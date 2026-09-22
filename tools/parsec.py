@@ -457,6 +457,10 @@ def prepare(args, launch):
     fdir, frel = feature_dir(cfg, primary, args.feature)
     if args.kind in ("prereview", "diff", "lastlook") and not args.base:
         raise Exit(64, f"--base is required for {args.kind}")
+    if not args.head:                            # 2026-09-22 16:45: two panel rounds died in the parser wanting a range a panel has not
+        if args.kind != "panel":
+            raise Exit(64, f"--head is required for {args.kind}")
+        args.head = git_out(["rev-parse", "--short", "HEAD"], primary).strip()
     if not Path(args.brief).is_file():
         raise Exit(64, f"brief not found: {args.brief}")
     folder = round_folder(fdir, args.kind, args.round, args.lane)
@@ -706,6 +710,9 @@ def build_run(args):
     checkout = Path(args.checkout)
     if not brief.is_file() or not checkout.is_dir():
         raise Exit(64, f"need {brief} and the checkout {checkout}")
+    at = git_out(["rev-parse", "HEAD"], checkout).strip()
+    if not (at.startswith(args.head) or args.head.startswith(at)):   # 2026-09-22 17:23: Gemini built on a tree the brief told it to refuse
+        raise Exit(64, f"{checkout} is at {at[:8]}, not --head {args.head}: the lane never checks, so the tool does")
     if report.is_file():
         if not args.again:
             raise Exit(64, f"{report} exists: --again archives it first")
@@ -736,7 +743,8 @@ def build_run(args):
     status = git_out(["status", "--porcelain"], checkout).strip()
     checks = [(f"route line present: {r}", r in log_text) for r in ROUTE_LINES]
     checks += [("no soft-denied step", SOFT_DENY not in log_text), ("final message non-empty", bool(message)),
-               ("git status non-empty (an empty diff is never done)", bool(status))]
+               ("git status non-empty (an empty diff is never done)", bool(status)),
+               ("line endings kept on every modified file", not eol_flipped(checkout, status))]
     ok = all(c for _, c in checks) and not (code is None)
     lines = ["", "---", f"parsec build run: task {args.task:02d}, lane gemini, model {row['model']}, {secs} s, "
              f"agy exit {code} (recorded, never trusted)"] + [f"- {'ok' if c else 'FAILED'}: {n}" for n, c in checks]
@@ -746,6 +754,17 @@ def build_run(args):
     ledger_line(fdir, f"build task {args.task:02d} gemini: {'ok' if ok else 'failed'}, build\\{report.name}", warnings)
     print(f"Task {args.task} Implement\n" + "\n".join(lines[2:]) + "".join(f"\nwarning: {w}" for w in warnings))
     return 0 if ok else 65
+
+
+def eol_flipped(checkout, status):                # 2026-09-22 02:06: a lane wrote LF into CRLF files, tests green, diff unreadable
+    out = []
+    for line in status.splitlines():
+        if "M" in line[:2]:                       # status is stripped, so the first line lost its leading space
+            p = line[2:].strip()
+            was = subprocess.run(["git", "show", f"HEAD:{p}"], cwd=str(checkout), capture_output=True, creationflags=NO_WINDOW).stdout
+            if (b"\r\n" in was) != (b"\r\n" in (checkout / p).read_bytes()):
+                out.append(p)
+    return out
 
 
 def build_archive(args):
@@ -868,7 +887,7 @@ def doctor(args):
             if key.startswith("parsec@"):
                 entry = val[0] if isinstance(val, list) else val
                 sha = entry.get("gitCommitSha", "")
-                state = f"{entry.get('version')} at {sha[:8]}: " + ("ok" if sha == head else "STALE (repo head " + head[:8] + ")")   # old item 65
+                state = f"{entry.get('version')} at {sha[:8]}: " + ("ok" if sha == head else "STALE (repo head " + head[:8] + "; the cache is keyed by version: bump it, then claude plugin update)")   # old item 65; 2026-09-22 17:16
     print(f"plugin install: {state}")
     for name, row in rows.items():
         code, ver = probe([row["command"][0], "--version"])
@@ -902,7 +921,7 @@ def parser():
         q.add_argument("--round", required=True, type=int)
         q.add_argument("--lane", required=True, choices=CLI_LANES if name == "run" else tuple(AGENT_OF))
         q.add_argument("--brief", required=True, help="written with a file tool; copied byte for byte")
-        q.add_argument("--head", required=True)
+        q.add_argument("--head", help="required except for a panel, which takes the primary's HEAD")
         q.add_argument("--base", help="prereview, diff, lastlook")
         q.add_argument("--file", action="append", help="evidence, copied as evidence/<k>-<basename>")
         q.add_argument("--reference", help="one reference-code subfolder")
@@ -928,6 +947,7 @@ def parser():
     q.add_argument("--feature", required=True)
     q.add_argument("--task", required=True, type=int)
     q.add_argument("--checkout", required=True)
+    q.add_argument("--head", required=True, help="the commit the task builds on; refused when the checkout is elsewhere")
     q.add_argument("--again", action="store_true", help="archive the earlier report and log first")
     q = bld.add_parser("archive", help="rename task N's report and log .dead<k>")
     q.add_argument("--feature", required=True)

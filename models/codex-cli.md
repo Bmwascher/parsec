@@ -24,7 +24,7 @@ A 400 "not supported when using Codex with a ChatGPT account" on a model id mean
 
 ## A missing model is a stale CLI first
 
-A newly released id answers `400 The '<id>' model is not supported when using Codex with a ChatGPT account` on a CLI that predates it, and the CLI's `models_cache.json` does not list it; the text reads like an entitlement problem and is not. Seen 2026-09-22 on 0.153.4 for `gpt-6-sol` and `gpt-6-luna`; `npm install -g @openai/codex@latest` (0.156.0) made both answer and refreshed the cache. So the doctor's update path is the first move on that error, and the entitlement reading comes only after it.
+A new id answers `400 The '<id>' model is not supported when using Codex with a ChatGPT account` on a CLI that predates it, and `models_cache.json` omits it: seen 2026-09-22 on 0.153.4 for `gpt-6-sol` and `gpt-6-luna`; the update to 0.156.0 fixed both. Update first; read entitlement second.
 
 ## Unmeasured
 

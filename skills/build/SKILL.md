@@ -11,7 +11,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 
 - Refuse to start without a recorded go (`design`).
 - Run `verify --feature <folder>`: MATCH and MATCH (CLOSED ON MINOR) continue; MATCH (DEGRADED PASS) and CHANGED stop and ask Brandon; NO-PASS-YET refuses.
-- Read the base from the ledger head (written once, by `design`). Work in the checkout the session was handed, or make one at `<worktrees>\<Project>-<branch>` and record in the ledger that `build` made it. Only a worktree `build` made is ever removed by it, and never under stop and report.
+- Read the base from the ledger head (written once, by `design`). A fresh worktree lacks the project's gitignored hook inputs (KitnEssentials: `dev\githooks\upstream-names.local.sh`); copy them before the first commit (2026-09-22). Work in the checkout the session was handed, or make one at `<worktrees>\<Project>-<branch>` and record in the ledger that `build` made it. Only a worktree `build` made is ever removed by it, and never under stop and report.
 
 ## Bounded work
 
@@ -21,7 +21,7 @@ Skips all of the above: no `verify`, Brandon's yes is the go, the session builds
 
 1. **Before task 1**: `doctor --lane gemini --kind build --feature <folder>` in the background (`Pre-flight: Gemini`), posted as is. When it finds no agy, every task goes to the `implementer`.
 2. `task-brief --feature <folder> --task N` writes `build\task-NN-brief.md` (the task, the header and the global constraints, byte for byte) and prints its SHA-256.
-3. `build run --feature <folder> --task N --checkout <path>` in the background, named `Task N Implement`. The tool copies the brief into the checkout, runs agy with the closing line that keeps the test and commit steps off Gemini, deletes the copy, writes `build\task-NN-report.md` and prints the success test. The session reads that, never agy's exit code.
+3. `build run --feature <folder> --task N --checkout <path> --head <commit>` in the background, named `Task N Implement`, where `--head` is the commit the task builds on (the ledger base, then the previous task's commit). The tool refuses any other checkout and fails a task that flipped a modified file's line endings; the lane checks neither (2026-09-22). The tool copies the brief into the checkout, runs agy with the closing line that keeps the test and commit steps off Gemini, deletes the copy, writes `build\task-NN-report.md` and prints the success test. The session reads that, never agy's exit code.
 4. **The session checks the task itself before the next**: run the task's tests in the background (a Gemini task's first run, since print mode runs no command; red-then-green is observed only on the `implementer` lane); read the diff against the task's files and its fenced code; then make the task's commit with the task's own commit step. The session is the one commit owner on both lanes. No per-task reviewer subagent.
 5. Ledger line: the task's commit and result, with the lane that built it.
 

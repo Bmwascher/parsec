@@ -34,7 +34,7 @@ Made when the request is classified as architectural and named: `<docs-root>\<MM
 
 Keep `notes.md` as a running record: each question, Brandon's exact answer, the chosen approach and what was rejected, verbatim, never a digest. Then dispatch the `author` (`agents/author.md`) in the background, named `Author: spec`, with the notes (or the handoff and its scoping section), the code paths and the same context paths a reviewer gets (the config's `[[context]]` entries), asking for the spec alone.
 
-The session never writes the two files itself, whatever model drives: the author's fresh context proves the notes complete, keeps the session small, and answers the debate against its own files.
+The session never writes the two files itself: the author's fresh context proves the notes complete and keeps the session small.
 
 Brandon reviews the written spec. Approving the spec is not a go. After approval, the same `author` agent, resumed, writes the task list (`Author: task list`), with the full test and implementation code in every task; the project's test policy outranks the plugin's, and a task with nothing worth testing says so and names its check.
 

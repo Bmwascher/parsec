@@ -428,6 +428,11 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable",
                     "--brief", str(e.brief), "--head", e.head, "--file", str(extra), "--file", str(extra))
     assert code == 64 and "twice" in out
+    code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "2", "--lane", "fable",
+                    "--brief", str(e.brief))                   # 2026-09-22 16:45: two panel rounds died wanting a range
+    assert code == 0 and e.head.startswith(json.loads((e.feat / "rounds" / "panel-r2-fable" / "pending.json").read_text(encoding="utf-8"))["head"])
+    code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--lane", "fable", "--brief", str(e.brief))
+    assert code == 64 and "--head is required" in out
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
@@ -443,7 +448,9 @@ def test_build_run_success_test(env):
     e.mp.setenv("FAKE_STDOUT", "I made the edits.\n")
     e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
     e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
-    b = lambda *a: run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), *a)
+    b = lambda *a: run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", e.head, *a)
+    code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", "0" * 40)
+    assert code == 64 and "not --head" in out                # 2026-09-22 17:23: the lane built on a tree the brief told it to refuse
     code, out = b()
     assert code == 0 and "result: ok" in out, out
     a = e.calls()[-1]
@@ -475,8 +482,16 @@ def test_build_run_success_test(env):
     e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
     code, out = b("--again")
     assert code == 65 and "FAILED: route line present: applying agent mode accept-edits" in out
+    (co / "crlf.txt").write_bytes(b"one\r\ntwo\r\n")
+    git("add", "crlf.txt", cwd=co)
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "crlf", cwd=co)
+    e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG)
+    e.mp.setenv("FAKE_WRITE", str(co / "crlf.txt"))                 # the fake writes LF into the CRLF file
+    code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head",
+                    git("rev-parse", "HEAD", cwd=co).strip(), "--again")
+    assert code == 65 and "FAILED: line endings kept" in out     # 2026-09-22 02:06: LF written into CRLF files, tests green
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead5" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead6" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)

@@ -10,7 +10,7 @@ The spec is the design document of one feature: what it does and why, in section
 4. **Design.** The modules, files and interfaces touched, with the patterns already in the code that they follow. Design for isolation; no unrelated refactoring.
 5. **Behaviour.** The observable behaviour, case by case, including errors and edges.
 6. **Testing.** What the project's test policy calls for here, and any case that has nothing worth testing, named with its check instead.
-7. **Open questions.** Anything still to decide, each with its owner.
+7. **Open questions.** Anything still to decide, each with its owner; never a question the notes already answer.
 
 ## Self-review, four points, before the file is handed over
 
