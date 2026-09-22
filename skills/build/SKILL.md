@@ -27,7 +27,7 @@ Skips all of the above: no `verify`, Brandon's yes is the go, the session builds
 
 ## To the `implementer` instead
 
-Dispatch `agents/implementer.md` (Opus 5 at `medium`) in the background, named `Task N Implement`, with the brief path, the contract path (`templates/implementer-contract.md`), the checkout and a report path, for:
+Dispatch `agents/implementer.md` (Opus 5.5 at `medium`) in the background, named `Task N Implement`, with the brief path, the contract path (`templates/implementer-contract.md`), the checkout and a report path, for:
 
 - a task that deletes, renames or moves a file (print mode has no delete tool, measured 2026-09-22);
 - a task whose Gemini run failed the success test once, or whose diff did not match its code (below);

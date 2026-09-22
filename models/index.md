@@ -11,8 +11,8 @@ One file per CLI and per model, holding only what a driver acts on, each fact da
 | Build lane (Gemini) | `agy-cli.md` | `lanes.toml`, row `gemini` |
 | `reviewer-opus` | `opus.md` | `agents/reviewer-opus.md` |
 | `reviewer-fable` | `fable.md` | `agents/reviewer-fable.md` |
-| Astra lane | `codex-cli.md`, `astra.md` | `lanes.toml`, row `astra` |
-| Sol lane (alternate) | `codex-cli.md`, `sol.md` | `lanes.toml`, row `sol` |
+| Sol lane (default) | `codex-cli.md`, `sol.md` | `lanes.toml`, row `sol` |
+| Astra lane (alternate, by name) | `codex-cli.md`, `astra.md` | `lanes.toml`, row `astra` |
 | Kimi lane (backup) | `kimi-cli.md`, `kimi-k3.md` | `lanes.toml`, row `kimi`; effort in the lane home |
 | Driver | nothing here | the session's own model; not pinned by the plugin |
 

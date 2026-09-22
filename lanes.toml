@@ -3,13 +3,13 @@
 # `command` is a list, so a test can substitute a fake CLI. Full model ids only:
 # what an alias resolves to was never measured (old item 81).
 
-[astra]
+[astra]                                 # the alternate, by name at any time (Brandon, 2026-09-22)
 model = "gpt-6-astra"
 effort = "high"
 command = ["codex"]
 update = ["npm", "install", "-g", "@openai/codex@latest"]
 
-[sol]                                   # the alternate, on Brandon's word or the config
+[sol]                                   # the default codex lane (Brandon, 2026-09-22); the config's codex_lane can name astra
 model = "gpt-6-sol"                     # 2026-09-22: Sol 6 (was gpt-5.6-sol); measurements pending
 effort = "high"
 command = ["codex"]

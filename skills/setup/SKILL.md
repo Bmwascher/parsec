@@ -15,7 +15,7 @@ The config holds ONLY what the tool or the `debate` skill reads as data. Gates, 
 | No config yet | The tool exits 64, "run setup first". |
 | Guess first, then confirm | Scan the repo with file tools and two read-only git commands, `git worktree list` and `git check-ignore`; show ONE proposed config with the evidence for each guess; Brandon corrects by exception; write nothing before he confirms. Look at: existing `docs` folders and whether git ignores them; the worktree list; `AGENTS.md` and `CLAUDE.md` in the repo and in the folders above it, up to the first folder that holds neither, with their headings listed for the section pick; links at the repo root and a `References` folder; the old-plugin lines the adoption-day list names (printed, never edited). |
 | Required | Only `docs_root` and `worktrees`. |
-| Not applicable | `[reviewer]` defaults to `astra` and `ask` when unanswered. A `[[context]]` question may be answered "N/A", "none", "skip" or anything that means the same (a model reads the answer; no phrase list is parsed); record it as `context = []`, so a later run can tell "answered none" from "never asked". With no rubric the brief has no rubric part and the pre-flight prints `rubric: none configured`. |
+| Not applicable | `[reviewer]` defaults to `sol` and `ask` when unanswered. A `[[context]]` question may be answered "N/A", "none", "skip" or anything that means the same (a model reads the answer; no phrase list is parsed); record it as `context = []`, so a later run can tell "answered none" from "never asked". With no rubric the brief has no rubric part and the pre-flight prints `rubric: none configured`. |
 | Tracked docs root | Warn when git tracks the docs root: round replies committed into the reviewed tree once ended a panel's blindness (old item 49). Round folders are then not committed while a debate or panel is open. |
 | Feature folder | `<docs-root>\<MM-DD>-<topic>\`, no year; the year and the readable title sit at the top of the notes and the ledger's head. `<project>`, wherever a worktree name uses it, is the primary checkout's folder name. |
 | Inside it | Loose: `notes.md`, `spec.md`, `tasks.md`, `ledger.md`. Subfolders made when their first file is written: `rounds\`, `build\` (`task-NN-brief.md`, `task-NN-report.md`, `task-NN-agy.log`), `pages\`. |
@@ -32,7 +32,7 @@ docs_root = "dev/docs/parsec"
 worktrees = "C:/Users/Brandon/Documents/KitnDev/_worktrees"
 
 [reviewer]                       # optional; these are the defaults
-codex_lane        = "astra"      # or "sol"
+codex_lane        = "sol"        # or "astra", the alternate, by name at any time
 kimi_substitution = "ask"        # or "approved"
 
 [[context]]                      # read first: the reviewer's rubric

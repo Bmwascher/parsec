@@ -1,7 +1,7 @@
 {
   "name": "parsec",
   "version": "0.1.0",
-  "description": "Design, build and cross-vendor debate for Claude Code: a Fable author writes the spec and task list, a Gemini lane transcribes each task, and Astra, Kimi, Opus and Fable review at the commitment boundaries. One Python tool runs the rounds.",
+  "description": "Design, build and cross-vendor debate for Claude Code: an Opus author writes the spec and task list, a Gemini lane transcribes each task, and Sol, Astra, Kimi, Opus and Fable review at the commitment boundaries. One Python tool runs the rounds.",
   "author": {
     "name": "Brandon Wascher",
     "url": "https://github.com/Bmwascher"

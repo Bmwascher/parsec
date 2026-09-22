@@ -1,6 +1,6 @@
 # GPT-6 Sol (`gpt-6-sol`)
 
-The alternate codex lane, used when Brandon says so or the config's `codex_lane` names it. Same CLI, same flags, same brief shape as Astra; only the id in `lanes.toml` differs. The row moved from GPT-5.6 Sol (`gpt-5.6-sol`) to GPT-6 Sol on Brandon's word the day it released (2026-09-22); whether Sol becomes the primary lane with Astra as the alternate for projects that need it is Brandon's decision, pending the first measurements below.
+The default codex lane from 2026-09-22 (Brandon's word; Astra is the alternate by name). Same CLI, flags and brief shape as Astra; only the id in `lanes.toml` differs. Moved from `gpt-5.6-sol` the day GPT-6 Sol released.
 
 ## Dated facts
 
@@ -10,9 +10,12 @@ The alternate codex lane, used when Brandon says so or the config's `codex_lane`
 
 ## Carried from GPT-5.6 Sol, UNMEASURED on GPT-6
 
-- "A higher effort spread to its subagents and burnt tokens" (old notes, UNDATED).
-- Fast tier at 1.5x speed (the catalog, read 2026-09-22).
+- "A higher effort spread to its subagents and burnt tokens" (old notes, UNDATED); fast tier at 1.5x (the catalog, 2026-09-22).
+
+## Measured here
+
+- 2026-09-22, `high`, fresh: a diff round in 338 s (Astra 153 s), same verdict and findings plus one Astra missed; a blind panel in 716 s (Astra 464 s), same winner, one defect Astra missed. Slower, reads more.
 
 ## Unmeasured
 
-Everything the rethink measured on Astra: continuity across resumes, round times, token use per round. The first diff round on this id (the totem-extent range, 2026-09-22) is recorded in the rethink's measurements file once it lands here.
+Continuity across resumes and token use per round.

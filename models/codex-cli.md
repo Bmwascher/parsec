@@ -8,7 +8,7 @@ Probed 2026-07-24 on 0.144.1: `codex exec ... resume <unknown id>` exits 1 with 
 
 ## The tier-gating 400
 
-A 400 "not supported when using Codex with a ChatGPT account" on a model id means the subscription tier does not carry that model, not a CLI fault (probed 2026-07-12 on Sol; free and Go tiers had Terra only). Astra answered at `low` and `high` on 2026-09-04. The same 400 on Astra would need its own probe.
+A 400 "not supported when using Codex with a ChatGPT account" on a model id means the tier lacks the model or the CLI predates it ("A missing model is a stale CLI first" below) (probed 2026-07-12 on Sol; free and Go tiers had Terra only). Astra answered at `low` and `high` on 2026-09-04. The same 400 on Astra would need its own probe.
 
 ## The free quota read
 

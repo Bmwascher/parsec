@@ -1,5 +1,7 @@
 # GPT-6 Astra (`gpt-6-astra`)
 
+The alternate codex lane from 2026-09-22, by name at any time or by the config's `codex_lane`; Sol is the default. Measured below as the primary.
+
 The reviewer lane. Vendor guide: OpenAI's Astra guide, fetched 2026-09-05 for the old notes; its URL was not recorded there and is UNCITED here until fetched again.
 
 ## The guide says, so the brief carries
