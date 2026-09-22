@@ -1,0 +1,27 @@
+name: Checks
+
+# Runs on every push and pull request: the changelog check (which runs the
+# STE checker on CHANGELOG.md) and pytest by folder. Windows, because the
+# tool's junction, taskkill and path rules are Windows rules.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Changelog and STE
+        run: python evals/tools/check_changelog.py
+
+      - name: Tests
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest evals/tests -q

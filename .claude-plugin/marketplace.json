@@ -1,0 +1,17 @@
+{
+  "name": "parsec",
+  "metadata": {
+    "description": "Design, build and cross-vendor debate for Claude Code, in one lean plugin."
+  },
+  "owner": {
+    "name": "Brandon Wascher",
+    "url": "https://github.com/Bmwascher"
+  },
+  "plugins": [
+    {
+      "name": "parsec",
+      "source": "./",
+      "description": "Spec and task list by a Fable author, transcription by a Gemini lane, review by Astra, Kimi, Opus and Fable at the commitment boundaries."
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# parsec: the plugin repo
+.parsec/
+__pycache__/
+.pytest_cache/
+*.pyc
