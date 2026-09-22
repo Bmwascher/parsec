@@ -1,6 +1,6 @@
 # Task list template
 
-The task list (`tasks.md`) is what gets built. The `author` writes it to this file. A zero-judgment lane transcribes each task, so every task holds the FULL code, test and implementation, and decides nothing.
+The task list (`tasks.md`) is what gets built. The `author` writes `tasks.md` by this file. A zero-judgment lane transcribes each task, so every task holds the FULL code, test and implementation, and decides nothing.
 
 ## Header
 

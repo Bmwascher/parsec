@@ -130,16 +130,6 @@ def test_codex_flags_before_resume(env):
     assert "gpt-5.6-sol" in e.calls()[-1] and "resume" not in e.calls()[-1]
 
 
-def test_fast_only_on_the_word(env):
-    e = env
-    rnd(e, 1)
-    assert ["-c", "service_tier=default"] == [x for x in e.calls()[-1] if x in ("-c", "service_tier=default")][-2:]
-    rnd(e, 2, "astra", "design", "--fast")
-    assert "service_tier=priority" in e.calls()[-1]
-    assert e.record("design", 2, "astra")["tier"] == "fast" and "tier: fast" in e.ledger().splitlines()[-1]
-    assert "tier: fast" not in e.ledger().splitlines()[-2]
-
-
 # row 2: the Kimi argument list and child environment (old item 17; the dead normal-home login, 2026-09-21)
 def test_kimi_arguments_and_home(env):
     e = env
@@ -460,8 +450,9 @@ def test_inputs_and_preflight(env):
     assert code == 64 and "never collected" in out              # 2026-09-22: five Kimi rounds collided on one folder; the refusal held
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--lane", "fable", "--brief", str(e.brief))
     assert code == 64 and "--head is required" in out
-    code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--brief", str(e.brief), "--head", e.head)
-    assert code == 0 and (e.feat / "rounds" / "design-r9-sol").is_dir()   # 2026-09-22 review: codex_lane was a key nothing read
+    assert run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--brief", str(e.brief), "--head", e.head)[0] == 2
+    code, out = run(e, "round", "run", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--brief", str(e.brief), "--head", e.head)
+    assert code == 0 and e.record("design", 9, "sol")["lane"] == "sol"   # 2026-09-22 review: codex_lane was a key nothing read; r2 (Sol): run only, prepare needs its seat
     code, out = run(e, "round", "prepare", "--feature", "panels/09-22-t", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     assert code == 0 and (e.repo / "docs" / "panels" / "09-22-t" / "ledger.md").is_file()   # the one folder the tool makes itself
 
@@ -526,8 +517,17 @@ def test_build_run_success_test(env):
     code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head",
                     git("rev-parse", "HEAD", cwd=co).strip(), "--again")
     assert code == 65 and "FAILED: line endings kept" in out     # 2026-09-22 02:06: LF written into CRLF files, tests green
+    clean()
+    (co / ".gitignore").write_text(".claude/\nignored.txt\n", encoding="utf-8")   # a TRACKED docs root, as setup allows
+    git("commit", "-qam", "docs tracked", cwd=co)
+    (co / "docs" / "09-22-x" / "rounds").mkdir(parents=True)
+    (co / "docs" / "09-22-x" / "rounds" / "pending.md").write_text("open round\n", encoding="utf-8")
+    e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
+    code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head",
+                    git("rev-parse", "HEAD", cwd=co).strip(), "--again")
+    assert code == 0 and "result: ok" in out, out                # 2026-09-22 r2 (Sol): open rounds under a tracked docs root are not dirt
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead6" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead7" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)
@@ -546,3 +546,4 @@ def test_tier_readback(env):
     assert r["tier"] == "priority" and r["tier_check"] == "unrequested" and "tier read-back priority differs" in out
     code, out = rnd(e, 4, "astra", "design", "--fast")
     assert e.record("design", 4, "astra")["tier_check"] == "verified" and e.record("design", 4, "astra")["tier"] == "fast"
+    assert "service_tier=priority" in e.calls()[-1] and "tier: fast" in e.ledger().splitlines()[-1] and "tier: fast" not in e.ledger().splitlines()[-2]

@@ -718,7 +718,8 @@ def build_run(args):
     at = git_out(["rev-parse", "HEAD"], checkout).strip()
     if not args.head or not (at.startswith(args.head) or args.head.startswith(at)):   # 2026-09-22 17:23: Gemini built on a tree the brief told it to refuse
         raise Exit(64, f"{checkout} is at {at[:8]}, not --head {args.head}: the lane never checks, so the tool does")
-    if git_out(["status", "--porcelain"], checkout).strip():
+    spec = [] if Path(cfg["docs_root"]).is_absolute() else ["--", ".", f":(exclude){cfg['docs_root']}"]   # 2026-09-22 r2 (Sol): open rounds under a tracked docs root are not dirt
+    if git_out(["status", "--porcelain", *spec], checkout).strip():
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
     eol_before = eol_map(checkout)
     if report.is_file():
@@ -744,11 +745,10 @@ def build_run(args):
             copy.unlink()                        # 2026-09-22 03:07: git status mid-run listed the copy
     err = fdir / "build" / f"task-{args.task:02d}-agy.err"
     err_text = read_text(err) if err.is_file() else ""
-    if err.is_file():
-        err.unlink()
+    err.unlink(missing_ok=True)
     log_text = read_text(log) if log.is_file() else ""
     message = read_text(report).strip()
-    status = git_out(["status", "--porcelain"], checkout).strip()
+    status = git_out(["status", "--porcelain", *spec], checkout).strip()
     checks = [(f"route line present: {r}", r in log_text) for r in ROUTE_LINES]
     checks += [("no soft-denied step", SOFT_DENY not in log_text), ("final message non-empty", bool(message)),
                ("git status non-empty (an empty diff is never done)", bool(status)),
@@ -925,7 +925,7 @@ def parser():
         q.add_argument("--feature", required=True, help="feature folder under the docs root")
         q.add_argument("--kind", required=True, choices=KINDS)
         q.add_argument("--round", required=True, type=int)
-        q.add_argument("--lane", choices=CLI_LANES if name == "run" else tuple(AGENT_OF), help="default: the config's codex_lane")
+        q.add_argument("--lane", required=name == "prepare", choices=CLI_LANES if name == "run" else tuple(AGENT_OF), help="run: default the config's codex_lane")   # 2026-09-22 r2 (Sol): prepare without --lane packaged a codex round
         q.add_argument("--brief", required=True, help="written with a file tool; copied byte for byte")
         q.add_argument("--head", help="required except for a panel, which takes the primary's HEAD")
         q.add_argument("--base", help="prereview, diff, lastlook")
