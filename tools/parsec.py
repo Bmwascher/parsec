@@ -148,7 +148,7 @@ def feature_dir(cfg, primary, feature):
     docs = resolve_under(primary, cfg["docs_root"])
     rel = Path(feature.replace("\\", "/"))
     fdir = docs / rel
-    if docs not in fdir.resolve().parents:
+    if docs not in fdir.resolve().parents:       # 2026-09-22 review (Sol): "../x" reached past the docs root
         raise Exit(64, f"--feature {feature} is not under the docs root {docs}")
     if not fdir.is_dir():
         if rel.parts[:1] == ("panels",) and len(rel.parts) == 2:   # the one feature folder the tool makes itself
@@ -353,9 +353,7 @@ def remove_worktree(primary, path):
 
 def last_write_age(paths):
     ages = []
-    for p in paths:
-        if p is None:
-            continue
+    for p in filter(None, paths):
         try:
             ages.append(time.time() - os.stat(p).st_mtime)
         except OSError:
@@ -580,7 +578,9 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     session = pend.get("session") or session_of(lane, transcript) or "unknown"
     cli_version = (re.search(r"OpenAI Codex v(\S+)", transcript) or [None, "unknown"])[1] if lane != "kimi" else "unknown"
     clean = None
-    if pend.get("worktree") and Path(pend["worktree"]).is_dir():   # 2026-09-22 review: a removed tree left the round unfinalisable
+    if pend.get("worktree") and not Path(pend["worktree"]).is_dir():   # 2026-09-22 review: a removed tree left the round unfinalisable;
+        verdict, warnings = "NONE", warnings + ["worktree missing: no clean-tree evidence, so no verdict"]   # r2 (Sol): and no PASS without it
+    elif pend.get("worktree"):
         writes = tree_writes(Path(pend["worktree"]))
         clean = not writes
         if writes:
@@ -606,10 +606,10 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
            "verdict": verdict, "clean_tree": clean, "tier": tier, "tier_check": check, "degraded": degraded,
            "closed_on_minor": None, "reply": str(reply), "warnings": warnings}
     write_json(rec_path, rec)
+    pend_path.unlink()                           # before the ledger line: the record is the truth, a replay would overwrite it (r2, Sol)
     cont = "" if continuity is None and not pend.get("resumed") else (", continuity answered" if continuity else ", continuity: not answered")
     ledger_line(fdir, f"{kind} r{n} {lane}: {verdict}{cont}" + (", tier: fast" if tier == "fast" else "")
                 + f", rounds\\{folder.name}\\reply.md", warnings)
-    pend_path.unlink()                           # last: a stop between the record and the ledger line leaves the round recoverable
     sub = "  ".join(f"{k} {v[:6]}" for k, v in pend.get("subject", {}).items())
     print(f"{pretty_name(lane, kind, n)}\nverdict: {verdict}    cli exit: {run['cli_exit']}    {run['seconds']} s    "
           f"{'resumed' if pend.get('resumed') else 'fresh'} session {session}    tier {tier}")
@@ -719,7 +719,7 @@ def build_run(args):
     if not args.head or not (at.startswith(args.head) or args.head.startswith(at)):   # 2026-09-22 17:23: Gemini built on a tree the brief told it to refuse
         raise Exit(64, f"{checkout} is at {at[:8]}, not --head {args.head}: the lane never checks, so the tool does")
     spec = [] if Path(cfg["docs_root"]).is_absolute() else ["--", ".", f":(exclude){cfg['docs_root']}"]   # 2026-09-22 r2 (Sol): open rounds under a tracked docs root are not dirt
-    if git_out(["status", "--porcelain", *spec], checkout).strip():
+    if git_out(["status", "--porcelain", *spec], checkout).strip():   # 2026-09-22 review (Sol): a leftover made the status test vacuous
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
     eol_before = eol_map(checkout)
     if report.is_file():
@@ -752,7 +752,7 @@ def build_run(args):
     checks = [(f"route line present: {r}", r in log_text) for r in ROUTE_LINES]
     checks += [("no soft-denied step", SOFT_DENY not in log_text), ("final message non-empty", bool(message)),
                ("git status non-empty (an empty diff is never done)", bool(status)),
-               ("line endings kept on every modified file", all(eol_before.get(p, w) == w for p, w in eol_map(checkout).items())),
+               ("line endings kept on every modified file", all(eol_before.get(p, w) in (w, b"w/none") or w == b"w/none" for p, w in eol_map(checkout).items())),   # r2 (Sol): a file with no ending yet has none to flip
                ("finished within the cap", code is not None)]   # 2026-09-22 review: a capped run failed with no named reason
     ok = all(c for _, c in checks)
     lines = ["", "---", f"parsec build run: task {args.task:02d}, lane gemini, model {row['model']}, {secs} s, "
@@ -816,7 +816,7 @@ def codex_quota(prog):
         pass
     finally:
         if p:
-            p.kill()                             # on every path, a broken pipe included (2026-09-22 review)
+            kill_tree(p)                         # on every path, a broken pipe included; the tree, since codex is a .CMD (2026-09-22 review, r2)
     return "quota: unavailable"
 
 
@@ -941,7 +941,7 @@ def parser():
     q.add_argument("--close-minor", metavar="REASON")
     q = rnd.add_parser("close", help="remove the feature's review worktrees")
     q.add_argument("--feature", required=True)
-    q.add_argument("--kind")
+    q.add_argument("--kind", choices=KINDS)       # 2026-09-22 r2 (Sol): a free string reached the name pattern
     q = sub.add_parser("verify", help="spec.md and tasks.md against the newest design record or amendment")
     q.add_argument("--feature", required=True)
     q.add_argument("--record-amendment", metavar="REASON")

@@ -451,8 +451,20 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--lane", "fable", "--brief", str(e.brief))
     assert code == 64 and "--head is required" in out
     assert run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--brief", str(e.brief), "--head", e.head)[0] == 2
+    conf = e.repo / ".claude" / "parsec.toml"
+    conf.write_text(conf.read_text(encoding="utf-8") + '[reviewer]\ncodex_lane = "astra"\n', encoding="utf-8")
     code, out = run(e, "round", "run", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--brief", str(e.brief), "--head", e.head)
-    assert code == 0 and e.record("design", 9, "sol")["lane"] == "sol"   # 2026-09-22 review: codex_lane was a key nothing read; r2 (Sol): run only, prepare needs its seat
+    assert code == 0 and e.record("design", 9, "astra")["lane"] == "astra"   # 2026-09-22 review: codex_lane was a key nothing read; r2 (Sol): run only, prepare needs its seat
+    assert run(e, "round", "close", "--feature", "09-22-x", "--kind", "d.sign")[0] == 2   # r2 (Sol): a free string reached the name pattern
+    run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "3", "--lane", "fable", "--brief", str(e.brief))
+    assert run(e, "round", "collect", "--feature", "09-22-x", "--kind", "panel", "--round", "3", "--lane", "fable")[0] == 65   # no reply yet: NONE
+    rnd(e, 7, "kimi")
+    seven = e.feat / "rounds" / "design-r7-kimi"                  # a killed run, its tree closed by hand, then a manual collect
+    (seven / "pending.json").write_text(json.dumps({**e.record("design", 7, "kimi"), "worktree": str(e.tmp / "gone")}), encoding="utf-8")
+    (seven / "record.json").unlink()
+    (seven / "reply.md").write_text("VERDICT: PASS\n", encoding="utf-8")
+    code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "7", "--lane", "kimi")
+    assert code == 65 and e.record("design", 7, "kimi")["verdict"] == "NONE" and "worktree missing" in out   # r2 (Sol): no PASS without the tree
     code, out = run(e, "round", "prepare", "--feature", "panels/09-22-t", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     assert code == 0 and (e.repo / "docs" / "panels" / "09-22-t" / "ledger.md").is_file()   # the one folder the tool makes itself
 
@@ -526,8 +538,20 @@ def test_build_run_success_test(env):
     code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head",
                     git("rev-parse", "HEAD", cwd=co).strip(), "--again")
     assert code == 0 and "result: ok" in out, out                # 2026-09-22 r2 (Sol): open rounds under a tracked docs root are not dirt
+    clean()
+    (co / "empty.txt").write_bytes(b"")
+    (co / "lf.txt").write_bytes(b"one\ntwo\n")
+    git("add", "empty.txt", "lf.txt", cwd=co)
+    git("commit", "-qm", "empty and lf", cwd=co)
+    b2 = lambda: run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", git("rev-parse", "HEAD", cwd=co), "--again")
+    e.mp.setenv("FAKE_WRITE", str(co / "empty.txt"))              # w/none to w/lf: a first ending is no flip (r2, Sol)
+    assert "ok: line endings kept" in b2()[1]
+    clean()
+    e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG.replace("silent", "FAKE_CRLF silent"))
+    e.mp.setenv("FAKE_WRITE", str(co / "lf.txt"))                 # the fake writes CRLF when its log says FAKE_CRLF
+    assert "FAILED: line endings kept" in b2()[1]                  # LF to CRLF is a flip too (r2, Sol)
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead7" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead9" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)
