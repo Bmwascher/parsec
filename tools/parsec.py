@@ -580,7 +580,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     session = pend.get("session") or session_of(lane, transcript) or "unknown"
     cli_version = (re.search(r"OpenAI Codex v(\S+)", transcript) or [None, "unknown"])[1] if lane != "kimi" else "unknown"
     clean = None
-    if pend.get("worktree"):
+    if pend.get("worktree") and Path(pend["worktree"]).is_dir():   # 2026-09-22 review: a removed tree left the round unfinalisable
         writes = tree_writes(Path(pend["worktree"]))
         clean = not writes
         if writes:
