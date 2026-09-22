@@ -5,13 +5,13 @@ description: Use for every review round of the plugin's flow, the pre-build desi
 
 # debate
 
-Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-rules.md`; read it first. The tool is `${CLAUDE_PLUGIN_ROOT}/tools/parsec.py`, run with `python`, always by that path; `--help` carries the argument detail.
+Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-rules.md`; read it first. The tool is `${CLAUDE_PLUGIN_ROOT}/tools/parsec.py`, run with `python`; `--help` carries the argument detail.
 
 ## Running a round
 
 - Run the pre-flight before round 1 and after a lane switch: `doctor --lane <lane> --kind <kind> --feature <folder>` (`--fast` too when the round will use it), in the background, and post the block as is.
 - Write the brief to a file WITH A FILE TOOL, never through a shell (2026-09-17: a heredoc lost every apostrophe and backtick while every check passed), from `templates/brief.md` with the kind's insert.
-- Start the round with Monitor, `timeout_ms` 1800000 (Monitor kills the script at expiry; the tool's own cap is 28 minutes), named before launch from the driver rules' list: `round run` for a CLI lane (astra, sol, kimi; `--lane` omitted takes the config's `codex_lane`); `round prepare`, then the reviewer agent, then `round collect` for opus or fable. `round prepare` prints the package root, the code root and its commit, the report path and the task name for the dispatch.
+- Start the round with Monitor, `timeout_ms` 1800000 (Monitor kills the script at expiry; the tool's own cap is 28 minutes), named before launch from the driver rules' list: `round run` for a CLI lane (`--lane` omitted: the config's `codex_lane`); `round prepare`, then the reviewer agent, then `round collect` for opus or fable. `round prepare` prints the package root, the code root and its commit, the report path and the task name for the dispatch.
 - Pass `--fast` only on Brandon's explicit word for THAT debate ("use fast"), never from a config or an earlier debate.
 - Pass `--reference <subfolder>` when the spec declares a port or touches a module that has a reference.
 - Pass earlier briefs and replies with `--file` to a lane that joins mid-debate; the round count continues.

@@ -421,6 +421,12 @@ def test_inputs_and_preflight(env):
     assert run(e, "doctor", "--lane", "kimi", "--kind", "design", "--feature", "09-22-x")[0] == 0
     code, out = run(e, "doctor", "--lane", "nope", "--kind", "design", "--feature", "09-22-x")
     assert code == 64 and "not a lane or a seat" in out          # 2026-09-22 review: a typo raised KeyError
+    e.mp.setenv("FAKE_CHILD_PID_FILE", str(e.tmp / "quota.pid"))
+    code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
+    assert code == 0 and "quota: 5 h 60% left" in out, out
+    pid = (e.tmp / "quota.pid").read_text()
+    assert not WIN or pid not in subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True).stdout   # r3 (Sol): the .CMD's child outlived the probe
+    e.mp.delenv("FAKE_CHILD_PID_FILE")
     bad = e.tmp / "bad-lanes.toml"
     bad.write_text('[astra]\nmodel = "gpt-6-astra"\neffort = "high"\ncommand = ["no-such-program-xyz"]\n', encoding="utf-8")
     e.mp.setattr(parsec, "LANES_FILE", bad)
@@ -465,6 +471,16 @@ def test_inputs_and_preflight(env):
     (seven / "reply.md").write_text("VERDICT: PASS\n", encoding="utf-8")
     code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "7", "--lane", "kimi")
     assert code == 65 and e.record("design", 7, "kimi")["verdict"] == "NONE" and "worktree missing" in out   # r2 (Sol): no PASS without the tree
+    (seven / "pending.json").write_text(json.dumps({**e.record("design", 7, "kimi"), "worktree": None}), encoding="utf-8")
+    keep = parsec.ledger_line
+    e.mp.setattr(parsec, "ledger_line", lambda *a: 1 / 0)          # a stop between the record and the ledger line
+    with pytest.raises(ZeroDivisionError):
+        run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "7", "--lane", "kimi")
+    assert not (seven / "pending.json").exists() and (seven / "record.json").is_file()   # r3 (Sol): no replay after the record
+    e.mp.setattr(parsec, "ledger_line", keep)
+    conf.write_text(conf.read_text(encoding="utf-8").replace('"astra"', '"opus"'), encoding="utf-8")
+    code, out = run(e, "round", "run", "--feature", "09-22-x", "--kind", "design", "--round", "10", "--brief", str(e.brief), "--head", e.head)
+    assert code == 64 and "is not a lane" in out and not (e.feat / "rounds" / "design-r10-opus").exists()   # r3: a config typo wrote a package
     code, out = run(e, "round", "prepare", "--feature", "panels/09-22-t", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     assert code == 0 and (e.repo / "docs" / "panels" / "09-22-t" / "ledger.md").is_file()   # the one folder the tool makes itself
 
@@ -498,11 +514,12 @@ def test_build_run_success_test(env):
     report = (e.feat / "build" / "task-01-report.md").read_text(encoding="utf-8")
     assert report.startswith("I made the edits.") and "agy exit 0 (recorded, never trusted)" in report
     assert "build task 01 gemini: ok" in e.ledger()
-    assert b()[0] == 64                                        # a report already present without --again
     code, out = b("--again")
     assert code == 64 and "dirty before the build" in out      # 2026-09-22 review: a pre-dirty tree made the status test vacuous
     clean = lambda: (git("checkout", "--", ".", cwd=co), git("clean", "-fdq", cwd=co))
     clean()
+    code, out = b()
+    assert code == 64 and "--again archives it first" in out   # a report already present without --again (r2 Opus: was vacuous)
     e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG + "soft-denying tool confirmation for RunCommand\n")
     code, out = b("--again")
     assert code == 65 and "FAILED: no soft-denied step" in out and (e.feat / "build" / "task-01-report.md.dead1").is_file()
@@ -530,7 +547,9 @@ def test_build_run_success_test(env):
                     git("rev-parse", "HEAD", cwd=co).strip(), "--again")
     assert code == 65 and "FAILED: line endings kept" in out     # 2026-09-22 02:06: LF written into CRLF files, tests green
     clean()
-    (co / ".gitignore").write_text(".claude/\nignored.txt\n", encoding="utf-8")   # a TRACKED docs root, as setup allows
+    (co / ".gitignore").write_text(".claude/\nignored.txt\n", encoding="utf-8")   # a docs root git does not ignore, as setup allows
+    conf = e.repo / ".claude" / "parsec.toml"
+    conf.write_text(conf.read_text(encoding="utf-8").replace('docs_root = "docs"', f'docs_root = "{(e.repo / "docs").as_posix()}"'), encoding="utf-8")   # r3 (Sol): absolute too
     git("commit", "-qam", "docs tracked", cwd=co)
     (co / "docs" / "09-22-x" / "rounds").mkdir(parents=True)
     (co / "docs" / "09-22-x" / "rounds" / "pending.md").write_text("open round\n", encoding="utf-8")

@@ -132,8 +132,7 @@ def agent_seat(lane):
 
 
 def is_link(p):
-    p = Path(p)
-    return p.is_symlink() or p.is_junction()
+    return Path(p).is_symlink() or Path(p).is_junction()
 
 
 def child_env():
@@ -372,8 +371,7 @@ def kill_tree(p):
 
 def run_child(argv, cwd, env, stdin, out_path, err_path, watch):
     """Returns (exit code or None on the cap, seconds). Prints only the 'still running' lines, flushed."""
-    start = time.time()
-    said = set()
+    start, said = time.time(), set()
     with open(stdin or os.devnull, "rb") as fin, open(out_path, "wb") as fout, \
             (fout if err_path == out_path else open(err_path, "wb")) as ferr:
         p = subprocess.Popen(argv, cwd=str(cwd), env=env, stdin=fin, stdout=fout, stderr=ferr, creationflags=NO_WINDOW)
@@ -458,6 +456,8 @@ def prepare(args, launch):
     cfg = load_config(primary)
     fdir, frel = feature_dir(cfg, primary, args.feature)
     args.lane = args.lane or cfg.get("reviewer", {}).get("codex_lane", "sol")   # the config's lane when none is named (2026-09-22 review)
+    if args.lane not in (CLI_LANES if launch else tuple(AGENT_OF)):
+        raise Exit(64, f"lane {args.lane} (from the config's codex_lane) is not a lane")   # r3: a typo there was a traceback after the package
     if args.kind in ("prereview", "diff", "lastlook") and not args.base:
         raise Exit(64, f"--base is required for {args.kind}")
     if not args.head:                            # 2026-09-22 16:45: two panel rounds died in the parser wanting a range a panel has not
@@ -718,8 +718,10 @@ def build_run(args):
     at = git_out(["rev-parse", "HEAD"], checkout).strip()
     if not args.head or not (at.startswith(args.head) or args.head.startswith(at)):   # 2026-09-22 17:23: Gemini built on a tree the brief told it to refuse
         raise Exit(64, f"{checkout} is at {at[:8]}, not --head {args.head}: the lane never checks, so the tool does")
-    spec = [] if Path(cfg["docs_root"]).is_absolute() else ["--", ".", f":(exclude){cfg['docs_root']}"]   # 2026-09-22 r2 (Sol): open rounds under a tracked docs root are not dirt
-    if git_out(["status", "--porcelain", *spec], checkout).strip():   # 2026-09-22 review (Sol): a leftover made the status test vacuous
+    docs = resolve_under(primary, cfg["docs_root"])   # r2, r3 (Sol): open rounds, builds and panels under a docs root inside the tree are not dirt, absolute or relative
+    rel = next((docs.relative_to(r.resolve()).as_posix() for r in (checkout, primary) if docs.is_relative_to(r.resolve())), None)
+    dirt = lambda: [l for l in git_out(["status", "--porcelain", "--untracked-files=all"], checkout).splitlines() if l.strip() and not (rel and re.match(rf'"?{re.escape(rel)}/(panels/|[^/]+/(rounds|build)/)', l[3:]))]
+    if dirt():                                   # 2026-09-22 review (Sol): a leftover made the status test vacuous
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
     eol_before = eol_map(checkout)
     if report.is_file():
@@ -748,11 +750,11 @@ def build_run(args):
     err.unlink(missing_ok=True)
     log_text = read_text(log) if log.is_file() else ""
     message = read_text(report).strip()
-    status = git_out(["status", "--porcelain", *spec], checkout).strip()
+    status = "\n".join(dirt())
     checks = [(f"route line present: {r}", r in log_text) for r in ROUTE_LINES]
     checks += [("no soft-denied step", SOFT_DENY not in log_text), ("final message non-empty", bool(message)),
                ("git status non-empty (an empty diff is never done)", bool(status)),
-               ("line endings kept on every modified file", all(eol_before.get(p, w) in (w, b"w/none") or w == b"w/none" for p, w in eol_map(checkout).items())),   # r2 (Sol): a file with no ending yet has none to flip
+               ("line endings kept on every modified file", all(eol_before.get(p, w) in (w, "w/none", "w/") or w in ("w/none", "w/") for p, w in eol_map(checkout).items())),   # r2 (Sol): no ending yet, or a file gone, is nothing to flip
                ("finished within the cap", code is not None)]   # 2026-09-22 review: a capped run failed with no named reason
     ok = all(c for _, c in checks)
     lines = ["", "---", f"parsec build run: task {args.task:02d}, lane gemini, model {row['model']}, {secs} s, "
@@ -766,8 +768,8 @@ def build_run(args):
 
 
 def eol_map(checkout):                            # 2026-09-22 02:06: LF written into CRLF files, tests green, diff unreadable; the
-    out = subprocess.run(["git", "ls-files", "--eol", "-z"], cwd=str(checkout), capture_output=True, creationflags=NO_WINDOW).stdout
-    return {e.split(b"\t", 1)[1].decode("utf-8", "replace"): e.split()[1] for e in out.split(b"\0") if b"\t" in e}   # w/ token before vs after (18:20: the HEAD blob misreads autocrlf)
+    out = git_out(["ls-files", "--eol", "-z"], checkout)   # r3: through git_out, so a failed call never passes the check
+    return {e.split("\t", 1)[1]: e.split()[1] for e in out.split("\0") if "\t" in e}   # w/ token before vs after (18:20: the HEAD blob misreads autocrlf)
 
 
 def build_archive(args):
@@ -794,20 +796,20 @@ def probe(argv, env=None, timeout=10, stdin_text=None):
         return None, "timed out after 10 s"
 
 
-def codex_quota(prog):
+def codex_quota(cmd):
     """The free quota read (codex app-server, account/rateLimits/read), information only: never fails a pre-flight."""
     p, found = None, []
     try:
         req = json.dumps({"id": 1, "method": "initialize", "params": {"clientInfo": {"name": "parsec-doctor", "version": "0"},
                           "capabilities": {"experimentalApi": True}}}) + "\n" + \
               json.dumps({"id": 2, "method": "account/rateLimits/read", "params": None}) + "\n"
-        p = subprocess.Popen([prog, "app-server", "--stdio"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        p = subprocess.Popen([shutil.which(cmd[0]), *cmd[1:], "app-server", "--stdio"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              stderr=subprocess.DEVNULL, env=child_env(), creationflags=NO_WINDOW)
         p.stdin.write(req.encode("utf-8"))
         p.stdin.flush()                          # stdin stays OPEN: the server exits when it closes
-        t = threading.Thread(target=lambda: found.extend(l for l in iter(p.stdout.readline, b"") if b"rateLimits" in l), daemon=True)
+        t = threading.Thread(target=lambda: found.append(next((l for l in iter(p.stdout.readline, b"") if b"rateLimits" in l), b"")), daemon=True)
         t.start(); t.join(10)                    # 2026-09-22 review: a readline on a silent server had no deadline at all
-        if found:
+        if found and found[0]:
             lim = json.loads(found[0]).get("result", {}).get("rateLimits", {})
             parts = [f"{'5 h' if (w.get('windowDurationMins') or 0) <= 300 else 'week'} {100 - w.get('usedPercent', 0)}% left"
                      for w in (lim.get("primary"), lim.get("secondary")) if w]
@@ -833,7 +835,7 @@ def preflight(args):
         code, login = probe(cmd + ["login", "status"], env=child_env())
         if code != 0 or "not logged in" in login.lower():
             fail.append(f"login: {login or 'no answer'}")
-        lines.append(f"{ver}   {login}   {codex_quota(shutil.which(cmd[0])) if code == 0 else ''}")
+        lines.append(f"{ver}   {login}   {codex_quota(cmd) if code == 0 else ''}")
         lines.append(f"model {row['model']}, effort {row['effort']} (lanes.toml)   tier {'fast' if args.fast else 'default (fast off)'}")
     elif args.lane == "kimi":
         code, ver = probe(cmd + ["--version"])
@@ -841,8 +843,7 @@ def preflight(args):
             fail.append(f"kimi: {ver}")
         home = resolve_under(PLUGIN, row["home"])
         conf = read_text(home / "config.toml") if (home / "config.toml").is_file() else ""
-        alias = f'[models."{row["model"]}"]' in conf
-        effort = "default_effort" in conf
+        alias, effort = f'[models."{row["model"]}"]' in conf, "default_effort" in conf
         if not alias:
             fail.append(f"model {row['model']} is not in the lane home's config")
         lines.append(f"kimi {ver}   lane home {home}   model alias {'present' if alias else 'MISSING'}, "
@@ -860,7 +861,8 @@ def preflight(args):
     if args.kind != "build":
         _, warnings, found, wanted = context_lines(cfg, primary, None)
         fail += [w for w in warnings if "not found" in w]
-        rub = f"rubric: {len([c for c in cfg.get('context', []) if c.get('role', 'rubric') == 'rubric'])} files, {found} of {wanted} sections found" if wanted else "rubric: none configured"
+        files = len([c for c in cfg.get("context", []) if c.get("role", "rubric") == "rubric"])
+        rub = f"rubric: {files} files, {found} of {wanted} sections found" if files else "rubric: none configured"   # r3: a rubric without sections is still a rubric
         wt = resolve_under(primary, cfg["worktrees"])
         lines.append(f"{rub}   worktrees folder {'ok' if wt.is_dir() else 'MISSING: ' + str(wt)}")
         if not wt.is_dir():
@@ -875,8 +877,7 @@ def preflight(args):
 def doctor(args):
     if args.lane:
         return preflight(args)
-    rows = lanes()
-    review, wt, bad = None, None, False
+    rows, review, wt, bad = lanes(), None, None, False
     try:
         primary = primary_of(args.repo)
         cfg = load_config(primary)
@@ -907,7 +908,7 @@ def doctor(args):
                     print(f"{label}: {p.name}   {age} d old")
     if args.update:
         print("warning: a debate may be open in another chat; its lane's update lands mid-debate")
-        for upd, name in {tuple(r["update"]): n for n, r in rows.items() if r.get("update")}.items():   # one update per CLI (2026-09-22 review)
+        for upd, name in {tuple(r["update"]): ", ".join(m for m, s in rows.items() if s.get("update") == r["update"]) for r in rows.values() if r.get("update")}.items():   # one update per CLI, every lane named (2026-09-22 review, r3)
             code, out = probe(list(upd), timeout=600, env=dict(os.environ, AGY_CLI_DISABLE_AUTO_UPDATE="true"))
             print(f"update {name}: exit {code}   {out}")
     return 64 if bad else 0
@@ -964,8 +965,8 @@ def parser():
     q.add_argument("--lane")
     q.add_argument("--kind", default="design")
     q.add_argument("--feature")
-    q.add_argument("--fast", action="store_true")
-    q.add_argument("--update", action="store_true")
+    for a in ("--fast", "--update"):
+        q.add_argument(a, action="store_true")
     return p
 
 
@@ -987,8 +988,7 @@ def main(argv=None):
         if args.cmd == "build":
             return build_run(args) if args.sub == "run" else build_archive(args)
         if args.cmd == "remove-worktree":
-            remove_worktree(primary_of(args.repo), Path(args.path))
-            print(f"removed {args.path}")
+            remove_worktree(primary_of(args.repo), Path(args.path)); print(f"removed {args.path}")
             return 0
         return doctor(args)
     except Exit as e:
