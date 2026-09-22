@@ -1,7 +1,7 @@
 ---
 name: author
 description: Writes the spec, then (resumed, after approval) the task list, from the notes or the handoff, the code paths and the context paths. Resumed in a debate it answers each finding with an edit or a refutation with evidence, amends a task whose code proved wrong, and writes the fix task for a gate finding.
-model: claude-fable-5-1
+model: claude-opus-5-5
 effort: high
 background: true
 tools: Read, Grep, Glob, Write, Edit

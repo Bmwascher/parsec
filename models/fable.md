@@ -1,6 +1,6 @@
 # Claude Fable 5.1 (`claude-fable-5-1`)
 
-The `author` and the `reviewer-fable` seats; also the driver when Brandon opens a Fable session, in which case the session is the author and `agents/author.md` is not dispatched.
+The `reviewer-fable` seat: the last look on both halves, a panel lane, an adjudication and a poll. The `author` seat moved to Opus 5.5 on 2026-09-22 after a blind panel ranked the Opus pair above the Fable pair on fidelity, correctness, tests and buildability (`opus.md`).
 
 ## The guide says, so the plugin does
 

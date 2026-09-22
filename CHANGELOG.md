@@ -10,6 +10,8 @@ First scaffold of the plugin that replaces superpowers and the old parallax plug
 
 - `design`, `build`, `debate`, `setup` and `panel`, each with one home per rule.
 - Templates for the spec, the task list, the brief and its three inserts, the ledger, the driver rules and the implementer contract.
+- The three Opus seats, the author, the pre-review and the implementer, name Opus 5.5. The session always dispatches the author and never writes the design files itself.
+- The Sol lane names GPT-6 Sol. The codex note records that a new id refused on an old CLI wants the update, not a new entitlement.
 
 ### Tool
 

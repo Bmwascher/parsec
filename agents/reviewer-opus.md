@@ -1,7 +1,7 @@
 ---
 name: reviewer-opus
 description: The pre-review seat of the diff gate. Dispatch it in the background with the path of a brief that `round prepare` packaged; the brief is the whole task and holds every reviewing rule.
-model: claude-opus-5
+model: claude-opus-5-5
 effort: high
 background: true
 tools: Read, Grep, Glob, Write

@@ -32,9 +32,9 @@ Made when the request is classified as architectural and named: `<docs-root>\<MM
 
 ## Who writes
 
-**When Opus drives**, keep `notes.md` as a running record: each question, Brandon's exact answer, the chosen approach and what was rejected, verbatim, never a digest. Then dispatch the `author` (`agents/author.md`) in the background, named `Author: spec`, with the notes (or the handoff and its scoping section), the code paths and the same context paths a reviewer gets (the config's `[[context]]` entries), asking for the spec alone.
+Keep `notes.md` as a running record: each question, Brandon's exact answer, the chosen approach and what was rejected, verbatim, never a digest. Then dispatch the `author` (`agents/author.md`) in the background, named `Author: spec`, with the notes (or the handoff and its scoping section), the code paths and the same context paths a reviewer gets (the config's `[[context]]` entries), asking for the spec alone.
 
-**When Fable drives**, the session writes from the same two templates, and wherever this plugin says `author` that is the session itself.
+The session never writes the two files itself, whatever model drives: the author's fresh context proves the notes complete, keeps the session small, and answers the debate against its own files.
 
 Brandon reviews the written spec. Approving the spec is not a go. After approval, the same `author` agent, resumed, writes the task list (`Author: task list`), with the full test and implementation code in every task; the project's test policy outranks the plugin's, and a task with nothing worth testing says so and names its check.
 

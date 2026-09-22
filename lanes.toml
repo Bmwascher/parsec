@@ -10,7 +10,7 @@ command = ["codex"]
 update = ["npm", "install", "-g", "@openai/codex@latest"]
 
 [sol]                                   # the alternate, on Brandon's word or the config
-model = "gpt-5.6-sol"
+model = "gpt-6-sol"                     # 2026-09-22: Sol 6 (was gpt-5.6-sol); measurements pending
 effort = "high"
 command = ["codex"]
 update = ["npm", "install", "-g", "@openai/codex@latest"]
