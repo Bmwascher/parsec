@@ -281,8 +281,10 @@ def test_tree_reuse_after_writes(env):
     e.mp.delenv("FAKE_WRITE")
     rnd(e, 5)
     assert tree.is_dir() and not (tree / "left.txt").exists() and tree.stat().st_ctime_ns != ino
+    other = e.wt / "_review" / "proj-09-22-x-more-design-astra"
+    other.mkdir()
     code, out = run(e, "round", "close", "--feature", "09-22-x")
-    assert code == 0 and not tree.exists()
+    assert code == 0 and not tree.exists() and other.is_dir()   # 2026-09-22 review: an unanchored prefix closed the neighbour
 
 
 # row 10: remove-worktree, ten cases (2026-09-13; old item 107)
@@ -379,10 +381,19 @@ def test_doctor_stale_install(env):
         {"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": "0" * 40}]}}), encoding="utf-8")
     e.mp.setattr(parsec, "PLUGIN", e.repo)
     code, out = run(e, "doctor")
-    assert code == 0 and "STALE" in out
+    assert code == 0 and "STALE" in out and "bump it, then claude plugin update" in out   # 2026-09-22 17:16: update said "already latest"
     plug.joinpath("installed_plugins.json").write_text(json.dumps(
         {"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head}]}}), encoding="utf-8")
     assert "0.1.0 at " in run(e, "doctor")[1] and "STALE" not in run(e, "doctor")[1]
+    cmd = json.dumps([sys.executable, str(FAKE)])
+    upd = json.dumps([sys.executable, str(FAKE), "update"])
+    (e.tmp / "lanes.toml").write_text(f'[astra]\nmodel = "a"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n'
+                                      f'[sol]\nmodel = "s"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n'
+                                      f'[gemini]\nmodel = "g"\ncommand = {cmd}\nupdate = {upd[:-1]}, "agy"]\n', encoding="utf-8")
+    e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
+    code, out = run(e, "doctor", "--update")
+    assert code == 0 and [c for c in e.calls() if c[:1] == ["update"]] == [["update"], ["update", "agy"]]   # 2026-09-22 review: codex updated twice
+    assert json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true"
 
 
 # row 14: inputs, the pre-flight, the in-session package (old item 100; the 2026-09-21 dry run and Kimi login; "in this directory")
@@ -391,21 +402,35 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "round", "prepare", "--feature", "09-22-y", "--kind", "design", "--round", "1", "--lane", "opus",
                     "--brief", str(e.brief), "--head", e.head)
     assert code == 64 and not (e.repo / "docs" / "09-22-y").exists()
+    code, out = run(e, "task-brief", "--feature", "../09-22-x", "--task", "1")
+    assert code == 64 and "not under the docs root" in out      # 2026-09-22 review: --feature could climb out of the docs root
     (e.repo / ".claude" / "parsec.toml").rename(e.repo / ".claude" / "off.toml")
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
     assert code == 64 and "run setup first" in out
+    assert run(e, "doctor")[0] == 64                            # 2026-09-22 review: the table printed "config:" and exited 0
     (e.repo / ".claude" / "off.toml").rename(e.repo / ".claude" / "parsec.toml")
+    (e.repo / "AGENTS.md").rename(e.repo / "A.md")
+    code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
+    assert code == 64 and "rubric file not found" in out        # 2026-09-22 review: a missing rubric file only warned
+    (e.repo / "A.md").rename(e.repo / "AGENTS.md")
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
     assert code == 0 and "2 of 2 sections found" in out and "tier default" in out, out
     assert "tier fast" in run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x", "--fast")[1]
     (e.repo / "AGENTS.md").write_text("# Rules\n\n## Lua style (renamed)\n\n## Git\n", encoding="utf-8")
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
     assert code == 64 and 'section not found: "Lua style"' in out and not (e.feat / "rounds").exists()
-    e.mp.setenv("FAKE_LOGIN", "Not logged in")
-    assert run(e, "doctor", "--lane", "kimi", "--kind", "design", "--feature", "09-22-x")[0] == 64
     (e.repo / "AGENTS.md").write_text("# Rules\n\n## Lua style\n\n## Git\n", encoding="utf-8")
+    e.mp.setenv("FAKE_LOGIN", "Not logged in")
     assert run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")[0] == 64
     e.mp.delenv("FAKE_LOGIN")
+    conf = e.tmp / "kimi-home" / "config.toml"
+    conf.write_text('default_effort = "high"\n', encoding="utf-8")
+    code, out = run(e, "doctor", "--lane", "kimi", "--kind", "design", "--feature", "09-22-x")
+    assert code == 64 and "not in the lane home" in out          # 2026-09-22 review: the Kimi line passed for another reason
+    conf.write_text('[models."kimi-code/k3"]\ndefault_effort = "high"\n', encoding="utf-8")
+    assert run(e, "doctor", "--lane", "kimi", "--kind", "design", "--feature", "09-22-x")[0] == 0
+    code, out = run(e, "doctor", "--lane", "nope", "--kind", "design", "--feature", "09-22-x")
+    assert code == 64 and "not a lane or a seat" in out          # 2026-09-22 review: a typo raised KeyError
     bad = e.tmp / "bad-lanes.toml"
     bad.write_text('[astra]\nmodel = "gpt-6-astra"\neffort = "high"\ncommand = ["no-such-program-xyz"]\n', encoding="utf-8")
     e.mp.setattr(parsec, "LANES_FILE", bad)
@@ -431,8 +456,14 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "2", "--lane", "fable",
                     "--brief", str(e.brief))                   # 2026-09-22 16:45: two panel rounds died wanting a range
     assert code == 0 and e.head.startswith(json.loads((e.feat / "rounds" / "panel-r2-fable" / "pending.json").read_text(encoding="utf-8"))["head"])
+    code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "2", "--lane", "fable", "--brief", str(e.brief))
+    assert code == 64 and "never collected" in out              # 2026-09-22: five Kimi rounds collided on one folder; the refusal held
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--lane", "fable", "--brief", str(e.brief))
     assert code == 64 and "--head is required" in out
+    code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--brief", str(e.brief), "--head", e.head)
+    assert code == 0 and (e.feat / "rounds" / "design-r9-sol").is_dir()   # 2026-09-22 review: codex_lane was a key nothing read
+    code, out = run(e, "round", "prepare", "--feature", "panels/09-22-t", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
+    assert code == 0 and (e.repo / "docs" / "panels" / "09-22-t" / "ledger.md").is_file()   # the one folder the tool makes itself
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
@@ -465,23 +496,28 @@ def test_build_run_success_test(env):
     assert report.startswith("I made the edits.") and "agy exit 0 (recorded, never trusted)" in report
     assert "build task 01 gemini: ok" in e.ledger()
     assert b()[0] == 64                                        # a report already present without --again
+    code, out = b("--again")
+    assert code == 64 and "dirty before the build" in out      # 2026-09-22 review: a pre-dirty tree made the status test vacuous
+    clean = lambda: (git("checkout", "--", ".", cwd=co), git("clean", "-fdq", cwd=co))
+    clean()
     e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG + "soft-denying tool confirmation for RunCommand\n")
     code, out = b("--again")
     assert code == 65 and "FAILED: no soft-denied step" in out and (e.feat / "build" / "task-01-report.md.dead1").is_file()
     assert (e.feat / "build" / "task-01-agy.log.dead1").is_file() and not list(co.glob("AGY-TASK-BRIEF-*"))
+    clean()
     e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG)
     e.mp.setenv("FAKE_STDOUT", "")
     assert b("--again")[0] == 65                                # an empty final message despite exit 0
+    clean()
     e.mp.setenv("FAKE_STDOUT", "done\n")
     e.mp.delenv("FAKE_WRITE")
-    git("checkout", "--", ".", cwd=co)
-    (co / "new.txt").unlink()
     code, out = b("--again")
     assert code == 65 and "FAILED: git status non-empty" in out     # an empty diff is never done
     e.mp.setenv("FAKE_AGY_LOG", "Print mode: starting\n")
     e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
     code, out = b("--again")
     assert code == 65 and "FAILED: route line present: applying agent mode accept-edits" in out
+    clean()
     (co / "crlf.txt").write_bytes(b"one\r\ntwo\r\n")
     git("add", "crlf.txt", cwd=co)
     git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "crlf", cwd=co)

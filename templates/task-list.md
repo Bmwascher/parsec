@@ -1,6 +1,6 @@
 # Task list template
 
-The task list (`tasks.md`) is what gets built. Whoever writes it, the `author` or the driving session, follows this file. A zero-judgment lane transcribes each task, so every task holds the FULL code, test and implementation, and decides nothing.
+The task list (`tasks.md`) is what gets built. The `author` writes it to this file. A zero-judgment lane transcribes each task, so every task holds the FULL code, test and implementation, and decides nothing.
 
 ## Header
 
@@ -31,7 +31,7 @@ Each task is a `## Task N: <name>` section holding:
   4. Run the tests and see them pass (green); the whole suite, output clean.
   5. Commit, as the LAST step, after a branch check, because phase chats share a checkout. The commit message is given in full.
 
-The test and commit steps belong to the session, not the transcribing lane; they are written here so the record is complete.
+The commit step belongs to the session. The test steps belong to the session on the Gemini lane (print mode runs no command) and to the `implementer` on its lane; they are written here so the record is complete.
 
 ## The three norms, written where they act
 

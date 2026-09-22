@@ -44,7 +44,7 @@ Nothing is built without one. When the task list exists, the driver asks for it,
 
 ## The pre-build debate
 
-One debate over both files, `--kind design`, run by `debate` on the cross-vendor lane. The `author` (or the session) answers each finding by editing the files or refuting with evidence. When the debate ends, the driver posts what it changed and:
+One debate over both files, `--kind design`, run by `debate` on the cross-vendor lane. The `author`, resumed, answers each finding by editing the files or refuting with evidence. When the debate ends, the driver posts what it changed and:
 
 - continues to `build` if a go is on record and the debate did not change what the feature does;
 - pauses and asks when no go is on record, or when the debate changed what the feature does (a new behaviour, a dropped one, a different interface).
@@ -55,7 +55,7 @@ Shapes in `templates/ledger.md`: the head (the base is written here, once, and n
 
 ## Running the tool
 
-The tool is `${CLAUDE_PLUGIN_ROOT}/tools/parsec.py`, run with `python`, always by that path. `design` itself runs none of its subcommands; `debate` runs the rounds and `build` runs `verify`.
+The tool is `${CLAUDE_PLUGIN_ROOT}/tools/parsec.py`, run with `python`. `design` itself runs none of its subcommands; `debate` runs the rounds and `build` runs `verify`.
 
 ## Known clashes, not fixed
 

@@ -4,7 +4,7 @@ Every brief has six parts, in this order, and every path in it is relative to th
 
 ## 1. Role
 
-One paragraph: which lane this is, what is being reviewed, and that the round is non-interactive.
+One paragraph: which lane this is (a panel's shared brief names every lane), what is being reviewed, and that the round is non-interactive.
 
 ## 2. Task
 

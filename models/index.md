@@ -1,6 +1,6 @@
 # The models set
 
-One file per CLI and per model, holding only what a driver acts on, each fact dated or marked UNMEASURED. CLI facts the tool enforces (the flags before `resume`, the disable flags, the cleared variable, never `--last`) are NOT here: each lives as a dated comment beside the argument list in `tools/parsec.py` and in its test's name.
+One file per CLI and per model, holding only what a driver acts on, each fact dated or marked UNMEASURED. CLI facts the tool enforces (the flags before `resume`, the disable flags, the cleared variable, never `--last`) are NOT here: each lives as a dated comment beside the argument list in `tools/parsec.py` and in a test.
 
 ## Seats
 
@@ -20,12 +20,12 @@ One file per CLI and per model, holding only what a driver acts on, each fact da
 
 - Ground every claim in what was run: a command, a file, a line. A claim without that is struck from a brief and from a report.
 - State what is out of scope, in the brief and in the reply.
-- A fresh context reviews better than self-critique: the last look is a fresh agent, and a confirming question resumes it only about its own finding.
+- A fresh context reviews better than self-critique (a design choice, UNMEASURED): the last look is a fresh agent, and a confirming question resumes it only about its own finding.
 - The brief shape is `templates/brief.md`; nothing here restates it.
 
 ## Citations
 
-Every note cites a heading or a date, never `path:line`: six such citations went stale in the old notes (old item 69).
+Every note cites a heading or a date, never `path:line`: six such citations went stale in the old notes (old item 69, 2026-09-21).
 
 ## Swapping a model
 

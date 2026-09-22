@@ -1,6 +1,6 @@
 # codex CLI
 
-What a driver acts on. Version in use when written: codex-cli 0.153.4 (2026-09-21).
+What a driver acts on. Version in use: codex-cli 0.156.0 (2026-09-22; written on 0.153.4, 2026-09-21).
 
 ## The lost-rollout error is never transient
 

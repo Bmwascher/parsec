@@ -2,9 +2,27 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.2 (2026-09-22)
+
+Fifteen reviews of the plugin found these the same day. The tool now reads the config's codex lane, the doctor fails without a config, and the build guards hold under every git setting.
+
+### Tool
+
+- `round run` and `round prepare` take the config's `codex_lane` without `--lane`; the setup skill named the key and nothing read it.
+- The line endings check compares the work tree before and after the build, so it holds under `autocrlf` and on renamed or quoted paths.
+- `build run` refuses a dirty checkout and an empty `--head`, and a capped run names its reason.
+- The doctor exits 64 without a config, prints a login line for every lane and runs one update per CLI. A rubric file that does not exist fails the pre-flight.
+- `--feature` cannot leave the docs root; `round close` matches whole worktree names; the round's record outlives the ledger line.
+- The quota read has a deadline and always ends its child; an unknown `doctor --lane` exits 64; an Opus last look carries the Opus name.
+
+### Prose
+
+- The author, never the session, writes and answers; skill command examples carry every necessary argument; brief rules have one home.
+- Every cited model-note line carries its date.
+
 ## v0.1.1 (2026-09-22)
 
-The seats and lanes settled by the day's measurements, and four guards on the build lane, each named after a failure seen that day.
+The seats and lanes settled by the day's measurements, and six guards, each named after a failure seen that day.
 
 ### Seats and lanes
 

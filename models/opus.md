@@ -11,7 +11,7 @@ Claude Code below 2.1.280 rejects the id with a 400 that names the version (seen
 ## Measured here, on Opus 5
 
 - **Implementer, Task 2 of the comparison, 2026-09-22, effort `medium`**: byte-identical to the reference edit in 370 s over 8 turns (Sonnet 5 took 48 turns for the same result), with its own fail-first step and the sharpest report; list cost under $0.89 merged with the driver's turn. Brandon chose it over Sonnet 5 at `medium` (09:53 CDT).
-- Untested on the broken base (a checkout one commit too early), where Sonnet blocked in 53 s.
+- Untested on the broken base (a checkout one commit too early), where Sonnet blocked in 53 s (2026-09-22).
 - Headless `claude -p --output-format stream-json`: the result event's `modelUsage` is the spend, subagent included; per-turn `output_tokens` is message-start and useless (2026-09-22).
 
 ## Measured here, on Opus 5.5

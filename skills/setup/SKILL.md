@@ -32,7 +32,7 @@ docs_root = "dev/docs/parsec"
 worktrees = "C:/Users/Brandon/Documents/KitnDev/_worktrees"
 
 [reviewer]                       # optional; these are the defaults
-codex_lane        = "sol"        # or "astra", the alternate, by name at any time
+codex_lane        = "sol"        # or "astra"; the lane a round takes when --lane is omitted
 kimi_substitution = "ask"        # or "approved"
 
 [[context]]                      # read first: the reviewer's rubric

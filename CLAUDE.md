@@ -7,6 +7,6 @@ Gotchas for this repo only. The design, with every dated failure behind every ru
 - **The family git guard** denies a commit message that merely names a flag such as `-a` (old item 79). Stage by explicit path.
 - **Skills name the tool by `${CLAUDE_PLUGIN_ROOT}/tools/parsec.py`**, never a bare path and never by searching (old item 58: the oldest of ten cached copies ran).
 - **Budgets are tests.** `evals/tests/test_budget.py` counts the tool (1,000 lines), the tests (1,500), the frozen checkers (522) and the prose (10,000 words, 1,600 per skill). An addition that would pass a budget deletes something first.
-- **Frozen copies.** The three checkers, their two tests, `lanes/kimi-reviewer.md` and `LICENSE` are byte-for-byte copies from the old repo; their blob ids are in the rethink's step 5. Do not tidy them.
+- **Frozen copies.** The two checkers, their allow list, their two tests, `lanes/kimi-reviewer.md` and `LICENSE` are byte-for-byte copies from the old repo; their blob ids are in the rethink's step 5. Do not tidy them.
 - **The refuted-sentence rule** is rule 6 of `templates/driver-rules.md`.
 - Python 3.12 and PowerShell 7 only.

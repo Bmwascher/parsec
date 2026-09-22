@@ -19,7 +19,7 @@ if env.get("FAKE_CHILD_PID_FILE"):                       # a grandchild that mus
     child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(600)"])
     Path(env["FAKE_CHILD_PID_FILE"]).write_text(str(child.pid))
 if env.get("FAKE_WRITE"):                                # a reviewer that writes into the tree
-    Path(env["FAKE_WRITE"]).write_text("written by the reviewer\n", encoding="utf-8")
+    Path(env["FAKE_WRITE"]).write_bytes(b"written by the reviewer\n")   # bytes: write_text made CRLF on Windows (2026-09-22 review)
 if "--log-file" in argv:                                 # agy: the log the success test reads
     Path(argv[argv.index("--log-file") + 1]).write_text(env.get("FAKE_AGY_LOG", ""), encoding="utf-8")
 time.sleep(float(env.get("FAKE_SLEEP", "0")))
