@@ -2,6 +2,16 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.3 (2026-09-22)
+
+The findings of the second and third rounds, fixed the same evening.
+
+- `round run` refuses a config `codex_lane` that is not a lane before it writes anything.
+- The build's status checks exclude only the round, build and panel folders under the docs root, absolute or relative.
+- A file that the work tree lost does not count as a flip; a failed `ls-files` now fails the check.
+- The quota probe stops at the first answer and ends its process tree; the doctor names every lane an update serves.
+- The pre-flight's rubric line counts rubric files, not sections. Tests for each, and for the record before the ledger line.
+
 ## v0.1.2 (2026-09-22)
 
 Fifteen reviews of the plugin found these the same day. The tool now reads the config's codex lane, the doctor fails without a config, and the build guards hold under every git setting.
