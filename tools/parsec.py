@@ -264,10 +264,8 @@ def write_package(root, args, cfg, primary, fdir, kind):
                                     encoding="utf-8", newline="\n")
     subject = {}
     if kind == "design":
-        for name in ("spec.md", "tasks.md"):
+        for name in ("spec.md", "tasks.md"):     # both checked in prepare, before anything is written
             src = fdir / name
-            if not src.is_file():
-                raise Exit(64, f"design round without {src}")
             shutil.copyfile(src, pkg / name)
             subject[name[:-3]] = sha256(src)
     elif kind != "panel":
