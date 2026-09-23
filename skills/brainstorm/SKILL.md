@@ -1,9 +1,9 @@
 ---
-name: design
+name: brainstorm
 description: Use when Brandon says "brainstorm", "design" or "plan" a feature, or hands over a phase or handoff to build. The conversation and the orchestration from a request to an approved spec, an approved task list, a recorded go and one pre-build debate. Not for a bug fix that needs no design (that is bounded work, see the classification).
 ---
 
-# design
+# brainstorm
 
 Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-rules.md`; read it first. The FORMAT of the two files is not here: it is in `templates/spec.md` and `templates/task-list.md`, read by whoever writes.
 
@@ -55,9 +55,9 @@ Shapes in `templates/ledger.md`: the head (the base is written here, once, and n
 
 ## Running the tool
 
-The tool is `${CLAUDE_PLUGIN_ROOT}/tools/parsec.py`, run with `python`. `design` itself runs none of its subcommands; `debate` runs the rounds and `build` runs `verify`.
+The tool is `${CLAUDE_PLUGIN_ROOT}/tools/parsec.py`, run with `python`. `brainstorm` itself runs none of its subcommands; `debate` runs the rounds and `build` runs `verify`.
 
 ## Known clashes, not fixed
 
 - "Spec" means the design document here and a busted test file in the projects. Noted, not renamed.
-- A fence in a task must hold a complete chunk; a bare backticks-only line inside fenced Lua closes it, so the `author` indents such lines. `design` never promises a clean run of the project's plan linter, which ignores the project's luacheck config (measured 2026-09-21).
+- A fence in a task must hold a complete chunk; a bare backticks-only line inside fenced Lua closes it, so the `author` indents such lines. `brainstorm` never promises a clean run of the project's plan linter, which ignores the project's luacheck config (measured 2026-09-21).

@@ -1,7 +1,7 @@
 {
   "name": "parsec",
   "metadata": {
-    "description": "Design, build and cross-vendor debate for Claude Code, in one lean plugin."
+    "description": "Brainstorm, build and cross-vendor debate for Claude Code, in one lean plugin."
   },
   "owner": {
     "name": "Brandon Wascher",

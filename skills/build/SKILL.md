@@ -9,9 +9,9 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 
 ## Start
 
-- Refuse to start without a recorded go (`design`).
+- Refuse to start without a recorded go (`brainstorm`).
 - Run `verify --feature <folder>`: MATCH and MATCH (CLOSED ON MINOR) continue; MATCH (DEGRADED PASS) and CHANGED stop and ask Brandon; NO-PASS-YET refuses.
-- Read the base from the ledger head (written once, by `design`). A fresh worktree lacks the project's gitignored hook inputs (KitnEssentials: `dev\githooks\upstream-names.local.sh`); copy them before the first commit (2026-09-22). Work in the checkout the session was handed, or make one at `<worktrees>\<Project>-<branch>` and record in the ledger that `build` made it. Only a worktree `build` made is ever removed by it, and never under stop and report.
+- Read the base from the ledger head (written once, by `brainstorm`). A fresh worktree lacks the project's gitignored hook inputs (KitnEssentials: `dev\githooks\upstream-names.local.sh`); copy them before the first commit (2026-09-22). Work in the checkout the session was handed, or make one at `<worktrees>\<Project>-<branch>` and record in the ledger that `build` made it. Only a worktree `build` made is ever removed by it, and never under stop and report.
 
 ## Bounded work
 

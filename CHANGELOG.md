@@ -2,6 +2,13 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.5 (2026-09-22)
+
+The design skill is now the brainstorm skill. Say "brainstorm" to start a feature.
+
+- The skill folder, its name and every reference to it use `brainstorm`.
+- The review kind `design` keeps its name, so round folders and commands do not change.
+
 ## v0.1.4 (2026-09-22)
 
 The fourth round's findings. A build in the main checkout works when git tracks the docs root.

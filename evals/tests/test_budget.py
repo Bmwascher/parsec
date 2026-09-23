@@ -3,7 +3,7 @@ is missing). Fails when a number passes its budget OR when any expected input is
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-SKILLS = ["design", "build", "debate", "setup", "panel"]
+SKILLS = ["brainstorm", "build", "debate", "setup", "panel"]
 PROSE = [f"skills/{s}/SKILL.md" for s in SKILLS] + [
     "templates/driver-rules.md", "templates/spec.md", "templates/task-list.md", "templates/brief.md",
     "templates/brief-design.md", "templates/brief-diff.md", "templates/brief-panel.md", "templates/ledger.md",

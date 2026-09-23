@@ -2,11 +2,11 @@
 
 # parsec
 
-**Design, build and cross-vendor review for Claude Code, in one lean plugin.**
+**Brainstorm, build and cross-vendor review for Claude Code, in one lean plugin.**
 
 An Opus author writes the plan. A fast Gemini lane types the code. Models from three different companies check the work at the moments where a mistake gets expensive.
 
-![version](https://img.shields.io/badge/version-0.1.4-4c6ef5)
+![version](https://img.shields.io/badge/version-0.1.5-4c6ef5)
 ![python](https://img.shields.io/badge/python-3.12-3776ab)
 ![platform](https://img.shields.io/badge/platform-Windows-0078d4)
 ![license](https://img.shields.io/badge/license-MIT-2f9e44)
@@ -38,7 +38,7 @@ An Opus author writes the plan. A fast Gemini lane types the code. Models from t
 
 parsec is a [Claude Code](https://claude.com/claude-code) plugin that takes a feature from a rough idea to reviewed, committed code. It does three things:
 
-1. **Design.** It interviews you, then has an Opus author write a spec and a step-by-step task list with the real code in every step.
+1. **Brainstorm.** It interviews you, then has an Opus author write a spec and a step-by-step task list with the real code in every step.
 2. **Build.** A Gemini lane copies each task into the codebase. The session runs the tests, checks the diff and makes the commit.
 3. **Review.** At each point where you are about to commit to something, a model from a *different company* reads the work cold and argues with it until the findings are settled.
 
@@ -104,8 +104,8 @@ A **seat** is a job. A **lane** is a model the tool launches from the command li
 | Seat or lane | Model | Job |
 |---|---|---|
 | `author` | Claude Opus 5.5, high effort | Writes the spec and task list; answers design findings with an edit or cited evidence |
-| **Gemini lane** | Gemini 3.8 Flash (via `agy`) | Types each task exactly as written. Decides nothing. |
-| `implementer` | Claude Opus 5.5, medium effort | Builds what Gemini can't: deletes, renames, moves, and any task Gemini got wrong once |
+| **Implementer** (Gemini lane) | Gemini 3.8 Flash (via `agy`) | Builds every task, typing its code exactly as written. Decides nothing. |
+| **Backup implementer** (`implementer` agent) | Claude Opus 5.5, medium effort | Builds what Gemini can't: deletes, renames, moves, any task Gemini got wrong once, and every task when `agy` is missing |
 | `reviewer-opus` | Claude Opus 5.5, high effort | The pre-review at the start of the diff gate |
 | **Sol lane** (default) | GPT-6 Sol (via `codex`) | The cross-vendor reviewer for design and diff debates |
 | **Astra lane** | GPT-6 Astra (via `codex`) | The alternate cross-vendor reviewer, used by name |
@@ -129,7 +129,7 @@ A **seat** is a job. A **lane** is a model the tool launches from the command li
 | Git | Worktrees, diffs, commits | Yes |
 | PowerShell 7 | Every shell step (never Windows PowerShell 5.1) | Yes, on Windows |
 | `codex` CLI, logged in | The Sol and Astra lanes | Yes, for cross-vendor review |
-| `agy` CLI, logged in | The Gemini build lane | No. Without it, every task goes to the Opus `implementer`. |
+| `agy` CLI, logged in | The implementer (Gemini lane) | No. Without it, every task goes to the backup implementer. |
 | `kimi` CLI, logged in | The Kimi backup lane | No |
 
 ### Add the plugin
@@ -216,7 +216,7 @@ You talk to it in plain words. The skills trigger on what you say.
 
 | You say | What runs |
 |---|---|
-| "Design a keybind export feature" / "brainstorm" / "plan" | `design`: sort the request, interview, spec, task list |
+| "Brainstorm a keybind export feature" / "plan" | `brainstorm`: sort the request, interview, spec, task list |
 | "Go" | Records the go; the design debate runs, then `build` |
 | "Fix the nil check in the timer" | Bounded work: build, commit, then the diff gate |
 | "Get a cross-vendor review of this branch" | `debate` on the files or branch you name |
@@ -379,7 +379,7 @@ Each rail exists because its failure happened at least once. The dates live in t
 - `build run` refuses any checkout other than the one named, refuses a checkout with uncommitted changes, and refuses a run whose base isn't the expected commit.
 - It fails a task that flipped a file's line endings.
 - It reads the task's success test, never Gemini's exit code. Gemini has reported success on runs that failed.
-- A task that deletes, renames or moves a file goes straight to the `implementer`, because Gemini's print mode has no delete tool.
+- A task that deletes, renames or moves a file goes straight to the backup implementer, because Gemini's print mode has no delete tool.
 - A second failed attempt at the same task, for any reason, goes to you.
 
 **Worktrees**
@@ -440,9 +440,9 @@ The plugin cache is keyed on the version string, so a missed bump means a stale 
 ```text
 parsec/
 ├── .claude-plugin/     plugin.json and marketplace.json
-├── agents/             the four Claude seats: author, implementer, reviewer-opus, reviewer-fable
+├── agents/             the four Claude seats: author, implementer (the backup), reviewer-opus, reviewer-fable
 ├── commands/           /parsec:doctor
-├── skills/             design, build, debate, panel, setup
+├── skills/             brainstorm, build, debate, panel, setup
 ├── templates/          spec, task list, ledger, briefs, driver rules, implementer contract
 ├── models/             dated notes on each model and CLI
 ├── lanes/              the Kimi reviewer's agent file
