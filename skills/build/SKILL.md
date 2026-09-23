@@ -43,7 +43,7 @@ A task whose CODE is wrong is the author's defect. Gemini never reports blocked 
 2. **The diff matches**: check the base first. The checkout must sit at the previous task's commit and every file the task consumes must exist (the 2026-09-22 wrong-base run had transcribed its edits exactly on a checkout one commit too early). A wrong base is the session's to fix before it dispatches the task again; that redispatch still counts.
 3. **The base is right**: the task is wrong. The `author`, resumed, amends it; `verify --feature <folder> --record-amendment "<reason>"` records it; the diff-gate brief lists it. No extra round unless the amendment changes something another task consumes; then Brandon is asked.
 
-A second failed dispatch of the same task, for ANY reason, amendment cycles included, goes to Brandon. A debate pauses after five rounds; the build loop's stop is this rule.
+A second failed dispatch of the same task, for ANY reason, amendment cycles included, goes to Brandon. A debate pauses after five rounds of one lane and kind; the build loop's stop is this rule.
 
 ## After a compaction
 

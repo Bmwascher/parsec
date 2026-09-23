@@ -498,6 +498,8 @@ def test_inputs_and_preflight(env):
     assert run(e, "round", "collect", "--feature", "panels/09-22-typo", "--kind", "panel", "--round", "1", "--lane", "fable")[0] == 64
     assert run(e, "round", "close", "--feature", "panels/09-22-typo")[0] == 64
     assert run(e, "round", "prepare", "--feature", "panels/09-22-typo", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.tmp / "nope.md"))[0] == 64
+    for bad in (["--file", str(e.tmp / "nope.md")], ["--head", "0" * 12], ["--kind", "design", "--head", e.head]):   # 2026-09-23 pre-review: a bad --file, --head or kind left one too
+        assert run(e, "round", "prepare", "--feature", "panels/09-22-typo", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief), *bad)[0] == 64
     (e.tmp / "gone.toml").write_text('[sol]\nmodel = "m"\neffort = "high"\ncommand = ["parsec-no-such-cli"]\n', encoding="utf-8")
     e.mp.setattr(parsec, "LANES_FILE", e.tmp / "gone.toml")
     code, out = run(e, "round", "run", "--feature", "panels/09-22-typo", "--kind", "panel", "--round", "1", "--lane", "sol", "--brief", str(e.brief))

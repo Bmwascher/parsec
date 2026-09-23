@@ -278,12 +278,7 @@ def write_package(root, args, cfg, primary, fdir, kind):
             if r.returncode:
                 raise Exit(64, f"git {cmd[0]} {rng} failed: {r.stderr.decode('utf-8', 'replace')[-200:]}")
             (pkg / name).write_bytes(r.stdout)
-    seen = set()
-    for k, f in enumerate(args.file or [], 1):
-        src = Path(f).resolve()
-        if src in seen or not src.is_file():
-            raise Exit(64, f"--file {f}: missing, or given twice")
-        seen.add(src)
+    for k, src in enumerate([Path(f).resolve() for f in args.file or []], 1):   # checked in prepare, before anything is written
         (pkg / "evidence").mkdir(exist_ok=True)
         shutil.copyfile(src, pkg / "evidence" / f"{k}-{src.name}")
     return subject, warnings
@@ -463,6 +458,13 @@ def prepare(args, launch):
         args.head = git_out(["rev-parse", "--short", "HEAD"], primary).strip()
     if not Path(args.brief).is_file():
         raise Exit(64, f"brief not found: {args.brief}")
+    files = [Path(f).resolve() for f in args.file or []]
+    if len(set(files)) < len(files) or not all(f.is_file() for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind)
+        raise Exit(64, f"--file {' '.join(args.file)}: missing, or given twice")
+    for c in filter(None, (args.base, args.head)):
+        git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary)
+    if args.kind == "design" and not all((fdir / n).is_file() for n in ("spec.md", "tasks.md")):
+        raise Exit(64, f"design round without spec.md and tasks.md in {fdir}")
     cli = args.lane in CLI_LANES
     if cli:
         program(row := lane_row(args.lane))      # before anything is written (2026-09-23 last look: a new panel's folder was)

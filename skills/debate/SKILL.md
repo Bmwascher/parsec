@@ -22,21 +22,27 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
   **Needs you:** F4, contested twice. I recommend option a.
 
   Critical 0 · Important 2 · Minor 1
+
   Round 1: F1 closed · F2 reopened narrower · F4 still open
 
   - **F2 · Important (reopened):** <finding>.
+
     → **Fix:** <what changes>.
   - **F4 · Important (still open):** <finding>.
+
     → **You decide** (see above).
   - **F5 · Minor:** <finding>.
+
     → **Refute:** <evidence in a few words>.
 
   **Next:** author edits, then round 3.
   ```
 
+  Every blank line in the shape is needed: a single line break renders as a space, which merges the lines.
+
   - The marker before the name: 🔴 FIX, 🟢 PASS, 🟡 ESCALATE or BLIND, ⚪ NONE or WROTE-FILES.
   - "Needs you" comes second and only when something waits on Brandon; leave it out otherwise.
-  - Findings keep the reviewer's own IDs, so they match `reply.md` and the next round's carry-over line, ordered by severity, then ID. A reopened or still-open finding says so in its bullet.
+  - Findings keep the reviewer's own IDs, so they match `reply.md` and the next round's "Round N" line, ordered by severity, then ID. A reply that gives no IDs is numbered F1, F2 and on in its own order, and the driver uses those numbers in every later round. A reopened or still-open finding says so in its bullet.
   - Every answer is **Fix** (what changes), **Refute** (the evidence in a few words) or **You decide**.
   - Only the verdict word is exact; the reviewer's own words stay in `reply.md`.
 - Collect a round whose tool was killed (`round collect`), then rerun it on its session asking only for the verdict.
