@@ -128,6 +128,8 @@ def test_codex_flags_before_resume(env):
     assert e.record("design", 2, "astra")["resumed"] is True
     code, out = rnd(e, 1, "sol", "design", "--fresh")
     assert "gpt-5.6-sol" in e.calls()[-1] and "resume" not in e.calls()[-1]
+    ctx = (e.wt / "_review" / "proj-09-22-x-design-sol" / ".parsec" / "context.md").read_text(encoding="utf-8")
+    assert ctx.splitlines()[2].startswith("- your lane, Sol: you may run read-only commands") and "(git show, git log, git grep; rg is not installed)" in ctx   # 2026-09-23 audit: a driver's command ban cost a Sol round
 
 
 # row 2: the Kimi argument list and child environment (old item 17; the dead normal-home login, 2026-09-21)
@@ -146,6 +148,7 @@ def test_kimi_arguments_and_home(env):
     child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
     assert child["KIMI_CODE_HOME"] == str(e.tmp / "kimi-home")
     assert e.record("design", 1, "kimi")["session"] == "session_2fc45d80-9dc5-4b9b-9561-65f39c787383"
+    assert "- your lane, Kimi: read with your file tools only; you have no shell" in (e.wt / "_review" / "proj-09-22-x-design-kimi" / ".parsec" / "context.md").read_text(encoding="utf-8")   # lanes/kimi-reviewer.md disallows Bash
     code, out = rnd(e, 2, "kimi")
     a = e.calls()[-1]
     assert "--agent-file" not in a and a[a.index("--session") + 1] == "session_2fc45d80-9dc5-4b9b-9561-65f39c787383"
@@ -363,6 +366,8 @@ def test_verify_states(env):
     code, out = v("--record-amendment", "fix task for a gate finding")
     assert code == 0 and "amendment 1 recorded" in out and v()[1].strip() == "MATCH (DEGRADED PASS)"   # the flag carries
     assert (e.feat / "rounds" / "amendment-1.json").is_file()
+    assert rnd(e, 1, "sol", "diff")[0] == 0 and set(e.record("diff", 1, "sol")["subject"]) == {"spec", "tasks"}   # Brandon, 2026-09-23 (A+): every gate seat checks the diff against the approved design
+    assert "- amendment 1: fix task for a gate finding" in (e.wt / "_review" / "proj-09-22-x-diff-sol" / ".parsec" / "context.md").read_text(encoding="utf-8")
     e.mp.setenv("FAKE_REPLY", "VERDICT: FIX\n")
     rnd(e, 3)
     assert v()[1].strip() == "NO-PASS-YET" and v("--record-amendment", "after an unclosed FIX")[0] == 64
@@ -490,10 +495,19 @@ def test_inputs_and_preflight(env):
     assert (folder / "pending.json").is_file() and git("rev-parse", "HEAD", cwd=tree) == e.head and f"code root: {tree}" in out
     ctx = (folder / ".parsec" / "context.md").read_text(encoding="utf-8")
     assert f"brief: {folder / '.parsec' / 'brief.md'}" in out and "evidence/1-reply-r1.md is a copy of reply-r1.md" in ctx and str(extra) not in ctx
+    assert ctx.splitlines()[2].startswith("- your lane, Opus: read with your file tools only") and (folder / ".parsec" / "tasks.md").is_file()   # 2026-09-23 audit: Fable was told it had a shell
+    assert "- design: .parsec/spec.md and .parsec/tasks.md, the approved design\n- amendments: none" in ctx   # Brandon, 2026-09-23 (A+)
+    bounded = e.repo / "docs" / "09-22-b"                           # bounded work has no design to pack
+    bounded.mkdir()
+    (bounded / "ledger.md").write_text("# Ledger\n", encoding="utf-8")
+    assert run(e, "round", "prepare", "--feature", "09-22-b", "--kind", "diff", "--round", "1", "--lane", "fable", "--brief", str(e.brief), "--head", e.head, "--base", e.base)[0] == 0
+    pkg = bounded / "rounds" / "diff-r1-fable" / ".parsec"
+    assert "- design:" not in (pkg / "context.md").read_text(encoding="utf-8") and not (pkg / "spec.md").exists()
     (folder / "reply.md").write_text("report\n\nVERDICT: PASS\n", encoding="utf-8")
     code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")
     r = e.record("prereview", 1, "opus")
     assert code == 0 and r["verdict"] == "PASS" and r["agent"] == "reviewer-opus" and r["model"].startswith("claude-opus") and not (folder / "pending.json").exists()
+    assert set(r["subject"]) == {"spec", "tasks"}
     assert "in-session agent" in out and r["degraded"] is None and "already collected" in run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")[1]
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "lastlook", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base)
     (e.feat / "rounds" / "lastlook-r1-opus" / "reply.md").write_text("VERDICT: PASS\n", encoding="utf-8")
@@ -507,6 +521,8 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable",
                     "--brief", str(e.brief))                   # 2026-09-22 16:45: two panel rounds died wanting a range
     assert code == 0 and e.head.startswith(json.loads((e.feat / "rounds" / "panel-r1-fable" / "pending.json").read_text(encoding="utf-8"))["head"])
+    fpkg = e.feat / "rounds" / "panel-r1-fable" / ".parsec"
+    assert "- your lane, Fable: read with your file tools only" in (fpkg / "context.md").read_text(encoding="utf-8") and not (fpkg / "spec.md").exists()   # a panel packs no design
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     assert code == 64 and "never collected" in out              # 2026-09-22: five Kimi rounds collided on one folder; the refusal held
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--lane", "fable", "--brief", str(e.brief))

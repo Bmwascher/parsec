@@ -31,6 +31,8 @@ KINDS = ("design", "prereview", "diff", "lastlook", "panel")
 CLI_LANES = ("astra", "sol", "kimi")
 AGENT_OF = {"opus": "reviewer-opus", "fable": "reviewer-fable"}
 VERDICTS = ("PASS", "FIX", "ESCALATE", "BLIND")
+SHELL_READS = "you may run read-only commands that read the tree or its history (git show, git log, git grep; rg is not installed); never a build, a test, a write or a fetch"   # 2026-09-23 audit: a driver's command ban cost a Sol round
+FILE_READS = "read with your file tools only; you have no shell; never a write or a fetch, except a seat's report path"   # Fable was told it had a shell; lanes/kimi-reviewer.md disallows Bash
 CODEX_FLAGS = ["exec", "--sandbox", "read-only",                     # 2026-07-24: a resumed round lost its sandbox and wrote
                "--disable", "plugins", "--disable", "apps",           # 2026-07-28: sources on the reviewer's machine steered a review
                "--disable", "memories",                               # 2026-08-12: observed on without it; free
@@ -283,17 +285,19 @@ def write_package(root, args, cfg, primary, fdir, kind):
     pkg.mkdir(parents=True)
     shutil.copyfile(args.brief, pkg / "brief.md")                          # the same bytes
     lines, warnings, _, _ = context_lines(cfg, primary, args.reference)
+    lines.insert(0, f"- your lane, {args.lane.capitalize()}: {SHELL_READS if args.lane in ('astra', 'sol') else FILE_READS}")
     ev = [(pkg / "evidence" / f"{k}-{src.name}", src) for k, src in enumerate([Path(f).resolve() for f in args.file or []], 1)]   # checked in prepare
     lines += [f"- evidence: .parsec/evidence/{dst.name} is a copy of {src.name}" for dst, src in ev]   # 2026-09-23: a reviewer looked for notes.md by its own name; never the path, which can name a lane
-    (pkg / "context.md").write_text("# Context\n\n" + ("\n".join(lines) or "(none configured)") + "\n",
-                                    encoding="utf-8", newline="\n")
     subject = {}
-    if kind == "design":
-        for name in ("spec.md", "tasks.md"):     # both checked in prepare, before anything is written
-            src = fdir / name
-            shutil.copyfile(src, pkg / name)
-            subject[name[:-3]] = sha256(src)
-    elif kind != "panel":
+    for name in (("spec.md", "tasks.md") if kind != "panel" else ()):   # a design round has both (prepare); a gate round packs the approved design when there is one (Brandon, 2026-09-23: A+)
+        if (fdir / name).is_file():
+            shutil.copyfile(fdir / name, pkg / name)
+            subject[name[:-3]] = sha256(fdir / name)
+    if subject and kind != "design":
+        lines.append(f"- design: {' and '.join(f'.parsec/{n}.md' for n in subject)}, the approved design")
+        lines += [f"- amendment {k}: {r['reason']}" for k, r in enumerate([r for r in records(fdir) if "reason" in r], 1)] or ["- amendments: none"]
+    (pkg / "context.md").write_text("# Context\n\n" + "\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    if kind in ("prereview", "diff", "lastlook"):
         rng = f"{args.base}..{args.head}"
         for name, cmd in (("commits.txt", ["log", "--oneline", rng]), ("stat.txt", ["diff", "--stat", rng]),
                           ("diff.patch", ["diff", "--no-color", "--no-ext-diff", rng])):
