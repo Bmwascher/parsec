@@ -470,11 +470,11 @@ def prepare(args, launch):
     warnings = []
     if args.round > 5:
         warnings.append(f"round {args.round}: past five rounds the skill asks Brandon (old item 24)")
+    nxt = 1 + max((r["round"] for r in records(fdir) if (r.get("kind"), r.get("lane")) == (args.kind, args.lane) and r.get("verdict") in VERDICTS), default=0)
+    if args.round != nxt:                        # 2026-09-22 KitnEssentials: a first diff round ran as r3 after design r1 and prereview r2, and a sixth round of the feature warned past five
+        raise Exit(64, f"round {args.round}: {args.lane}'s next {args.kind} round is {nxt}; each lane counts its own rounds of a kind from 1, and a round with no verdict reruns under its number")
     if folder.exists():
-        rec = folder / "record.json"
-        if rec.is_file() and read_json(rec).get("verdict") in VERDICTS:
-            raise Exit(64, f"{folder} already holds a completed verdict; a new round takes the next number")
-        if not rec.is_file() and (folder / "pending.json").is_file():
+        if not (folder / "record.json").is_file() and (folder / "pending.json").is_file():
             raise Exit(64, f"{folder} was never collected: run round collect first")
         dead_rename(folder)
     session = None

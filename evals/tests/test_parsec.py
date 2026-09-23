@@ -126,7 +126,7 @@ def test_codex_flags_before_resume(env):
     assert resumed[i + 1] == "01a0c9a2-0000-4000-8000-000000000001" and resumed[i + 2] == "-"
     assert all(f in resumed[:i] for f in ("--sandbox", "--disable", "-m", "--output-last-message", "service_tier=default"))
     assert e.record("design", 2, "astra")["resumed"] is True
-    code, out = rnd(e, 3, "sol", "design", "--fresh")
+    code, out = rnd(e, 1, "sol", "design", "--fresh")
     assert "gpt-5.6-sol" in e.calls()[-1] and "resume" not in e.calls()[-1]
 
 
@@ -183,7 +183,7 @@ def test_rerun_rule(env):
     a = e.calls()[-1]
     assert a[a.index("resume") + 1] == "01a0c9a2-0000-4000-8000-000000000001" and "--last" not in a
     code, out = rnd(e, 1)
-    assert code == 64 and "completed verdict" in out
+    assert code == 64 and "astra's next design round is 2" in out and rnd(e, 3, "kimi")[0] == 64   # 2026-09-22 KitnEssentials: a first round ran as r3
     e.mp.setenv("FAKE_STDOUT", "no header at all\n")
     code, out = rnd(e, 2, "astra", "design", "--fresh")
     assert e.record("design", 2, "astra")["session"] == "unknown"
@@ -263,13 +263,13 @@ def test_tree_reuse_after_writes(env):
     assert code == 66
     e.mp.delenv("FAKE_WRITE")
     ino = tree.stat().st_ctime_ns
-    rnd(e, 3)
+    rnd(e, 2)
     assert tree.is_dir() and (tree / "code.txt").read_text() == "one\ntwo\n" and tree.stat().st_ctime_ns == ino
     e.mp.setenv("FAKE_WRITE", str(tree / "left.txt"))          # an untracked leftover
-    code, out = rnd(e, 4)
+    code, out = rnd(e, 3)
     assert code == 66
     e.mp.delenv("FAKE_WRITE")
-    rnd(e, 5)
+    rnd(e, 3)
     assert tree.is_dir() and not (tree / "left.txt").exists() and tree.stat().st_ctime_ns != ino
     other = e.wt / "_review" / "proj-09-22-x-more-design-astra"
     other.mkdir()
@@ -450,34 +450,33 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable",
                     "--brief", str(e.brief), "--head", e.head, "--file", str(extra), "--file", str(extra))
     assert code == 64 and "twice" in out
-    code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "2", "--lane", "fable",
+    code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable",
                     "--brief", str(e.brief))                   # 2026-09-22 16:45: two panel rounds died wanting a range
-    assert code == 0 and e.head.startswith(json.loads((e.feat / "rounds" / "panel-r2-fable" / "pending.json").read_text(encoding="utf-8"))["head"])
-    code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "2", "--lane", "fable", "--brief", str(e.brief))
+    assert code == 0 and e.head.startswith(json.loads((e.feat / "rounds" / "panel-r1-fable" / "pending.json").read_text(encoding="utf-8"))["head"])
+    code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     assert code == 64 and "never collected" in out              # 2026-09-22: five Kimi rounds collided on one folder; the refusal held
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--lane", "fable", "--brief", str(e.brief))
     assert code == 64 and "--head is required" in out
     assert run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--brief", str(e.brief), "--head", e.head)[0] == 2
     conf = e.repo / ".claude" / "parsec.toml"
     conf.write_text(conf.read_text(encoding="utf-8") + '[reviewer]\ncodex_lane = "astra"\n', encoding="utf-8")
-    code, out = run(e, "round", "run", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--brief", str(e.brief), "--head", e.head)
-    assert code == 0 and e.record("design", 9, "astra")["lane"] == "astra"   # 2026-09-22 review: codex_lane was a key nothing read; r2 (Sol): run only, prepare needs its seat
+    code, out = run(e, "round", "run", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--brief", str(e.brief), "--head", e.head)
+    assert code == 0 and e.record("design", 1, "astra")["lane"] == "astra"   # 2026-09-22 review: codex_lane was a key nothing read; r2 (Sol): run only, prepare needs its seat
     assert run(e, "round", "close", "--feature", "09-22-x", "--kind", "d.sign")[0] == 2   # r2 (Sol): a free string reached the name pattern
-    run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "3", "--lane", "fable", "--brief", str(e.brief))
-    assert run(e, "round", "collect", "--feature", "09-22-x", "--kind", "panel", "--round", "3", "--lane", "fable")[0] == 65   # no reply yet: NONE
-    rnd(e, 7, "kimi")
-    seven = e.feat / "rounds" / "design-r7-kimi"                  # a killed run, its tree closed by hand, then a manual collect
-    (seven / "pending.json").write_text(json.dumps({**e.record("design", 7, "kimi"), "worktree": str(e.tmp / "gone")}), encoding="utf-8")
+    assert run(e, "round", "collect", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable")[0] == 65   # no reply yet: NONE
+    rnd(e, 1, "kimi")
+    seven = e.feat / "rounds" / "design-r1-kimi"                  # a killed run, its tree closed by hand, then a manual collect
+    (seven / "pending.json").write_text(json.dumps({**e.record("design", 1, "kimi"), "worktree": str(e.tmp / "gone")}), encoding="utf-8")
     (seven / "record.json").unlink()
     (seven / "reply.md").write_text("VERDICT: PASS\n", encoding="utf-8")
-    code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "7", "--lane", "kimi")
-    assert code == 65 and e.record("design", 7, "kimi")["verdict"] == "NONE" and "worktree missing" in out   # r2 (Sol): no PASS without the tree
-    (seven / "pending.json").write_text(json.dumps({**e.record("design", 7, "kimi"), "worktree": None}), encoding="utf-8")
+    code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "kimi")
+    assert code == 65 and e.record("design", 1, "kimi")["verdict"] == "NONE" and "worktree missing" in out   # r2 (Sol): no PASS without the tree
+    (seven / "pending.json").write_text(json.dumps({**e.record("design", 1, "kimi"), "worktree": None}), encoding="utf-8")
     keep = parsec.ledger_line
     e.mp.setattr(parsec, "ledger_line", lambda *a: 1 / 0)          # a stop between the record and the ledger line
     with pytest.raises(ZeroDivisionError):
-        run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "7", "--lane", "kimi")
-    assert not (seven / "pending.json").exists() and e.record("design", 7, "kimi")["verdict"] == "PASS"   # r3 (Sol): no replay after the record
+        run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "kimi")
+    assert not (seven / "pending.json").exists() and e.record("design", 1, "kimi")["verdict"] == "PASS"   # r3 (Sol): no replay after the record
     e.mp.setattr(parsec, "ledger_line", keep)
     conf.write_text(conf.read_text(encoding="utf-8").replace('"astra"', '"opus"'), encoding="utf-8")
     code, out = run(e, "round", "run", "--feature", "panels/09-22-bad", "--kind", "panel", "--round", "1", "--brief", str(e.brief))

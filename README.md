@@ -8,7 +8,7 @@
 An Opus author writes the plan. A fast Gemini implementer types the code.<br>
 Models from three different companies check the work at the moments where a mistake gets expensive.
 
-![version](https://img.shields.io/badge/version-0.1.6-4c6ef5?style=flat-square)
+![version](https://img.shields.io/badge/version-0.1.7-4c6ef5?style=flat-square)
 ![python](https://img.shields.io/badge/python-3.12-3776ab?style=flat-square)
 ![platform](https://img.shields.io/badge/platform-Windows-0078d4?style=flat-square)
 ![license](https://img.shields.io/badge/license-MIT-2f9e44?style=flat-square)

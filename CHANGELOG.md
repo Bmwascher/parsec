@@ -2,6 +2,13 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.7 (2026-09-22)
+
+Each lane now counts its own rounds of a kind from 1. A first diff round is round 1, not the next number of the feature.
+
+- `round run` and `round prepare` refuse a round number that is not the next one for that lane and kind, and name the correct number.
+- A round with no verdict runs again under the same number.
+
 ## v0.1.6 (2026-09-22)
 
 The Gemini lane is now the implementer, and the Opus agent is the backup implementer.
