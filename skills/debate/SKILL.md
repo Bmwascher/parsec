@@ -13,7 +13,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 - Write the brief as `templates/brief.md` says, with the kind's insert.
 - Start the round with Monitor, `timeout_ms` 1800000 (Monitor kills the script at expiry; the tool's own cap is 28 minutes), named before launch from the driver rules' list: `round run` for a CLI lane (`--lane` omitted: the config's `codex_lane`); `round prepare`, then the reviewer agent, then `round collect --agent-id <its id>` for opus or fable. `round prepare` prints the brief path, the code root (a review worktree at `--head`, for every lane), the report path and the task name for the dispatch.
 - Pass `--fast` only on Brandon's explicit word for THAT debate ("use fast"), never from a config or an earlier debate.
-- Pass `--reference <subfolder>` when the spec declares a port or touches a module that has a reference.
+- Pass `--reference <subfolder>` when the spec declares a port or touches a module that has a reference; a reference outside the reference-code folder goes in as `--file` evidence (field phase 6, 2026-09-23).
 - Pass earlier briefs and replies with `--file` to a lane that joins mid-debate; its own rounds start at 1. The brief names each reply's lane and round.
 - Post the summary after every round (every kind, a PASS included, and to a delegator too), without waiting for Brandon, as rendered Markdown in this shape. Never put it inside a code block: a fenced table wraps into unreadable pipes on his phone (2026-09-23).
 
