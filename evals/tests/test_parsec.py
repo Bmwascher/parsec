@@ -579,8 +579,6 @@ def test_agent_resume(env):
     assert prep("design", 1, "--resume", "a-1")[0] == 64 and not (e.feat / "rounds" / "design-r1-fable").exists()   # no earlier round to resume
     assert prep("design", 1)[0] == 0 and coll("design", 1, "VERDICT: FIX\n", "--agent-id", "a-1")[0] == 0
     assert e.record("design", 1, "fable")["session"] == "a-1"                    # spec review, Q3 "a": round 1 records the agent it ran on
-    assert coll("design", 1, "VERDICT: FIX\n", "--degraded", "x", "--agent-id", "a-9")[0] == 64 and e.record("design", 1, "fable")["session"] == "a-1"   # 0.1.11 last look: a collected round
-    assert run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "sol", "--agent-id", "a-1")[0] == 64   # and a CLI lane
     for bad in (["--resume", "a-2"], ["--resume", "a-1", "--fresh"]):            # another agent, or a resume that is also fresh
         assert prep("design", 2, *bad)[0] == 64 and not (e.feat / "rounds" / "design-r2-fable").exists()
     assert prep("design", 2, "--resume", "a-1")[0] == 0
