@@ -2,7 +2,7 @@
 
 Every brief has seven parts, in this order, and every path in it is relative to the package's parent folder (the reviewer's working folder). ALL reviewing rules but the lane's are here, once, so a CLI lane and an in-session lane review under the same text.
 
-The driver writes a brief WITH A FILE TOOL, never through a shell (2026-09-17: a heredoc lost every apostrophe and backtick while every check passed), and only after the last pending fix is committed. Each seat's brief is the shared text plus its insert, never a shell edit of another brief.
+The driver writes a brief WITH A FILE TOOL, never through a shell (2026-09-17: a heredoc lost every apostrophe), and only after the last pending fix is committed. Each seat's brief is the shared text plus its insert, never a shell edit of another brief.
 
 ## 1. Role
 

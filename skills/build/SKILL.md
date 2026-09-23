@@ -29,7 +29,7 @@ Skips all of the above: no `verify`, Brandon's yes is the go, the session builds
 
 Dispatch `agents/backup-implementer.md` (Opus 5.5 at `medium`) in the background, named `Task N Implement`, with the brief path, the contract path (`templates/implementer-contract.md`), the checkout and a report path, for:
 
-- a task that deletes, renames or moves a file (print mode has no delete tool, measured 2026-09-22);
+- a task that deletes, renames or moves a file (print mode has no delete tool);
 - a task whose Gemini run failed the success test once, or whose diff did not match its code (below);
 - every task when the pre-flight finds no agy.
 
@@ -37,10 +37,10 @@ Run `build archive --feature <folder> --task N` before ANY redispatch of a task 
 
 ## A failing task
 
-A task whose CODE is wrong is the author's defect. Gemini never reports blocked (2026-09-22: it read two errors on the missing dependency it was told to dot-source, edited on and reported success), so on that lane the failed test run is the signal, and the session names the cause in this order:
+A task whose CODE is wrong is the author's defect. Gemini never reports blocked (2026-09-22), so on that lane the failed test run is the signal, and the session names the cause in this order:
 
 1. **The diff does not match the task's code**: a transcription failure. The task goes to the `backup-implementer` as its second dispatch.
-2. **The diff matches**: check the base first. The checkout must sit at the previous task's commit and every file the task consumes must exist (the 2026-09-22 wrong-base run had transcribed its edits exactly on a checkout one commit too early). A wrong base is the session's to fix before it dispatches the task again; that redispatch still counts.
+2. **The diff matches**: check the base first. The checkout must sit at the previous task's commit and every file the task consumes must exist (2026-09-22: a run on a checkout one commit early). A wrong base is the session's to fix before it dispatches the task again; that redispatch still counts.
 3. **The base is right**: the task is wrong. The `author`, resumed, amends it; `verify --feature <folder> --record-amendment "<reason>"` records it; the gate's `context.md` lists it. No extra round unless the amendment changes something another task consumes; then Brandon is asked.
 
 A second failed dispatch of the same task, for ANY reason, amendment cycles included, goes to Brandon. A debate pauses after five rounds of one lane and kind; the build loop's stop is this rule.

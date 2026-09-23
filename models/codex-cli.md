@@ -16,7 +16,7 @@ Probed 2026-07-24 on 0.144.1: `codex exec ... resume <unknown id>` exits 1 with 
 
 ## Web search is on
 
-`codex exec` searched the web during a review round on 0.153.4 (2026-09-22, a stop-test round whose brief invited a long essay): the sandbox and disable flags do not cover it. The lane line in `context.md` bans a fetch; whether a `-c` key turns it off is unmeasured.
+`codex exec` searched the web during a review round on 0.153.4 (2026-09-22): the sandbox and disable flags do not cover it. The lane line in `context.md` bans a fetch; whether a `-c` key turns it off is unmeasured.
 
 ## A missing model is a stale CLI first
 
