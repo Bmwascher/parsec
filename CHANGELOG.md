@@ -2,6 +2,15 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.12 (2026-09-23)
+
+The Gemini build lane works again with a relative checkout path. Each round now prints the first lines of its summary.
+
+- `build run` gives agy the full path of the checkout. With `--checkout .` agy did not find the workspace and did not read the files.
+- `round run` and `round collect` print the title line and the counts line of the round summary. Each brief asks the reviewer for one counts line.
+- The debate skill says that a reference outside the reference folder goes in as a `--file` evidence file. Item 10 of the list is closed.
+- The skills and templates are shorter: a rule keeps the date of its failure, and the full account stays in the notes.
+
 ## v0.1.11 (2026-09-23)
 
 The spec and the task list are shorter to review and easier to build. The tool now records the second question to Opus or Fable as a resume of the same agent.
