@@ -8,7 +8,7 @@
 An Opus author writes the plan. A fast Gemini implementer types the code.<br>
 Models from three different companies check the work at the moments where a mistake gets expensive.
 
-![version](https://img.shields.io/badge/version-0.1.12-4c6ef5?style=flat-square)
+![version](https://img.shields.io/badge/version-0.1.13-4c6ef5?style=flat-square)
 ![python](https://img.shields.io/badge/python-3.12-3776ab?style=flat-square)
 ![platform](https://img.shields.io/badge/platform-Windows-0078d4?style=flat-square)
 ![license](https://img.shields.io/badge/license-MIT-2f9e44?style=flat-square)
@@ -222,7 +222,7 @@ The plugin install line compares the installed copy with the head of the reposit
 
 > ### 🟢 parsec doctor
 >
-> - 🟢 **plugin install:** 0.1.12 at d10b4a40: ok
+> - 🟢 **plugin install:** 0.1.13 at bfa158f6: ok
 > - 🟢 **lane astra:** gpt-6-astra, effort high, codex-cli 0.156.0, Logged in using ChatGPT
 > - 🟢 **lane sol:** gpt-6-sol, effort high, codex-cli 0.156.0, Logged in using ChatGPT
 > - 🟢 **lane kimi:** kimi-code/k3, effort lane home, 0.43.1, credentials present in the lane home

@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.13 (2026-09-23)
+
+The skills, templates and model notes are shorter by about 260 words. No rule changed.
+
+- A rule that two files stated now lives in one file, and the other file points to it when its reader needs the pointer.
+- The model notes lose old history and stale lines.
+- The debate skill now says that for bounded work the session makes the feature folder and writes the ledger head before the first diff round.
+
 ## v0.1.12 (2026-09-23)
 
 The Gemini build lane works again with a relative checkout path. Each round now prints the first lines of its summary.
