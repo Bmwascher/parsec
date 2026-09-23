@@ -141,12 +141,32 @@ def child_env():
     return env
 
 
+def installed_entry():
+    """(marketplace, entry) of the installed parsec, or (None, {})."""
+    f = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
+    for key, val in (read_json(f).get("plugins", {}) if f.is_file() else {}).items():
+        if key.startswith("parsec@"):
+            return key.split("@", 1)[1], (val[0] if isinstance(val, list) else val)
+    return None, {}
+
+
+def behind():
+    """2026-09-23: three phase sessions ran 0.1.6 for hours after 0.1.7 was installed; a skill names the path it loaded."""
+    try:
+        mine, inst = read_json(PLUGIN / ".claude-plugin" / "plugin.json")["version"], installed_entry()[1].get("version")
+        key = lambda v: tuple(int(x) for x in v.split("."))
+        return f"this tool is parsec {mine}, but {inst} is installed: invoke the skill again so it names the new path" if inst and key(inst) > key(mine) else None
+    except (OSError, ValueError, KeyError, AttributeError):
+        return None
+
+
 # ---------------------------------------------------------------- feature, records, replies
 
 def feature_dir(cfg, primary, feature, first=None):
     """A missing panels/<name> passes only for prepare's round 1 (`first`); prepare makes it after its checks."""
     docs = resolve_under(primary, cfg["docs_root"])
-    rel = Path(feature.replace("\\", "/"))
+    whole = resolve_under(primary, feature)      # 2026-09-23: "dev/docs/parsec/<x>" was refused by round run, accepted by doctor
+    rel = whole.relative_to(docs) if whole.is_relative_to(docs) and whole != docs else Path(feature.replace("\\", "/"))
     fdir = docs / rel
     if docs not in fdir.resolve().parents:       # 2026-09-22 review (Sol): "../x" reached past the docs root
         raise Exit(64, f"--feature {feature} is not under the docs root {docs}")
@@ -260,6 +280,8 @@ def write_package(root, args, cfg, primary, fdir, kind):
     pkg.mkdir(parents=True)
     shutil.copyfile(args.brief, pkg / "brief.md")                          # the same bytes
     lines, warnings, _, _ = context_lines(cfg, primary, args.reference)
+    ev = [(pkg / "evidence" / f"{k}-{src.name}", src) for k, src in enumerate([Path(f).resolve() for f in args.file or []], 1)]   # checked in prepare
+    lines += [f"- evidence: .parsec/evidence/{dst.name} is a copy of {src}" for dst, src in ev]   # 2026-09-23: a reviewer looked for notes.md by its own name
     (pkg / "context.md").write_text("# Context\n\n" + ("\n".join(lines) or "(none configured)") + "\n",
                                     encoding="utf-8", newline="\n")
     subject = {}
@@ -276,9 +298,9 @@ def write_package(root, args, cfg, primary, fdir, kind):
             if r.returncode:
                 raise Exit(64, f"git {cmd[0]} {rng} failed: {r.stderr.decode('utf-8', 'replace')[-200:]}")
             (pkg / name).write_bytes(r.stdout)
-    for k, src in enumerate([Path(f).resolve() for f in args.file or []], 1):   # checked in prepare, before anything is written
-        (pkg / "evidence").mkdir(exist_ok=True)
-        shutil.copyfile(src, pkg / "evidence" / f"{k}-{src.name}")
+    for dst, src in ev:
+        dst.parent.mkdir(exist_ok=True)
+        shutil.copyfile(src, dst)
     return subject, warnings
 
 
@@ -489,32 +511,27 @@ def prepare(args, launch):
         (fdir / "ledger.md").write_text(f"# Panel {fdir.name}\n\nMade by parsec on {stamp()}.\n", encoding="utf-8", newline="\n")
     folder.mkdir(parents=True)
     shutil.copyfile(args.brief, folder / "brief.md")
+    tree = worktree_path(cfg, primary, frel, args.kind, args.lane)   # every lane reads the code at --head (2026-09-23: seven phases gave Opus and Fable the primary)
+    ensure_worktree(primary, tree, args.head)
     if cli:
         model, effort, agent = row["model"], row.get("effort", "lane home"), None
-        tree = worktree_path(cfg, primary, frel, args.kind, args.lane)
-        ensure_worktree(primary, tree, args.head)
         subject, w = write_package(tree, args, cfg, primary, fdir, args.kind)
         if args.kind == "design":
             for name in ("spec.md", "tasks.md"):
                 shutil.copyfile(fdir / name, folder / name)
     else:
         model, effort, agent = agent_seat(args.lane)
-        tree = None
         subject, w = write_package(folder, args, cfg, primary, fdir, args.kind)
     warnings += w
     pending = {"kind": args.kind, "round": args.round, "lane": args.lane, "head": args.head, "base": args.base,
                "start": stamp(), "brief_sha256": sha256(args.brief), "tier": "fast" if args.fast else "default",
                "model": model, "effort": effort, "agent": agent, "resumed": bool(session), "session": session,
-               "subject": subject, "worktree": str(tree) if tree else None, "feature": frel, "warnings": warnings}
+               "subject": subject, "worktree": str(tree), "feature": frel, "warnings": warnings}
     write_json(folder / "pending.json", pending)
     if not launch:
-        r = git(["rev-parse", "--short", "HEAD"], primary)
-        dirty = bool(git(["status", "--porcelain"], primary).stdout.strip())
-        at = r.stdout.strip()
         print(f"task name: {pretty_name(args.lane, args.kind, args.round)}")
-        print(f"package root: {folder}")
-        same = args.head.startswith(at) or at.startswith(args.head)
-        print(f"code root: {primary} at {at}, {'dirty' if dirty else 'clean'}" + ("" if same else f"   WARNING: not --head {args.head}"))
+        print(f"brief: {folder / '.parsec' / 'brief.md'}")   # 2026-09-23: four phases hunted for the package
+        print(f"code root: {tree} at {args.head}, a review worktree that round close removes")
         patch = folder / ".parsec" / "diff.patch"
         if patch.is_file():
             print(f"diff.patch: {len(read_text(patch).splitlines())} lines (Read pages 2,000 at a time)")
@@ -564,8 +581,8 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
                     warnings)
         print(f"{pretty_name(lane, kind, n)}: record updated" + "".join(f"\nwarning: {w}" for w in warnings))
         return 0
-    if not pend_path.is_file():
-        raise Exit(64, f"nothing pending in {folder}")
+    if not pend_path.is_file():                  # 2026-09-23: a collect after round run read as an error
+        raise Exit(64, f"{folder.name} is already collected (round run collects its own round)" if rec_path.is_file() else f"nothing pending in {folder}")
     pend = read_json(pend_path)
     warnings += pend.get("warnings", [])
     reply = folder / "reply.md"
@@ -598,6 +615,8 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     if run["timeout"]:
         verdict = "NONE"
         warnings.append("TIMEOUT: the cap ended the round")
+    if kind == "lastlook" and lane != "fable":    # 2026-09-23: six Opus stand-ins were recorded as a plain PASS
+        degraded = degraded or f"stand-in last look on {lane}; a Fable last look on the same head supersedes it"
     end = now()
     rec = {**{k: v for k, v in pend.items() if k not in ("warnings",)}, "cli_version": cli_version, "session": session,
            "continuity": continuity, "end": stamp(end), "seconds": run["seconds"], "cli_exit": run["cli_exit"],
@@ -607,10 +626,10 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     pend_path.unlink()                           # before the ledger line: the record is the truth, a replay would overwrite it (r2, Sol)
     cont = "" if continuity is None and not pend.get("resumed") else (", continuity answered" if continuity else ", continuity: not answered")
     ledger_line(fdir, f"{kind} r{n} {lane}: {verdict}{cont}" + (", tier: fast" if tier == "fast" else "")
-                + f", rounds\\{folder.name}\\reply.md", warnings)
+                + (f", degraded ({degraded})" if degraded else "") + f", rounds\\{folder.name}\\reply.md", warnings)
     sub = "  ".join(f"{k} {v[:6]}" for k, v in pend.get("subject", {}).items())
-    print(f"{pretty_name(lane, kind, n)}\nverdict: {verdict}    cli exit: {run['cli_exit']}    {run['seconds']} s    "
-          f"{'resumed' if pend.get('resumed') else 'fresh'} session {session}    tier {tier}")
+    print(f"{pretty_name(lane, kind, n)}\nverdict: {verdict}    " + ("in-session agent" if lane in AGENT_OF else f"cli exit: {run['cli_exit']}    {run['seconds']} s    "
+          f"{'resumed' if pend.get('resumed') else 'fresh'} session {session}    tier {tier}") + (f"\ndegraded: {degraded}" if degraded else ""))
     print(f"repo:    {primary}    head {pend.get('head')}\nreply:   {reply}" + (f"\nsubject: {sub}" if sub else ""))
     for w in warnings:
         print(f"warning: {w}")
@@ -833,8 +852,9 @@ def preflight(args):
         code, login = probe(cmd + ["login", "status"], env=child_env())
         if code != 0 or "not logged in" in login.lower():
             fail.append(f"login: {login or 'no answer'}")
-        lines.append(f"{ver}   {login}   {codex_quota(cmd) if code == 0 else ''}")
-        lines.append(f"model {row['model']}, effort {row['effort']} (lanes.toml)   tier {'fast' if args.fast else 'default (fast off)'}")
+        lines.append(f"- **CLI:** {ver}, {login}")
+        lines.append(f"- **Quota:** {(codex_quota(cmd) if code == 0 else 'quota: not read').removeprefix('quota: ')}")
+        lines.append(f"- **Model:** {row['model']}, effort {row['effort']} (lanes.toml), {'fast' if args.fast else 'fast off'}")
     elif args.lane == "kimi":
         code, ver = probe(cmd + ["--version"])
         if code != 0:
@@ -844,71 +864,74 @@ def preflight(args):
         alias, effort = f'[models."{row["model"]}"]' in conf, "default_effort" in conf
         if not alias:
             fail.append(f"model {row['model']} is not in the lane home's config")
-        lines.append(f"kimi {ver}   lane home {home}   model alias {'present' if alias else 'MISSING'}, "
+        lines.append(f"- **CLI:** kimi {ver}")
+        lines.append(f"- **Lane home:** {home}, model alias {'present' if alias else 'MISSING'}, "
                      f"default_effort {'present' if effort else 'MISSING'} (effort lives in the lane home)")
     elif args.lane == "gemini":
         code, ver = probe(cmd + ["--version"])
         if code != 0:
             fail.append(f"agy: {ver}")
-        lines.append(f"agy {shutil.which(cmd[0])} {ver}   model {row['model']} (lanes.toml)   login: read from the first run's log")
+        lines.append(f"- **CLI:** agy {ver} at {shutil.which(cmd[0])}")
+        lines.append(f"- **Model:** {row['model']} (lanes.toml); login is read from the first run's log")
     elif args.lane in AGENT_OF:
         model, effort, agent = agent_seat(args.lane)
-        lines.append(f"agent {agent}: model {model}, effort {effort} (agent file)")
+        lines.append(f"- **Agent:** {agent}, model {model}, effort {effort} (agent file)")
     else:
         raise Exit(64, f"lane {args.lane} is not a lane or a seat")   # 2026-09-22 review: a typo raised KeyError
+    if args.feature:
+        try:
+            feature_dir(cfg, primary, args.feature, 1)   # 2026-09-23: doctor accepted a --feature that round run then refused
+        except Exit as e:
+            fail.append(str(e))
     if args.kind != "build":
         _, warnings, found, wanted = context_lines(cfg, primary, None)
         fail += [w for w in warnings if "not found" in w]
         files = len([c for c in cfg.get("context", []) if c.get("role", "rubric") == "rubric"])
-        rub = f"rubric: {files} file{"s" * (files != 1)}, {found} of {wanted} sections found" if files else "rubric: none configured"   # r3: a rubric without sections is still a rubric
+        rub = f"rubric {files} file{"s" * (files != 1)}, {found} of {wanted} sections found" if files else "rubric none configured"   # r3: a rubric without sections is still a rubric
         wt = resolve_under(primary, cfg["worktrees"])
-        lines.append(f"{rub}   worktrees folder {'ok' if wt.is_dir() else 'MISSING: ' + str(wt)}")
+        lines.append(f"- **Checks:** {rub} · worktrees folder {'ok' if wt.is_dir() else 'MISSING: ' + str(wt)}")
         if not wt.is_dir():
             fail.append("worktrees folder missing")
-    print(f"Pre-flight: {args.lane.capitalize()}, {args.kind} {'debate' if args.kind != 'build' else ''}, {args.feature or ''}".rstrip(", "))
-    print("\n".join(lines))
-    if fail:
-        raise Exit(64, "pre-flight failed: " + "; ".join(fail))
-    return 0
+    title = f"Pre-flight: {args.lane.capitalize()} · {args.kind}" + (" debate" if args.kind != "build" else "")   # Markdown, posted as is (Brandon, 2026-09-23)
+    print(f"### 🔴 {title} · FAILED\n\n**{'; '.join(fail)}**" if fail else f"### 🟢 {title}")
+    print((f"\n**{args.feature}**\n" if args.feature else "") + "\n" + "\n".join(lines))
+    return 64 if fail else 0
 
 
 def doctor(args):
     if args.lane:
         return preflight(args)
-    rows, review, wt, bad = lanes(), None, None, False
+    rows, review, wt, bad, out = lanes(), None, None, False, []
     try:
         primary = primary_of(args.repo)
         cfg = load_config(primary)
         wt = resolve_under(primary, cfg["worktrees"])
         review = wt / "_review"
     except Exit as e:
-        print(f"config: {e}"); bad = True        # the table still prints, the exit says setup is owed (2026-09-22 review)
-    installed = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
-    head = git(["rev-parse", "HEAD"], PLUGIN).stdout.strip()
-    state = "not installed"
-    if installed.is_file():
-        for key, val in read_json(installed).get("plugins", {}).items():
-            if key.startswith("parsec@"):
-                entry = val[0] if isinstance(val, list) else val
-                sha = entry.get("gitCommitSha", "")
-                state = f"{entry.get('version')} at {sha[:8]}: " + ("ok" if sha == head else "STALE (repo head " + head[:8] + "; the cache is keyed by version: bump it, then claude plugin update)")   # old item 65; 2026-09-22 17:16
-    print(f"plugin install: {state}")
+        out.append(f"- 🔴 **config:** {e}"); bad = True   # the table still prints, the exit says setup is owed (2026-09-22 review)
+    mkt, entry = installed_entry()
+    known = Path.home() / ".claude" / "plugins" / "known_marketplaces.json"   # 2026-09-23: the cached copy is no git checkout, so /parsec:doctor always said STALE
+    src = read_json(known).get(mkt, {}).get("installLocation") if mkt and known.is_file() else None
+    head = git(["rev-parse", "HEAD"], src if src and Path(src).is_dir() else PLUGIN).stdout.strip() or "unknown"
+    sha, ok = entry.get("gitCommitSha", ""), entry.get("gitCommitSha") == head
+    out.insert(0, f"- {'🟢' if ok else '🔴'} **plugin install:** " + (f"{entry.get('version')} at {sha[:8]}: " + ("ok" if ok else f"STALE (repo head {head[:8]}; the cache is keyed by version: bump it, then claude plugin update)") if entry else "not installed"))   # old item 65; 2026-09-22 17:16
     for name, row in rows.items():
         code, ver = probe([row["command"][0], "--version"])
         login = probe(row["command"] + ["login", "status"], env=child_env())[1] if name in ("astra", "sol") else "login: the first run's log" \
             if name == "gemini" else f"credentials {'present' if (resolve_under(PLUGIN, row['home']) / 'credentials').exists() else 'MISSING'} in the lane home"
-        print(f"lane {name}: {row['model']} effort {row.get('effort', 'lane home' if name == 'kimi' else 'the model')}   {ver}   {login}")
+        good = code == 0 and "not logged in" not in login.lower() and "MISSING" not in login
+        out.append(f"- {'🟢' if good else '🔴'} **lane {name}:** {row['model']}, effort {row.get('effort', 'lane home' if name == 'kimi' else 'the model')}, {ver}, {login}")
     for folder, label in ((wt, "worktrees"), (review, "_review")):
         if folder and folder.is_dir():
             for p in sorted(folder.iterdir()):
                 if p.is_dir() and not p.name.startswith("_"):
-                    age = int((time.time() - p.stat().st_mtime) / 86400)
-                    print(f"{label}: {p.name}   {age} d old")
+                    out.append(f"- **{label}:** {p.name}, {int((time.time() - p.stat().st_mtime) / 86400)} d old")
+    print(f"### {'🔴' if any('🔴' in l for l in out) else '🟢'} parsec doctor\n\n" + "\n".join(out))   # Markdown, posted as is (Brandon, 2026-09-23)
     if args.update:
-        print("warning: a debate may be open in another chat; its lane's update lands mid-debate")
+        print("\nwarning: a debate may be open in another chat; its lane's update lands mid-debate\n")
         for upd, name in {tuple(r["update"]): ", ".join(m for m, s in rows.items() if s.get("update") == r["update"]) for r in rows.values() if r.get("update")}.items():   # one update per CLI, every lane named (2026-09-22 review, r3)
-            code, out = probe(list(upd), timeout=600, env=dict(os.environ, AGY_CLI_DISABLE_AUTO_UPDATE="true"))
-            print(f"update {name}: exit {code}   {out}")
+            code, msg = probe(list(upd), timeout=600, env=dict(os.environ, AGY_CLI_DISABLE_AUTO_UPDATE="true"))
+            print(f"- **update {name}:** exit {code}, {msg}")
     return 64 if bad else 0
 
 
@@ -972,6 +995,8 @@ def main(argv=None):
     if hasattr(sys.stdout, "reconfigure"):     # 2026-08-11: em dashes as ??? (a test's StringIO has no reconfigure)
         sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
     args = parser().parse_args(argv)
+    if (late := behind()):
+        print(f"warning: {late}")
     try:
         if args.cmd == "round" and args.sub in ("run", "prepare"):
             return prepare(args, launch=args.sub == "run")

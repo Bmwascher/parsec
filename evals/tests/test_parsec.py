@@ -385,6 +385,13 @@ def test_doctor_stale_install(env):
     plug.joinpath("installed_plugins.json").write_text(json.dumps(
         {"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head}]}}), encoding="utf-8")
     assert "0.1.0 at " in run(e, "doctor")[1] and "STALE" not in run(e, "doctor")[1]
+    plug.joinpath("known_marketplaces.json").write_text(json.dumps({"parsec": {"installLocation": str(e.repo)}}), encoding="utf-8")
+    e.mp.setattr(parsec, "PLUGIN", e.tmp / "cache-copy")           # 2026-09-23: the cached copy is no git checkout, so the head read blank
+    assert "🟢 **plugin install:** 0.1.0 at " in run(e, "doctor")[1]
+    e.mp.setattr(parsec, "PLUGIN", e.repo)
+    (e.repo / ".claude-plugin").mkdir()
+    (e.repo / ".claude-plugin" / "plugin.json").write_text('{"version": "0.0.9"}', encoding="utf-8")
+    assert "warning: this tool is parsec 0.0.9, but 0.1.0 is installed" in run(e, "doctor")[1]   # 2026-09-23: three phases ran 0.1.6 after 0.1.7
     cmd = json.dumps([sys.executable, str(FAKE)])
     upd = json.dumps([sys.executable, str(FAKE), "update"])
     (e.tmp / "lanes.toml").write_text(f'[astra]\nmodel = "a"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n'
@@ -414,8 +421,11 @@ def test_inputs_and_preflight(env):
     assert code == 64 and "rubric file not found" in out        # 2026-09-22 review: a missing rubric file only warned
     (e.repo / "A.md").rename(e.repo / "AGENTS.md")
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
-    assert code == 0 and "2 of 2 sections found" in out and "tier default" in out, out
-    assert "tier fast" in run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x", "--fast")[1]
+    assert code == 0 and "2 of 2 sections found" in out and "fast off" in out and out.startswith("### 🟢 Pre-flight: Astra"), out
+    assert "(lanes.toml), fast\n" in run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x", "--fast")[1]
+    assert run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "docs/09-22-x")[0] == 0   # 2026-09-23: the docs-root prefix was refused by round run only
+    code, out = run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "09-22-nope")
+    assert code == 64 and out.startswith("### 🔴 Pre-flight: Opus · design debate · FAILED")   # and doctor never checked --feature at all
     (e.repo / "AGENTS.md").write_text("# Rules\n\n## Lua style (renamed)\n\n## Git\n", encoding="utf-8")
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
     assert code == 64 and 'section not found: "Lua style"' in out and not (e.feat / "rounds").exists()
@@ -434,7 +444,7 @@ def test_inputs_and_preflight(env):
     e.mp.setenv("FAKE_CHILD_PID_FILE", str(e.tmp / "quota.pid"))
     t0 = time.time()
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
-    assert code == 0 and "quota: 5 h 60% left" in out and time.time() - t0 < 8, out   # r4 (Sol): the reader returns at its first answer
+    assert code == 0 and "**Quota:** 5 h 60% left" in out and time.time() - t0 < 8, out   # r4 (Sol): the reader returns at its first answer
     pid = (e.tmp / "quota.pid").read_text()
     assert not WIN or pid not in subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True).stdout   # r3 (Sol): the .CMD's child outlived the probe
     e.mp.delenv("FAKE_CHILD_PID_FILE")
@@ -452,11 +462,18 @@ def test_inputs_and_preflight(env):
     assert code == 0 and "Opus Pre-Review" in out and str(folder) in out and "diff.patch:" in out, out
     assert (folder / ".parsec" / "evidence" / "1-reply-r1.md").read_text() == "earlier reply"
     assert (folder / ".parsec" / "evidence" / "2-brief.md").is_file() and (folder / ".parsec" / "diff.patch").stat().st_size > 0
-    assert (folder / "pending.json").is_file() and not (e.wt / "_review").exists()
+    tree = e.wt / "_review" / "proj-09-22-x-prereview-opus"        # 2026-09-23: seven phases gave Opus and Fable the primary as the code root
+    assert (folder / "pending.json").is_file() and git("rev-parse", "HEAD", cwd=tree) == e.head and f"code root: {tree}" in out
+    assert f"brief: {folder / '.parsec' / 'brief.md'}" in out and "evidence/1-reply-r1.md is a copy of" in (folder / ".parsec" / "context.md").read_text(encoding="utf-8")
     (folder / "reply.md").write_text("report\n\nVERDICT: PASS\n", encoding="utf-8")
     code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")
     r = e.record("prereview", 1, "opus")
     assert code == 0 and r["verdict"] == "PASS" and r["agent"] == "reviewer-opus" and r["model"].startswith("claude-opus") and not (folder / "pending.json").exists()
+    assert "in-session agent" in out and r["degraded"] is None and "already collected" in run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")[1]
+    run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "lastlook", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base)
+    (e.feat / "rounds" / "lastlook-r1-opus" / "reply.md").write_text("VERDICT: PASS\n", encoding="utf-8")
+    run(e, "round", "collect", "--feature", "09-22-x", "--kind", "lastlook", "--round", "1", "--lane", "opus")
+    assert "stand-in" in e.record("lastlook", 1, "opus")["degraded"] and "lastlook r1 opus: PASS, degraded (stand-in" in e.ledger()   # 2026-09-23: six stand-ins read as a plain PASS
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable",
                     "--brief", str(e.brief), "--head", e.head, "--file", str(extra), "--file", str(extra))
     assert code == 64 and "twice" in out
