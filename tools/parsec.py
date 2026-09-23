@@ -505,14 +505,14 @@ def prepare(args, launch):
     if args.round != nxt and not (mine and mine[-1].get("round") == args.round and mine[-1].get("verdict") not in VERDICTS):   # r1 (Sol): an old-style round with no verdict reruns under its number
         raise Exit(64, f"round {args.round}: {args.lane}'s next {args.kind} round is {nxt}; each lane counts its own rounds of a kind from 1, and a round with no verdict reruns under its number")   # 2026-09-22 KitnEssentials: a first diff round ran as r3 after design r1 and prereview r2
     resume, last = getattr(args, "resume", None), mine[-1].get("session") if mine else None   # round run has no --resume
-    if resume and (args.fresh or not mine or last not in (None, "", "unknown", resume)):   # before any write (2026-09-23, Q2): the id is checked against the record
+    last = None if last in (None, "", "unknown") else last
+    if resume and (args.fresh or not mine or last not in (None, resume)):   # before any write (2026-09-23, Q2): the id is checked against the record
         raise Exit(64, f"--resume {resume}: needs an earlier {args.kind} round of {args.lane}, no --fresh, and the agent its newest record names ({last})")
     if folder.exists():
         dead_rename(folder)
     session = resume
     if cli and not args.fresh and mine:          # an agent round resumes only on --resume (design r1, F1)
-        session = mine[-1].get("session")
-        session = None if session in (None, "", "unknown") else session
+        session = last
         if not session:
             warnings.append("newest record of this lane has no session id: fresh round")
     if not fdir.is_dir():                        # a new panel, round 1 (feature_dir): the one feature folder the tool makes

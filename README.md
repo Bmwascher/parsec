@@ -355,7 +355,7 @@ Wording-only findings never cost a round either: the reviewer grades them Minor,
 - **A debate ends** on a round with no new Critical or Important finding and no contested point left open.
 - **Five rounds is the cap,** for each lane in each phase. After that the session pauses and asks you. A spent budget never counts as a pass.
 - **A point contested twice** with evidence on both sides goes to you at once.
-- **Reviewers keep their memory.** A codex lane is resumed each round and must answer a continuity question. If it can't, the next round starts fresh with its earlier replies attached as evidence. An Opus or Fable agent is resumed only for a confirming question: `round collect --agent-id` records the agent's id, and `round prepare --resume` checks it.
+- **Reviewers keep their memory.** A codex lane is resumed each round and must answer a continuity question. If it can't, the next round starts fresh with its earlier replies attached as evidence. An Opus or Fable agent is resumed by its id: `round collect --agent-id` records the id, and `round prepare --resume` checks it.
 
 ### The diff gate
 
