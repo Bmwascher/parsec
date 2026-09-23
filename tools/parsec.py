@@ -220,9 +220,12 @@ def tag_line(text, tag):
     return None
 
 
-def severity_counts(text):                       # a reply's counts line, number before or after the word
-    got = [re.search(rf"\b{w}:?\s+(\d+)|(\d+)\s+{w}\b", text) for w in ("Critical", "Important", "Minor")]
-    return " · ".join(f"{w} {m[1] or m[2]}" for w, m in zip(("Critical", "Important", "Minor"), got)) if all(got) else None
+COUNTS = re.compile(r"Critical:? (\d+)\W+Important:? (\d+)\W+Minor:? (\d+)|(\d+) Critical\W+(\d+) Important\W+(\d+) Minor")
+
+
+def severity_counts(text):                       # the LAST one line naming all three in order (pre-review F1: a search per word mixed lines)
+    hits = [m for line in text.splitlines() if (m := COUNTS.search(line))]
+    return "Critical {} · Important {} · Minor {}".format(*[g for g in hits[-1].groups() if g]) if hits else None
 
 
 def verdict_of(text):
@@ -653,9 +656,9 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     code = 67 if run["timeout"] else 66 if verdict == "WROTE-FILES" else 65 if verdict == "NONE" else (run["cli_exit"] or 0)
     if code and transcript:
         print("transcript tail:\n" + "\n".join(transcript.splitlines()[-5:]))
-    took = f"{round(run['seconds'] / 60)} min, " if run["seconds"] is not None else ""   # 2026-09-23 phase 6: a prose summary; the head is printed to paste
-    print(f"\n### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took}{'resumed' if pend.get('resumed') else 'fresh'})"
-          + (f"\n\n{severity_counts(text)}" if severity_counts(text) else ""))
+    took, counts = round((end - dt.datetime.fromisoformat(pend.get("start") or stamp(end))).total_seconds() / 60), severity_counts(text)   # 2026-09-23 phase 6: a prose summary
+    print(f"\n### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min, {'resumed' if pend.get('resumed') else 'fresh'})"
+          + (f"\n\n{counts}" if counts else ""))
     return code
 
 

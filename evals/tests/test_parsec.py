@@ -608,16 +608,20 @@ def test_reason_cap(env):
     assert run(e, "verify", "--feature", "09-22-x", "--record-amendment", "x" * 130)[0] == 64   # 130 reaches verify, which refuses only for want of a design PASS
 
 
-# row 14c: the tool prints the summary's opening lines (2026-09-23 KitnEssentials phase 6 on 0.1.11 posted a prose summary: no marker, counts or bullets)
+# row 14d: the tool prints the summary's opening lines (2026-09-23 KitnEssentials phase 6 on 0.1.11 posted a prose summary: no marker, counts or bullets)
 def test_summary_head(env):
     e = env
-    e.mp.setenv("FAKE_REPLY", "- F1 · Minor: x\n\nCritical 0, Important 1, Minor 2\n\nVERDICT: FIX\n")
+    e.mp.setenv("FAKE_REPLY", "- F2 · Important: 3 of 20 lack it.\n\nCritical 0, Important 1, Minor 2\n\nVERDICT: FIX\n")   # pre-review F1: printed Important 3
     out = rnd(e, 1)[1]
     assert "\n### 🔴 Astra R1 Design Round: FIX (0 min, fresh)\n\nCritical 0 · Important 1 · Minor 2\n" in out, out
     e.mp.setenv("FAKE_REPLY", "**0 Critical, 0 Important, 3 Minor.**\n\nVERDICT: PASS\n")
     assert "\n### 🟢 Astra R2 Design Round: PASS (0 min, resumed)\n\nCritical 0 · Important 0 · Minor 3\n" in rnd(e, 2)[1]
-    e.mp.setenv("FAKE_REPLY", "No findings.\n\nVERDICT: PASS\n")
-    assert rnd(e, 3)[1].endswith("### 🟢 Astra R3 Design Round: PASS (0 min, resumed)\n")   # no counts line in the reply, none printed
+    e.mp.setenv("FAKE_REPLY", "Critical: 0\nImportant: 1\nMinor: 2\n\nVERDICT: PASS\n")   # pre-review F1: printed 0, 0, 1; no one line holds all three
+    assert rnd(e, 3)[1].endswith("### 🟢 Astra R3 Design Round: PASS (0 min, resumed)\n")
+    run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable", "--brief", str(e.brief), "--head", e.head)
+    (e.feat / "rounds" / "design-r1-fable" / "reply.md").write_text("VERDICT: FIX\n", encoding="utf-8")
+    assert run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable")[1].endswith(
+        "### 🔴 Fable R1 Design Round: FIX (0 min, fresh)\n")                        # pre-review F2: an agent round gets its minutes too
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
