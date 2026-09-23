@@ -46,8 +46,8 @@ Nothing is built without one. When the task list exists, the driver asks for it,
 
 One debate over both files, `--kind design`, run by `debate` on the cross-vendor lane, then the Fable design look (`debate`, "The Fable looks"). When both end, the driver posts what they changed and:
 
-- continues to `build` if a go is on record and the debate did not change what the feature does;
-- pauses and asks when no go is on record, or when the debate changed what the feature does (a new behaviour, a dropped one, a different interface).
+- continues to `build` if a go is on record and neither changed what the feature does;
+- pauses and asks when no go is on record, or when either changed what the feature does (a new behaviour, a dropped one, a different interface).
 
 ## Ledger lines this skill writes
 
