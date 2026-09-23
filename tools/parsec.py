@@ -577,6 +577,8 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     folder = round_folder(fdir, kind, n, lane)
     rec_path, pend_path = folder / "record.json", folder / "pending.json"
     warnings = []
+    if agent_id and (lane not in AGENT_OF or rec_path.is_file()):   # 0.1.11 last look: a CLI lane's id replaced the transcript's; a collected round's was ignored
+        raise Exit(64, f"--agent-id {agent_id}: only for an opus or fable round not yet collected")
     if rec_path.is_file() and (degraded or close_minor):
         rec = read_json(rec_path)
         if degraded:
