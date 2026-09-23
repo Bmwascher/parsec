@@ -355,7 +355,7 @@ Wording-only findings never cost a round either: the reviewer grades them Minor,
 - **A debate ends** on a round with no new Critical or Important finding and no contested point left open.
 - **Five rounds is the cap,** for each lane in each phase. After that the session pauses and asks you. A spent budget never counts as a pass.
 - **A point contested twice** with evidence on both sides goes to you at once.
-- **Reviewers keep their memory.** A codex lane is resumed each round and must answer a continuity question. If it can't, the next round starts fresh with its earlier replies attached as evidence.
+- **Reviewers keep their memory.** A codex lane is resumed each round and must answer a continuity question. If it can't, the next round starts fresh with its earlier replies attached as evidence. An Opus or Fable agent is resumed only for a confirming question: `round collect --agent-id` records the agent's id, and `round prepare --resume` checks it.
 
 ### The diff gate
 
@@ -381,7 +381,7 @@ A blocking finding anywhere in the gate becomes a fix task, written by the autho
 
 ## What it writes to disk
 
-Each feature gets one folder under the project's docs root, named `<MM-DD>-<topic>`. Four files sit loose in it:
+Each feature gets one folder under the project's docs root, named `<MM-DD>-<topic>`, and every file it writes stays inside it. Four files sit loose in it; every other file goes in a named subfolder, shown in the full tree below:
 
 | File | What it holds |
 |---|---|
@@ -390,7 +390,7 @@ Each feature gets one folder under the project's docs root, named `<MM-DD>-<topi
 | `tasks.md` | The task list, with full code in every task |
 | `ledger.md` | The running record: base, go, rounds, tasks, finish |
 
-The **ledger** is the feature's memory. Its head records the base commit once. The tool appends one line per round, amendment and build, and never parses a line it didn't write. A failed attempt is never overwritten: it's renamed `.dead1`, `.dead2` and so on, so the evidence survives.
+The **ledger** is the feature's memory. Its head records the base commit once. The tool appends one line per round, amendment and build, and never parses a line it didn't write. Hand-written lines, such as the go, a task result or your ruling on a finding, follow the shapes in [`templates/ledger.md`](templates/ledger.md). A failed attempt is never overwritten: it's renamed `.dead1`, `.dead2` and so on, so the evidence survives.
 
 <details>
 <summary><b>The full folder tree</b></summary>
@@ -411,7 +411,9 @@ dev/docs/parsec/
 │   │   ├── task-01-brief.md   the exact slice Gemini received
 │   │   ├── task-01-report.md  what the tool saw
 │   │   └── task-01-agy.log
-│   └── pages/            published pages, when a question is clearer shown
+│   ├── pages/            published pages, when a question is clearer shown
+│   ├── briefs/           each brief as written
+│   └── evidence/         saved output a brief cites
 └── panels/
     └── 09-22-split-module/    panels about no feature
 ```
@@ -425,8 +427,8 @@ dev/docs/parsec/
 # Keybind export (2026)
 topic: keybind-export   branch: feature/keybind-export   base: 3f2a91c
 checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
-- 14:02 go: Brandon, "go"
-- 14:31 task 01: 8c1d0e2, gemini, tests: green
+- 2026-09-22 14:02 -0500 go: Brandon, "go"
+- 2026-09-22 14:31 -0500 task 01: 8c1d0e2, gemini, tests: green
 ```
 
 </details>
