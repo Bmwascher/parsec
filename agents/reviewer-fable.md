@@ -1,6 +1,6 @@
 ---
 name: reviewer-fable
-description: The same reviewer shell for the last look, a panel lane, an adjudication between two positions, and a poll. Dispatch it in the background with the path of a brief; with no report path (a poll or an adjudication) it answers in its reply.
+description: The same reviewer seat for the design look, the last look, a panel lane, an adjudication between two positions, and a poll. Dispatch it in the background with the path of a brief; with no report path (a poll or an adjudication) it answers in its reply.
 model: claude-fable-5-1
 effort: high
 background: true

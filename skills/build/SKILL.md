@@ -9,7 +9,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 
 ## Start
 
-- Refuse to start without a recorded go (`brainstorm`).
+- Refuse to start without a recorded go (`brainstorm`), or without a design look after the last cross-vendor design round: a `design r<n> fable` ledger line, or on Brandon's recorded word an Opus stand-in's `design r<n> opus` line or none (`debate`, "The Fable looks").
 - Run `verify --feature <folder>`: MATCH and MATCH (CLOSED ON MINOR) continue; MATCH (DEGRADED PASS) and CHANGED stop and ask Brandon; NO-PASS-YET refuses.
 - Read the base from the ledger head (written once, by `brainstorm`). A fresh worktree lacks the project's gitignored hook inputs (KitnEssentials: `dev\githooks\upstream-names.local.sh`); copy them before the first commit (2026-09-22). Work in the checkout the session was handed, or make one at `<worktrees>\<Project>-<branch>` and record in the ledger that `build` made it. Only a worktree `build` made is ever removed by it, and never under stop and report.
 
@@ -41,7 +41,7 @@ A task whose CODE is wrong is the author's defect. Gemini never reports blocked 
 
 1. **The diff does not match the task's code**: a transcription failure. The task goes to the `backup-implementer` as its second dispatch.
 2. **The diff matches**: check the base first. The checkout must sit at the previous task's commit and every file the task consumes must exist (the 2026-09-22 wrong-base run had transcribed its edits exactly on a checkout one commit too early). A wrong base is the session's to fix before it dispatches the task again; that redispatch still counts.
-3. **The base is right**: the task is wrong. The `author`, resumed, amends it; `verify --feature <folder> --record-amendment "<reason>"` records it; the diff-gate brief lists it. No extra round unless the amendment changes something another task consumes; then Brandon is asked.
+3. **The base is right**: the task is wrong. The `author`, resumed, amends it; `verify --feature <folder> --record-amendment "<reason>"` records it; the gate's `context.md` lists it. No extra round unless the amendment changes something another task consumes; then Brandon is asked.
 
 A second failed dispatch of the same task, for ANY reason, amendment cycles included, goes to Brandon. A debate pauses after five rounds of one lane and kind; the build loop's stop is this rule.
 
