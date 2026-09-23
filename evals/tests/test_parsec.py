@@ -189,6 +189,10 @@ def test_rerun_rule(env):
     assert e.record("design", 2, "astra")["session"] == "unknown"
     code, out = rnd(e, 3)
     assert "resume" not in e.calls()[-1] and "fresh round" in "".join(e.record("design", 3, "astra")["warnings"])
+    old = e.feat / "rounds" / "design-r3-sol"                     # r1 (Sol): an old-style round with no verdict reruns under its number
+    old.mkdir()
+    (old / "record.json").write_text(json.dumps({"kind": "design", "round": 3, "lane": "sol", "verdict": "NONE", "end": "9"}), encoding="utf-8")
+    assert rnd(e, 3, "sol", "design", "--fresh")[0] == 0 and (old.parent / "design-r3-sol.dead1" / "record.json").is_file()
 
 
 # row 6: verdict reading (old items 34 and 67; the 2026-09-21 Kimi replies)
@@ -481,6 +485,8 @@ def test_inputs_and_preflight(env):
     conf.write_text(conf.read_text(encoding="utf-8").replace('"astra"', '"opus"'), encoding="utf-8")
     code, out = run(e, "round", "run", "--feature", "panels/09-22-bad", "--kind", "panel", "--round", "1", "--brief", str(e.brief))
     assert code == 64 and "is not a lane" in out and not (e.repo / "docs" / "panels" / "09-22-bad").exists()   # r3, r4 (Sol): a config typo wrote a package, then a panel folder
+    assert run(e, "round", "prepare", "--feature", "panels/09-22-t", "--kind", "panel", "--round", "3", "--lane", "fable", "--brief", str(e.brief))[0] == 64
+    assert not (e.repo / "docs" / "panels" / "09-22-t").exists()      # r1 (Sol): a wrong first number made the panel folder
     code, out = run(e, "round", "prepare", "--feature", "panels/09-22-t", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     assert code == 0 and (e.repo / "docs" / "panels" / "09-22-t" / "ledger.md").is_file()   # the one folder the tool makes itself
 
