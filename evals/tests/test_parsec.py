@@ -407,6 +407,8 @@ def test_doctor_stale_install(env):
     assert run(e, "doctor")[0] == 0                                 # 2026-09-23 pre-review: an empty entry crashed every command
     plug.joinpath("installed_plugins.json").write_text("[]", encoding="utf-8")
     assert "not installed" in run(e, "doctor")[1]                   # 2026-09-23, Astra: a malformed file crashed the doctor
+    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"gitCommitSha": None}]}}), encoding="utf-8")
+    assert "STALE" in run(e, "doctor")[1]                           # and so did a null commit (Astra r2)
     plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head}]}}), encoding="utf-8")
     e.mp.setattr(parsec, "PLUGIN", e.repo)
     (e.repo / ".claude-plugin").mkdir()

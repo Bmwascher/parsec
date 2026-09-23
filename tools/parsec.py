@@ -918,7 +918,8 @@ def doctor(args):
     except Exception:                            # no marketplace record, or a malformed one: the plugin folder (2026-09-23 pre-review)
         src = PLUGIN
     head = git(["rev-parse", "HEAD"], src if src.is_dir() else PLUGIN).stdout.strip() or "unknown"
-    sha, ok = entry.get("gitCommitSha", ""), entry.get("gitCommitSha") == head
+    sha = entry.get("gitCommitSha") if isinstance(entry.get("gitCommitSha"), str) else ""   # a null commit crashed the doctor (2026-09-23, Astra r2)
+    ok = sha == head
     out.insert(0, f"- {'🟢' if ok else '🔴'} **plugin install:** " + (f"{entry.get('version')} at {sha[:8]}: " + ("ok" if ok else f"STALE (repo head {head[:8]}; the cache is keyed by version: bump it, then claude plugin update)") if entry else "not installed"))   # old item 65; 2026-09-22 17:16
     for name, row in rows.items():
         code, ver = probe([row["command"][0], "--version"])
