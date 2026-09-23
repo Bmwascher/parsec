@@ -201,6 +201,18 @@ def test_rerun_rule(env):
     assert code == 64 and "never collected" in out
 
 
+# row 5b: a symbolic --head resolves in the primary, not in a reused review worktree (2026-09-23, Astra)
+def test_symbolic_head_resolved_in_primary(env):
+    e = env
+    args = ["round", "run", "--feature", "09-22-x", "--kind", "design", "--lane", "sol", "--brief", str(e.brief), "--head", "HEAD"]
+    assert run(e, *args, "--round", "1")[0] == 0
+    (e.repo / "code.txt").write_text("one\ntwo\nthree\n", encoding="utf-8")
+    git("commit", "-qam", "later", cwd=e.repo)
+    assert run(e, *args, "--round", "2")[0] == 0
+    tree = e.wt / "_review" / "proj-09-22-x-design-sol"
+    assert git("rev-parse", "HEAD", cwd=tree) == git("rev-parse", "HEAD", cwd=e.repo) == e.record("design", 2, "sol")["head"]
+
+
 # row 6: verdict reading (old items 34 and 67; the 2026-09-21 Kimi replies)
 @pytest.mark.parametrize("text,want", [
     ("VERDICT: PASS\n", "PASS"), ("  - **VERDICT: FIX** - a sentence after\n", "FIX"), ("> VERDICT: ESCALATE\n", "ESCALATE"),
@@ -393,6 +405,8 @@ def test_doctor_stale_install(env):
     assert "repo head unknown" in run(e, "doctor")[1]               # a malformed marketplace file falls back, never a traceback
     plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": []}}), encoding="utf-8")
     assert run(e, "doctor")[0] == 0                                 # 2026-09-23 pre-review: an empty entry crashed every command
+    plug.joinpath("installed_plugins.json").write_text("[]", encoding="utf-8")
+    assert "not installed" in run(e, "doctor")[1]                   # 2026-09-23, Astra: a malformed file crashed the doctor
     plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head}]}}), encoding="utf-8")
     e.mp.setattr(parsec, "PLUGIN", e.repo)
     (e.repo / ".claude-plugin").mkdir()

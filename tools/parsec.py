@@ -142,12 +142,14 @@ def child_env():
 
 
 def installed_entry():
-    """(marketplace, entry) of the installed parsec, or (None, {})."""
-    f = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
-    for key, val in (read_json(f).get("plugins", {}) if f.is_file() else {}).items():
-        if key.startswith("parsec@"):
-            entry = (val or [{}])[0] if isinstance(val, list) else val
-            return key.split("@", 1)[1], entry if isinstance(entry, dict) else {}
+    """(marketplace, entry) of the installed parsec, or (None, {}) for a missing or malformed file (2026-09-23, Astra)."""
+    try:
+        for key, val in read_json(Path.home() / ".claude" / "plugins" / "installed_plugins.json")["plugins"].items():
+            if key.startswith("parsec@"):
+                entry = (val or [{}])[0] if isinstance(val, list) else val
+                return key.split("@", 1)[1], entry if isinstance(entry, dict) else {}
+    except Exception:
+        pass
     return None, {}
 
 
@@ -483,8 +485,7 @@ def prepare(args, launch):
     files = [Path(f).resolve() for f in args.file or []]   # inside the round folder, the rerun's rename would move it away mid-round (2026-09-23, Sol)
     if len(set(files)) < len(files) or not all(f.is_file() and not f.is_relative_to(folder) for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind)
         raise Exit(64, f"--file {' '.join(args.file)}: missing, given twice, or inside {folder.name}")
-    for c in filter(None, (args.base, args.head)):
-        git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary)
+    args.base, args.head = [c and git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary).strip() for c in (args.base, args.head)]   # full ids: "HEAD" in a reused review worktree named its old commit (2026-09-23, Astra)
     if args.kind == "design" and not all((fdir / n).is_file() for n in ("spec.md", "tasks.md")):
         raise Exit(64, f"design round without spec.md and tasks.md in {fdir}")
     cli = args.lane in CLI_LANES
