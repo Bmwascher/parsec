@@ -15,7 +15,8 @@ The default codex lane from 2026-09-22 (Brandon's word; Astra is the alternate b
 ## Measured here
 
 - 2026-09-22, `high`, fresh: a diff round in 338 s (Astra 153 s), same verdict and findings plus one Astra missed; a blind panel in 716 s (Astra 464 s), same winner, one defect Astra missed. Slower, reads more.
+- 2026-09-22 and 23, KitnEssentials: 4 of 4 resumes answered the continuity question.
 
 ## Unmeasured
 
-Continuity across resumes and token use per round.
+Token use per round.

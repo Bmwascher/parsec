@@ -20,11 +20,15 @@ A 400 "not supported when using Codex with a ChatGPT account" on a model id mean
 
 ## Web search is on
 
-`codex exec` searched the web during a review round on 0.153.4 (2026-09-22, a stop-test round whose brief invited a long essay): the sandbox and disable flags do not cover it. A brief's boundaries part says "do not fetch"; whether a `-c` key turns it off is unmeasured.
+`codex exec` searched the web during a review round on 0.153.4 (2026-09-22, a stop-test round whose brief invited a long essay): the sandbox and disable flags do not cover it. The lane line in `context.md` bans a fetch; whether a `-c` key turns it off is unmeasured.
 
 ## A missing model is a stale CLI first
 
 A new id answers `400 The '<id>' model is not supported when using Codex with a ChatGPT account` on a CLI that predates it, and `models_cache.json` omits it: seen 2026-09-22 on 0.153.4 for `gpt-6-sol` and `gpt-6-luna`; the update to 0.156.0 fixed both. Update first; read entitlement second.
+
+## No rg in the reviewer shell
+
+Missing there (field audit, 2026-09-23); the lane line names `git grep` instead.
 
 ## Unmeasured
 

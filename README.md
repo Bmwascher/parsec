@@ -78,7 +78,8 @@ flowchart TD
     A --> T[Author writes the task list<br/>with full code per task]:::brainstorm
     T --> G{Go?}:::you
     G --> DD[Design debate<br/>cross-vendor lane vs. author]:::review
-    DD --> B[Gemini implementer builds each task<br/>session tests, checks, commits]:::build
+    DD --> FD[Fable design look<br/>fresh eyes on spec and tasks]:::review
+    FD --> B[Gemini implementer builds each task<br/>session tests, checks, commits]:::build
 
     B --> P[Opus pre-review]:::review
     BW --> P
@@ -169,7 +170,7 @@ These are the reviewers from other companies. They run the design debate before 
 ![Seat](https://img.shields.io/badge/seat-reviewer--fable-7048e8?style=flat-square)
 ![Model](https://img.shields.io/badge/Claude_Fable_5.1-high_effort-d97757?style=flat-square)
 
-A fresh agent that reads the final head once every other review has passed. Its PASS names the exact commit that ships. The same seat also sits on panels, answers polls and gives advice when two positions need an outside view.
+A fresh agent that reads the final head once every other review has passed. Its PASS names the exact commit that ships. Before the build, it gives the spec and task list the same fresh look once the design debate has passed. The same seat also sits on panels, answers polls and gives advice when two positions need an outside view.
 
 > [!TIP]
 > Model notes in [`models/`](models/) record what each model and CLI actually does, each fact dated or marked UNMEASURED. Swapping a model means re-deciding its effort level from that model's own guide, because "high" doesn't mean the same amount of thinking across companies.
@@ -283,7 +284,7 @@ You talk to it in plain words, and the skills trigger on what you say.
 | You say | What runs |
 |---|---|
 | "Brainstorm a keybind export feature" / "plan" | `brainstorm`: sort the request, interview, spec, task list |
-| "Go" | Records the go; the design debate runs, then `build` |
+| "Go" | Records the go; the design debate and the Fable design look run, then `build` |
 | "Fix the nil check in the timer" | Bounded work: build, commit, then the diff gate |
 | "Get a cross-vendor review of this branch" | `debate` on the files or branch you name |
 | "Run a panel on whether to split this module" | `panel`: two or more lanes answer one question blind |
@@ -343,9 +344,9 @@ A **round** is one reviewer reading one package and returning one verdict. A **d
 |---|---|
 | ![Critical](https://img.shields.io/badge/Critical-e03131?style=flat-square) | Yes |
 | ![Important](https://img.shields.io/badge/Important-f08c00?style=flat-square) | Yes |
-| ![Minor](https://img.shields.io/badge/Minor-868e96?style=flat-square) | Never. It's fixed or recorded, then the debate closes. |
+| ![Minor](https://img.shields.io/badge/Minor-868e96?style=flat-square) | Never, with one exception: a last-look Minor triaged "fix now" gets the one confirming question from the same Fable agent. Otherwise it's fixed or recorded, then the debate closes. |
 
-Wording-only findings never cost a round either. Code defects matter most, then tests, and quota is never spent on prose.
+Wording-only findings never cost a round either: the reviewer grades them Minor, and only the reviewer grades a finding. Code defects matter most, then tests, and quota is never spent on prose.
 
 ### The rules of a debate
 
