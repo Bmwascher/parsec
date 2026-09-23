@@ -626,14 +626,15 @@ def test_build_run_success_test(env):
     b = lambda *a: run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", e.head, *a)
     code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", "0" * 40)
     assert code == 64 and "not --head" in out                # 2026-09-22 17:23: the lane built on a tree the brief told it to refuse
-    code, out = b()
+    e.mp.chdir(co)                                               # 2026-09-23 fld-5b: --checkout . reached agy's --add-dir as ".", which it could not resolve
+    code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", ".", "--head", e.head)
     assert code == 0 and "result: ok" in out, out
     a = e.calls()[-1]
     prompt = a[a.index("-p") + 1]
     digest = parsec.sha256(e.feat / "build" / "task-01-brief.md")
     assert prompt.startswith(f"Read the file AGY-TASK-BRIEF-{digest[:12]}.md in the workspace") and prompt.endswith(parsec.CLOSING)
     assert a[a.index("--model") + 1] == "gemini-3.8-flash-high" and a[a.index("--mode") + 1] == "accept-edits"
-    assert a[a.index("--add-dir") + 1] == str(co) and a[a.index("--log-file") + 1] == str((e.feat / "build" / "task-01-agy.log").resolve())
+    assert a[a.index("--add-dir") + 1] == str(co.resolve()) and a[a.index("--log-file") + 1] == str((e.feat / "build" / "task-01-agy.log").resolve())
     child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
     assert child["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and not list(co.glob("AGY-TASK-BRIEF-*"))
     report = (e.feat / "build" / "task-01-report.md").read_text(encoding="utf-8")

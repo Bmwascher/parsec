@@ -742,7 +742,7 @@ def build_run(args):
     fdir, _ = feature_dir(cfg, primary, args.feature)
     brief = fdir / "build" / f"task-{args.task:02d}-brief.md"
     report, log = fdir / "build" / f"task-{args.task:02d}-report.md", fdir / "build" / f"task-{args.task:02d}-agy.log"
-    checkout = Path(args.checkout)
+    checkout = Path(args.checkout).resolve()      # 2026-09-23 fld-5b: agy could not resolve --add-dir "." and dropped the workspace
     if not brief.is_file() or not checkout.is_dir():
         raise Exit(64, f"need {brief} and the checkout {checkout}")
     at = git_out(["rev-parse", "HEAD"], checkout).strip()
