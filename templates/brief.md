@@ -41,6 +41,7 @@ What is out of scope for this round. The lane's read and run rules are the first
 ## 7. Final check
 
 - List what could not be verified.
+- One line `Critical N · Important N · Minor N`, counting open findings.
 - One line per claim: holds, fails (with the finding ID), or UNVERIFIED.
 - On a resumed round, one line starting `CONTINUITY:` naming the verdict word of your most recent earlier round in this debate and one finding you raised there, or "no findings" if you raised none.
 - The LAST line is exactly one line starting `VERDICT:` and PASS, FIX or ESCALATE (BLIND in a blind panel lane), and that word appears on no other line of that shape. PASS when no Critical or Important finding is open; Minor findings ride with a PASS.
