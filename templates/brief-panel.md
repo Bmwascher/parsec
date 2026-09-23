@@ -11,4 +11,4 @@ Each lane answers in this order:
 
 The verdict word means: PASS, the host's recommendation stands; FIX, another option is better; ESCALATE, the evidence cannot settle it.
 
-In a blind panel (Brandon's request) the host's recommendation is left out, the lane ends with `VERDICT: BLIND` instead of a judgment word, and its ranking is its answer.
+In a blind panel (Brandon's request) the lane ends with `VERDICT: BLIND` instead of a judgment word, and its ranking is its answer.

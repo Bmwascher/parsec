@@ -10,8 +10,6 @@ topic: <topic>   branch: <branch>   base: <commit>
 checkout: <path> (made by build | handed)
 ```
 
-"made by build" or "handed" decides what `build` may remove.
-
 ## Lines
 
 `<time>` is the tool's stamp, `YYYY-MM-DD HH:MM ±hhmm`. A hand-written line stays within 200 characters; a reason passed to the tool stays within 130, and the tool refuses a longer one. Longer detail goes in a file the line names.

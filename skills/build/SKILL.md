@@ -21,13 +21,13 @@ Skips all of the above: no `verify`, Brandon's yes is the go, the session builds
 
 1. **Before task 1**: `doctor --lane gemini --kind build --feature <folder>` in the background (`Pre-flight: Gemini`), posted as is. When it finds no agy, every task goes to the `backup-implementer`.
 2. `task-brief --feature <folder> --task N` writes `build\task-NN-brief.md` (the task, the header and the global constraints, byte for byte) and prints its SHA-256.
-3. `build run --feature <folder> --task N --checkout <path> --head <commit>` in the background, named `Task N Implement`, where `--head` is the commit the task builds on (the ledger base, then the previous task's commit). The tool refuses any other checkout, refuses a dirty checkout (discard a failed run's writes first) and fails a task that flipped a modified file's line endings; the lane checks none of these (2026-09-22). The tool copies the brief into the checkout, runs agy with the closing line that keeps the test and commit steps off Gemini, deletes the copy, writes `build\task-NN-report.md` and prints the success test. The session reads that, never agy's exit code.
+3. `build run --feature <folder> --task N --checkout <path> --head <commit>` in the background, named `Task N Implement`, where `--head` is the commit the task builds on (the ledger base, then the previous task's commit). The tool refuses any other checkout, refuses a dirty checkout (discard a failed run's writes first) and fails a task that flipped a modified file's line endings; the lane checks none of these (2026-09-22). The tool runs agy, writes `build\task-NN-report.md` and prints the success test. The session reads that, never agy's exit code.
 4. **The session checks the task itself before the next**: run the task's **Checks** in the background (a Gemini task's first run, since print mode runs no command; red-then-green is observed only on the `backup-implementer` lane); read the diff against the task's files and its fenced code; then make the task's commit with the task's own commit step. The session is the one commit owner on both lanes. No per-task reviewer subagent.
 5. Ledger line: the task's commit and result, with the lane that built it.
 
 ## To the `backup-implementer` instead
 
-Dispatch `agents/backup-implementer.md` (Opus 5.5 at `medium`) in the background, named `Task N Implement`, with the brief path, the contract path (`templates/implementer-contract.md`), the checkout and a report path, for:
+Dispatch `agents/backup-implementer.md` in the background, named `Task N Implement`, with the brief path, the contract path (`templates/implementer-contract.md`), the checkout and a report path, for:
 
 - a task that deletes, renames or moves a file (print mode has no delete tool);
 - a task whose Gemini run failed the success test once, or whose diff did not match its code (below);
@@ -51,7 +51,7 @@ A `task-NN-brief.md` with no `task-NN-report.md` beside it means a build may sti
 
 ## The gate and the finish
 
-Then the diff gate (`debate`, `--kind diff`, with the pre-review first and the last look after), then the finish. The plugin's part of the order is one sentence: the gate runs first, the project's human check (a smoke, on Brandon's yes) last, on the final head.
+Then the diff gate (`debate`, `--kind diff`, with the pre-review first and the last look after), then the finish. The gate runs first, the project's human check (a smoke, on Brandon's yes) last, on the final head.
 
 The finish is STOP AND REPORT unless Brandon, a handoff or the project's finishing rule says merge or pull request. The report takes the shape and destination the handoff or project gives, and lists every open Minor finding, every refutation the driver made and every round it closed on Minor findings, each with its reply path, so nothing decided on Brandon's behalf is silently dropped. A degraded gate blocks a clean report. Only the commit the final PASS names is merged.
 

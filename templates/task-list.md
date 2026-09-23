@@ -29,11 +29,11 @@ Each task is a `## Task N: <name>` section holding:
 
 - **Files**: the paths it creates or changes.
 - **Consumes / produces**: what it needs from earlier tasks and what later tasks take from it.
-- **Checks**: each command that checks the task and the result it expects (a test run, a grep, the budget test); a task with nothing worth testing names its check here.
+- **Checks**: each command that checks the task and the result it expects (a test run, a grep, the budget test).
 - **Steps**, as checkbox items, in this order:
   1. Write the failing test, the FULL code of each edit in the edit format above, and the expected failure named.
   2. Run it and see the expected failure (red).
-  3. Write the implementation, the FULL code of each edit in the edit format above, never a placeholder.
+  3. Write the implementation, the FULL code in the same edit format, never a placeholder.
   4. Run the tests and see them pass (green); the whole suite, output clean.
   5. Commit, as the LAST step, after a branch check, because phase chats share a checkout. Every task ends with its own commit. The commit message is given in full.
 

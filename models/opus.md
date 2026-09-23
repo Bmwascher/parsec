@@ -1,6 +1,6 @@
 # Claude Opus 5.5 (`claude-opus-5-5`)
 
-The `author` seat (from 2026-09-22), the `reviewer-opus` seat (the pre-review) and the `backup-implementer` seat; also Brandon's daily driver from 2026-09-22. The author is dispatched even though the driver is the same model: its fresh context is the point, not the model.
+The `author` seat (from 2026-09-22), the `reviewer-opus` seat (the pre-review) and the `backup-implementer` seat.
 
 ## The guide says, so the plugin does
 

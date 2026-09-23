@@ -1,6 +1,6 @@
 # Driver rules
 
-Six rules that cut across `brainstorm`, `build`, `debate` and `panel`. Each flow skill names this file in its first line.
+Six rules that cut across `brainstorm`, `build`, `debate` and `panel`.
 
 1. **Background, named.** Every round, review, author run, build run, gate command and doctor run is dispatched in the background from the first attempt, named in Title Case for the person watching. A foreground call owns the session and hits the Bash tool's 10-minute ceiling. A command known to end within a minute may instead run in the foreground with a timeout (2026-09-23). The names (this is their one home): `<Lane> R<n> <Kind> Round` for every CLI round, panel lane and design look (`Astra R2 Design Round`, `Fable R1 Panel Round`); `Opus Pre-Review`; `<Lane> Last Look`; `Fable Poll`; `Author: <what>`; `Task 3 Implement`; `Gate: Busted`; `Pre-flight: Astra`; `Doctor`.
 2. **The project's own rules outrank this plugin's sequence.**

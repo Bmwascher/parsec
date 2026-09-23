@@ -11,7 +11,7 @@ Set in the lane home's config as `default_effort = "high"` because the CLI has n
 - Round 1 with the agent file and an empty `--skills-dir`: exit 0, 28 to 46 s, the reply on standard output ending in a verdict line, the worktree clean outside the package.
 - Round 2 with `--session`: exit 0, 9 s, recalled round 1 without re-reading; the read-only tool set persisted.
 - `--skills-dir` at an empty folder suppressed the home's skills, with a positive control.
-- A brief that said "in this directory" sent it looking beside the brief; it answered `VERDICT: FAIL`, which the tool reads as NONE. Every path in a brief is relative to the package's parent.
+- A brief that said "in this directory" sent it looking beside the brief; it answered `VERDICT: FAIL`, which the tool reads as NONE.
 - One Kimi round wrote `VERDICT: FIX`, a dash and a sentence; text after the word is allowed.
 
 ## Unmeasured

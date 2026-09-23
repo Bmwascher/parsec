@@ -2,7 +2,7 @@
 
 The alternate codex lane from 2026-09-22, by name at any time or by the config's `codex_lane`; Sol is the default. Measured below as the primary.
 
-The reviewer lane. Vendor guide: OpenAI's Astra guide, fetched 2026-09-05 for the old notes; its URL was not recorded there and is UNCITED here until fetched again.
+Vendor guide: OpenAI's Astra guide, fetched 2026-09-05 for the old notes; its URL was not recorded there and is UNCITED here until fetched again.
 
 ## The guide says, so the brief carries
 
@@ -12,7 +12,7 @@ The reviewer lane. Vendor guide: OpenAI's Astra guide, fetched 2026-09-05 for th
 ## Measured here
 
 - Effort `high`, pinned per call in `lanes.toml` (2026-09-22).
-- Fast tier: the catalog names one tier, `priority`, "2x speed" on Astra, "increased usage"; reasoning effort unchanged (read 2026-09-22). Pinned off by the tool; on only with `--fast` on Brandon's word.
+- Fast tier: the catalog names one tier, `priority`, "2x speed" on Astra, "increased usage"; reasoning effort unchanged (read 2026-09-22). Pinned off by the tool; on only with `--fast` (`debate`).
 - Tandem review of the rethink's five design files, 2026-09-22, fast tier: 10 fresh rounds and 16 resumes on five sessions, 60 to 150 s per resumed round, 67k to 78k tokens each; every continuity answer matched the record; findings cited `file:line` throughout.
 
 ## Unmeasured

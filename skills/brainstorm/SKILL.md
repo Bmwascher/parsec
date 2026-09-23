@@ -12,7 +12,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 Say which it is before anything else. It only ever gets heavier, never lighter.
 
 - **Spike**: exploration with nothing to keep. No feature folder, no spec, no debate. Say what was learned and stop.
-- **Bounded work**: a change small enough to make without a design (a fix, a rename, a guard). No spec, no task list. Brandon's yes is the go; the session builds and commits it, then runs the diff gate (`build`, "Bounded work"). Its feature folder is made when the diff debate's ledger is written; the session writes the ledger head with the base.
+- **Bounded work**: a change small enough to make without a design (a fix, a rename, a guard). No spec, no task list. Brandon's yes is the go; the session builds and commits it, then runs the diff gate (`build`, "Bounded work").
 - **Architectural**: everything else. The full flow below.
 
 ## What is asked, and what is not
@@ -24,7 +24,7 @@ A handoff that settles the design replaces the interview. Read from what the ses
 - The design presented in sections, approval on each.
 - A published page when a question is clearer shown than described (rule 4).
 
-Carried from superpowers' brainstorming: YAGNI; design for isolation; follow the patterns already in the code; no unrelated refactoring; split a request that is really several subsystems into several features.
+YAGNI; design for isolation; follow the patterns already in the code; no unrelated refactoring; split a request that is really several subsystems into several features.
 
 ## The feature folder
 
@@ -36,7 +36,7 @@ Keep `notes.md` as a running record: each question, Brandon's exact answer, the 
 
 The session never writes the two files itself: the author's fresh context proves the notes complete and keeps the session small.
 
-Brandon reviews the written spec before the task list, from its decision summary posted in chat (a delegator relays it), even under a pre-approved handoff: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Approving the spec is not a go. After approval, the same `author` agent, resumed, writes the task list (`Author: task list`), with the full test and implementation code in every task.
+Brandon reviews the written spec before the task list, from its decision summary posted in chat (a delegator relays it), even under a pre-approved handoff: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Approving the spec is not a go. After approval, the same `author` agent, resumed, writes the task list (`Author: task list`).
 
 ## The go (its one home)
 
