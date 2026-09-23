@@ -365,7 +365,7 @@ After the build, three reviewers look at the diff in order:
 |---|---|---|
 | 1 | ![Opus](https://img.shields.io/badge/Opus-pre--review-d97757?style=flat-square) | Catches the obvious before the cross-vendor quota is spent |
 | 2 | ![Sol](https://img.shields.io/badge/Sol-cross--vendor_debate-10a37f?style=flat-square) | Debates the diff to a settled verdict; Astra by name, Kimi only with approval |
-| 3 | ![Fable](https://img.shields.io/badge/Fable-last_look-d97757?style=flat-square) | A *fresh* agent reviews the final head. The version bump is the last commit before it, so its PASS names the exact commit that ships. |
+| 3 | ![Fable](https://img.shields.io/badge/Fable-last_look-d97757?style=flat-square) | A *fresh* agent reviews the final head. The version bump is the last commit before it, so its PASS names the exact commit that ships, or the commit of a "fix now" Minor its confirming question covers. |
 
 A blocking finding anywhere in the gate becomes a fix task, written by the author and built like any other task. Only the commit that the final PASS names is ever merged.
 
