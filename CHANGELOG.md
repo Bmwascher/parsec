@@ -2,14 +2,28 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.9 (2026-09-23)
+
+Opus and Fable review the correct commit. The doctor and the pre-flight are easy to read on a phone.
+
+- `round prepare` makes a review worktree at `--head` for Opus and Fable, as `round run` does for the other lanes. `round close` removes it.
+- The tool changes `--base` and `--head` to full commit IDs before it starts a round.
+- A last look on a lane other than Fable is a degraded stand-in. A Fable last look on the same head replaces it.
+- The doctor compares the installed copy with the source repository, not with the cache. It shows a colour for each line.
+- Each command warns you when you have a newer parsec than the one that runs.
+- The pre-flight shows a colour, the feature and one bullet for each check. It also checks `--feature`.
+- `--feature` can start with the docs root.
+- `round prepare` shows the path to the brief. The context file gives the name of each evidence file.
+- The tool budget is 1,250 lines. The prose budget is 11,000 words.
+
 ## v0.1.8 (2026-09-23)
 
 Round summaries are easy to read on a phone. A mistyped panel name makes no folder.
 
 - The debate skill gives a new shape for the round summary. The title shows a colour and the verdict. One line shows what needs Brandon. Each result of the review has one bullet with its answer. Do not put the summary in a code block.
 - The five-round limit counts the rounds of one lane and one kind.
-- Only `round prepare` makes a panel folder, and only for round 1. It makes the folder after all of its checks.
-- `round prepare` checks the evidence files, the commits and the design files before it writes anything. It refuses an evidence file in the round folder that a rerun moves.
+- Only `round prepare` and `round run` make a panel folder, and only for round 1. They make the folder after all of their checks.
+- `round prepare` and `round run` check the evidence files, the commits and the design files before they write anything. They refuse an evidence file in the round folder that a rerun moves. `round run` also finds the CLI before it writes anything.
 - If you did not collect a round, the tool tells you to collect it. It does not tell you the next round number.
 - The prose budget is 10,200 words.
 
