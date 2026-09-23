@@ -2,6 +2,18 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.10 (2026-09-23)
+
+Each review brief now tells the reviewer what is final, what changed and what to check. Fable also reviews the plan before the build.
+
+- The context file of each round starts with the read and run rules of its lane. Sol and Astra can read with shell commands. Kimi, Opus and Fable use their file tools only.
+- A diff gate round of a feature with a design gets the spec, the task list and the list of amendments.
+- The brief template has a record part. It lists the settled points, the accepted residuals and the answer to each result of the last round. Each claim has a number.
+- The new last-look insert serves the two Fable looks. In the last look, Fable sorts each open Minor result into "fix now" or "ride".
+- The debate skill adds the Fable design look after the design debate. The session closes a round on Minor results only when the reviewer gave each open result the grade Minor.
+- The driver rules let a command that ends in less than a minute run in the foreground with a timeout.
+- A diff, pre-review or last-look round makes no panel folder. The "already collected" message names `round run` only for a CLI lane.
+
 ## v0.1.9 (2026-09-23)
 
 Opus and Fable review the correct commit. The doctor and the pre-flight are easy to read on a phone.
@@ -9,7 +21,7 @@ Opus and Fable review the correct commit. The doctor and the pre-flight are easy
 - `round prepare` makes a review worktree at `--head` for Opus and Fable, as `round run` does for the other lanes. `round close` removes it.
 - The tool changes `--base` and `--head` to full commit IDs before it starts a round.
 - A last look on a lane other than Fable is a degraded stand-in. A Fable last look on the same head replaces it.
-- The doctor compares the installed copy with the source repository, not with the cache. It shows a colour for each line.
+- The doctor compares the installed copy with the source repository, not with the cache. It shows a colour on the install line and on each lane line.
 - Each command warns you when you have a newer parsec than the one that runs.
 - The pre-flight shows a colour, the feature and one bullet for each check. It also checks `--feature`.
 - `--feature` can start with the docs root.
