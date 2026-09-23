@@ -458,9 +458,10 @@ def prepare(args, launch):
         args.head = git_out(["rev-parse", "--short", "HEAD"], primary).strip()
     if not Path(args.brief).is_file():
         raise Exit(64, f"brief not found: {args.brief}")
-    files = [Path(f).resolve() for f in args.file or []]
-    if len(set(files)) < len(files) or not all(f.is_file() for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind)
-        raise Exit(64, f"--file {' '.join(args.file)}: missing, or given twice")
+    folder = round_folder(fdir, args.kind, args.round, args.lane)
+    files = [Path(f).resolve() for f in args.file or []]   # inside the round folder, the rerun's rename would move it away mid-round (2026-09-23, Sol)
+    if len(set(files)) < len(files) or not all(f.is_file() and not f.is_relative_to(folder) for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind)
+        raise Exit(64, f"--file {' '.join(args.file)}: missing, given twice, or inside {folder.name}")
     for c in filter(None, (args.base, args.head)):
         git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary)
     if args.kind == "design" and not all((fdir / n).is_file() for n in ("spec.md", "tasks.md")):
@@ -468,7 +469,6 @@ def prepare(args, launch):
     cli = args.lane in CLI_LANES
     if cli:
         program(row := lane_row(args.lane))      # before anything is written (2026-09-23 last look: a new panel's folder was)
-    folder = round_folder(fdir, args.kind, args.round, args.lane)
     warnings = []
     if args.round > 5:
         warnings.append(f"{args.lane}'s {args.kind} round {args.round}: past five rounds of one lane and kind the skill asks Brandon (old item 24)")

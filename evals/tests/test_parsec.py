@@ -177,6 +177,7 @@ def test_rerun_rule(env):
     e.mp.setenv("FAKE_REPLY", "cut off before the verd")
     code, out = rnd(e, 1)
     assert code == 65 and e.record("design", 1, "astra")["verdict"] == "NONE"
+    assert rnd(e, 1, "astra", "design", "--file", str(e.feat / "rounds" / "design-r1-astra" / "reply.md"))[0] == 64   # 2026-09-23 Sol: the rename moved that evidence away mid-round
     e.mp.setenv("FAKE_REPLY", "ok\n\nVERDICT: PASS\n")
     code, out = rnd(e, 1)
     assert code == 0 and (e.feat / "rounds" / "design-r1-astra.dead1").is_dir()
