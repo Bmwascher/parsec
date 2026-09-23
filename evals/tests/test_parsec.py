@@ -386,8 +386,14 @@ def test_doctor_stale_install(env):
         {"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head}]}}), encoding="utf-8")
     assert "0.1.0 at " in run(e, "doctor")[1] and "STALE" not in run(e, "doctor")[1]
     plug.joinpath("known_marketplaces.json").write_text(json.dumps({"parsec": {"installLocation": str(e.repo)}}), encoding="utf-8")
-    e.mp.setattr(parsec, "PLUGIN", e.tmp / "cache-copy")           # 2026-09-23: the cached copy is no git checkout, so the head read blank
+    (e.tmp / "cache-copy").mkdir()                                  # 2026-09-23: the cached copy is no git checkout, so the head read blank: STALE
+    e.mp.setattr(parsec, "PLUGIN", e.tmp / "cache-copy")
     assert "🟢 **plugin install:** 0.1.0 at " in run(e, "doctor")[1]
+    plug.joinpath("known_marketplaces.json").write_text("[]", encoding="utf-8")
+    assert "repo head unknown" in run(e, "doctor")[1]               # a malformed marketplace file falls back, never a traceback
+    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": []}}), encoding="utf-8")
+    assert run(e, "doctor")[0] == 0                                 # 2026-09-23 pre-review: an empty entry crashed every command
+    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head}]}}), encoding="utf-8")
     e.mp.setattr(parsec, "PLUGIN", e.repo)
     (e.repo / ".claude-plugin").mkdir()
     (e.repo / ".claude-plugin" / "plugin.json").write_text('{"version": "0.0.9"}', encoding="utf-8")
@@ -464,7 +470,8 @@ def test_inputs_and_preflight(env):
     assert (folder / ".parsec" / "evidence" / "2-brief.md").is_file() and (folder / ".parsec" / "diff.patch").stat().st_size > 0
     tree = e.wt / "_review" / "proj-09-22-x-prereview-opus"        # 2026-09-23: seven phases gave Opus and Fable the primary as the code root
     assert (folder / "pending.json").is_file() and git("rev-parse", "HEAD", cwd=tree) == e.head and f"code root: {tree}" in out
-    assert f"brief: {folder / '.parsec' / 'brief.md'}" in out and "evidence/1-reply-r1.md is a copy of" in (folder / ".parsec" / "context.md").read_text(encoding="utf-8")
+    ctx = (folder / ".parsec" / "context.md").read_text(encoding="utf-8")
+    assert f"brief: {folder / '.parsec' / 'brief.md'}" in out and "evidence/1-reply-r1.md is a copy of reply-r1.md" in ctx and str(extra) not in ctx
     (folder / "reply.md").write_text("report\n\nVERDICT: PASS\n", encoding="utf-8")
     code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")
     r = e.record("prereview", 1, "opus")
@@ -474,6 +481,8 @@ def test_inputs_and_preflight(env):
     (e.feat / "rounds" / "lastlook-r1-opus" / "reply.md").write_text("VERDICT: PASS\n", encoding="utf-8")
     run(e, "round", "collect", "--feature", "09-22-x", "--kind", "lastlook", "--round", "1", "--lane", "opus")
     assert "stand-in" in e.record("lastlook", 1, "opus")["degraded"] and "lastlook r1 opus: PASS, degraded (stand-in" in e.ledger()   # 2026-09-23: six stand-ins read as a plain PASS
+    code, out = run(e, "round", "prepare", "--feature", "docs/09-22-x", "--kind", "panel", "--round", "1", "--lane", "opus", "--brief", str(e.brief))
+    assert code == 0 and (e.feat / "rounds" / "panel-r1-opus").is_dir() and (e.wt / "_review" / "proj-09-22-x-panel-opus").is_dir()   # 2026-09-23: the docs-root prefix was refused by round run
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable",
                     "--brief", str(e.brief), "--head", e.head, "--file", str(extra), "--file", str(extra))
     assert code == 64 and "twice" in out

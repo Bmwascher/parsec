@@ -146,7 +146,8 @@ def installed_entry():
     f = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
     for key, val in (read_json(f).get("plugins", {}) if f.is_file() else {}).items():
         if key.startswith("parsec@"):
-            return key.split("@", 1)[1], (val[0] if isinstance(val, list) else val)
+            entry = (val or [{}])[0] if isinstance(val, list) else val
+            return key.split("@", 1)[1], entry if isinstance(entry, dict) else {}
     return None, {}
 
 
@@ -156,7 +157,7 @@ def behind():
         mine, inst = read_json(PLUGIN / ".claude-plugin" / "plugin.json")["version"], installed_entry()[1].get("version")
         key = lambda v: tuple(int(x) for x in v.split("."))
         return f"this tool is parsec {mine}, but {inst} is installed: invoke the skill again so it names the new path" if inst and key(inst) > key(mine) else None
-    except (OSError, ValueError, KeyError, AttributeError):
+    except Exception:                            # a warning never stops a command (2026-09-23 pre-review)
         return None
 
 
@@ -281,7 +282,7 @@ def write_package(root, args, cfg, primary, fdir, kind):
     shutil.copyfile(args.brief, pkg / "brief.md")                          # the same bytes
     lines, warnings, _, _ = context_lines(cfg, primary, args.reference)
     ev = [(pkg / "evidence" / f"{k}-{src.name}", src) for k, src in enumerate([Path(f).resolve() for f in args.file or []], 1)]   # checked in prepare
-    lines += [f"- evidence: .parsec/evidence/{dst.name} is a copy of {src}" for dst, src in ev]   # 2026-09-23: a reviewer looked for notes.md by its own name
+    lines += [f"- evidence: .parsec/evidence/{dst.name} is a copy of {src.name}" for dst, src in ev]   # 2026-09-23: a reviewer looked for notes.md by its own name; never the path, which can name a lane
     (pkg / "context.md").write_text("# Context\n\n" + ("\n".join(lines) or "(none configured)") + "\n",
                                     encoding="utf-8", newline="\n")
     subject = {}
@@ -830,13 +831,13 @@ def codex_quota(cmd):
             lim = json.loads(found[0]).get("result", {}).get("rateLimits", {})
             parts = [f"{'5 h' if (w.get('windowDurationMins') or 0) <= 300 else 'week'} {100 - w.get('usedPercent', 0)}% left"
                      for w in (lim.get("primary"), lim.get("secondary")) if w]
-            return "quota: " + ", ".join(parts) if parts else "quota: no windows in the answer"
+            return ", ".join(parts) if parts else "no windows in the answer"
     except (ValueError, OSError):
         pass
     finally:
         if p:
             kill_tree(p)                         # on every path, a broken pipe included; the tree, since codex is a .CMD (2026-09-22 review, r2)
-    return "quota: unavailable"
+    return "unavailable"
 
 
 def preflight(args):
@@ -853,7 +854,7 @@ def preflight(args):
         if code != 0 or "not logged in" in login.lower():
             fail.append(f"login: {login or 'no answer'}")
         lines.append(f"- **CLI:** {ver}, {login}")
-        lines.append(f"- **Quota:** {(codex_quota(cmd) if code == 0 else 'quota: not read').removeprefix('quota: ')}")
+        lines.append(f"- **Quota:** {codex_quota(cmd) if code == 0 else 'not read'}")
         lines.append(f"- **Model:** {row['model']}, effort {row['effort']} (lanes.toml), {'fast' if args.fast else 'fast off'}")
     elif args.lane == "kimi":
         code, ver = probe(cmd + ["--version"])
@@ -911,15 +912,18 @@ def doctor(args):
         out.append(f"- 🔴 **config:** {e}"); bad = True   # the table still prints, the exit says setup is owed (2026-09-22 review)
     mkt, entry = installed_entry()
     known = Path.home() / ".claude" / "plugins" / "known_marketplaces.json"   # 2026-09-23: the cached copy is no git checkout, so /parsec:doctor always said STALE
-    src = read_json(known).get(mkt, {}).get("installLocation") if mkt and known.is_file() else None
-    head = git(["rev-parse", "HEAD"], src if src and Path(src).is_dir() else PLUGIN).stdout.strip() or "unknown"
+    try:
+        src = Path(read_json(known)[mkt]["installLocation"])
+    except Exception:                            # no marketplace record, or a malformed one: the plugin folder (2026-09-23 pre-review)
+        src = PLUGIN
+    head = git(["rev-parse", "HEAD"], src if src.is_dir() else PLUGIN).stdout.strip() or "unknown"
     sha, ok = entry.get("gitCommitSha", ""), entry.get("gitCommitSha") == head
     out.insert(0, f"- {'🟢' if ok else '🔴'} **plugin install:** " + (f"{entry.get('version')} at {sha[:8]}: " + ("ok" if ok else f"STALE (repo head {head[:8]}; the cache is keyed by version: bump it, then claude plugin update)") if entry else "not installed"))   # old item 65; 2026-09-22 17:16
     for name, row in rows.items():
         code, ver = probe([row["command"][0], "--version"])
-        login = probe(row["command"] + ["login", "status"], env=child_env())[1] if name in ("astra", "sol") else "login: the first run's log" \
-            if name == "gemini" else f"credentials {'present' if (resolve_under(PLUGIN, row['home']) / 'credentials').exists() else 'MISSING'} in the lane home"
-        good = code == 0 and "not logged in" not in login.lower() and "MISSING" not in login
+        lcode, login = probe(row["command"] + ["login", "status"], env=child_env()) if name in ("astra", "sol") else (0, "login: the first run's log") \
+            if name == "gemini" else (0, f"credentials {'present' if (resolve_under(PLUGIN, row['home']) / 'credentials').exists() else 'MISSING'} in the lane home")
+        good = code == 0 and lcode == 0 and "not logged in" not in login.lower() and "MISSING" not in login   # the login's own exit too (2026-09-23 pre-review)
         out.append(f"- {'🟢' if good else '🔴'} **lane {name}:** {row['model']}, effort {row.get('effort', 'lane home' if name == 'kimi' else 'the model')}, {ver}, {login}")
     for folder, label in ((wt, "worktrees"), (review, "_review")):
         if folder and folder.is_dir():
