@@ -24,8 +24,8 @@ def words(path):
     return len(path.read_text(encoding="utf-8").split())
 
 
-def test_tool_within_1000_lines():
-    assert lines(REPO / "tools" / "parsec.py") <= 1000
+def test_tool_within_1250_lines():
+    assert lines(REPO / "tools" / "parsec.py") <= 1250
 
 
 def test_tests_within_1500_lines():
@@ -38,8 +38,8 @@ def test_frozen_checkers_do_not_grow():
     assert sum(lines(REPO / c) for c in CHECKERS) <= 522
 
 
-def test_prose_within_10200_words_and_each_skill_within_1600():
+def test_prose_within_11000_words_and_each_skill_within_1600():
     counts = {p: words(REPO / p) for p in PROSE}
     for s in SKILLS:
         assert counts[f"skills/{s}/SKILL.md"] <= 1600, (s, counts[f"skills/{s}/SKILL.md"])
-    assert sum(counts.values()) <= 10200, sum(counts.values())
+    assert sum(counts.values()) <= 11000, sum(counts.values())

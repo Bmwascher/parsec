@@ -214,18 +214,18 @@ Restart Claude Code afterwards so the skills load.
 /parsec:doctor
 ```
 
-The first line compares the installed copy with the repository head. If it says anything but `ok`, the plugin cache is stale; see [Releasing](#releasing). `/parsec:doctor update` runs each CLI's own update command once and names every lane it serves.
+The plugin install line compares the installed copy with the head of the repository the marketplace points at. If it says anything but `ok`, the plugin cache is stale; see [Releasing](#releasing). `/parsec:doctor update` runs each CLI's own update command once and names every lane it serves. The session posts the output as Markdown, so a red line stands out on a phone.
 
 <details>
 <summary><b>What a healthy result looks like</b></summary>
 
-```text
-plugin install: 0.1.8 at 47e9ebdf: ok
-lane astra: gpt-6-astra effort high   codex-cli 0.156.0   Logged in using ChatGPT
-lane sol: gpt-6-sol effort high   codex-cli 0.156.0   Logged in using ChatGPT
-lane kimi: kimi-code/k3 effort lane home   0.43.1   credentials present in the lane home
-lane gemini: gemini-3.8-flash-high effort the model   1.2.5   login: the first run's log
-```
+> ### 🟢 parsec doctor
+>
+> - 🟢 **plugin install:** 0.1.8 at 47e9ebdf: ok
+> - 🟢 **lane astra:** gpt-6-astra, effort high, codex-cli 0.156.0, Logged in using ChatGPT
+> - 🟢 **lane sol:** gpt-6-sol, effort high, codex-cli 0.156.0, Logged in using ChatGPT
+> - 🟢 **lane kimi:** kimi-code/k3, effort lane home, 0.43.1, credentials present in the lane home
+> - 🟢 **lane gemini:** gemini-3.8-flash-high, effort the model, 1.2.5, login: the first run's log
 
 </details>
 
@@ -437,7 +437,7 @@ checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 
 ## The tool
 
-`tools/parsec.py` is one Python file, kept at or under 1,000 lines by a test. The skills call it, so you rarely need to. Every subcommand has `--help`, and exit code `64` means a usage or setup error, such as a missing config or an unknown lane.
+`tools/parsec.py` is one Python file, kept at or under 1,250 lines by a test. The skills call it, so you rarely need to. Every subcommand has `--help`, and exit code `64` means a usage or setup error, such as a missing config or an unknown lane.
 
 | Command | What it does |
 |---|---|
@@ -501,10 +501,10 @@ The plugin stays lean because its size limits fail the build. An addition that w
 
 | What | Limit |
 |---|---|
-| `tools/parsec.py` | 1,000 lines |
+| `tools/parsec.py` | 1,250 lines |
 | All tests | 1,500 lines |
 | The frozen checkers | 522 lines |
-| All skill, template, agent and model prose | 10,200 words |
+| All skill, template, agent and model prose | 11,000 words |
 | Any one skill | 1,600 words |
 
 ### House rules
