@@ -569,6 +569,45 @@ def test_inputs_and_preflight(env):
     assert code == 64 and "not found on PATH" in out and not typo.exists()
 
 
+# row 14b: an agent's confirming round resumes it by id (0.1.10 last look: agent confirming rounds were recorded as fresh; Q2 "A")
+def test_agent_resume(env):
+    e = env
+    prep = lambda kind, n, *extra: run(e, "round", "prepare", "--feature", "09-22-x", "--kind", kind, "--round", str(n), "--lane", "fable",
+                                       "--brief", str(e.brief), "--head", e.head, *(["--base", e.base] if kind != "design" else []), *extra)
+    coll = lambda kind, n, reply, *extra: ((e.feat / "rounds" / f"{kind}-r{n}-fable" / "reply.md").write_text(reply, encoding="utf-8"),
+                                          run(e, "round", "collect", "--feature", "09-22-x", "--kind", kind, "--round", str(n), "--lane", "fable", *extra))[1]
+    assert prep("design", 1, "--resume", "a-1")[0] == 64 and not (e.feat / "rounds" / "design-r1-fable").exists()   # no earlier round to resume
+    assert prep("design", 1)[0] == 0 and coll("design", 1, "VERDICT: FIX\n", "--agent-id", "a-1")[0] == 0
+    assert e.record("design", 1, "fable")["session"] == "a-1"                    # spec review, Q3 "a": round 1 records the agent it ran on
+    for bad in (["--resume", "a-2"], ["--resume", "a-1", "--fresh"]):            # another agent, or a resume that is also fresh
+        assert prep("design", 2, *bad)[0] == 64 and not (e.feat / "rounds" / "design-r2-fable").exists()
+    assert prep("design", 2, "--resume", "a-1")[0] == 0
+    pend = json.loads((e.feat / "rounds" / "design-r2-fable" / "pending.json").read_text(encoding="utf-8"))
+    assert pend["resumed"] is True and pend["session"] == "a-1"
+    reply = "CONTINUITY: FIX, F1 the ledger point\n\nVERDICT: PASS\n"
+    assert coll("design", 2, reply, "--agent-id", "a-2")[0] == 64 and (e.feat / "rounds" / "design-r2-fable" / "pending.json").is_file()   # not the agent prepare named
+    assert coll("design", 2, reply)[0] == 0
+    r = e.record("design", 2, "fable")
+    assert r["session"] == "a-1" and r["continuity"] == "FIX, F1 the ledger point" and "design r2 fable: PASS, continuity answered" in e.ledger().splitlines()[-1]
+    assert prep("design", 3)[0] == 0 and json.loads((e.feat / "rounds" / "design-r3-fable" / "pending.json").read_text(encoding="utf-8"))["resumed"] is False   # design r1 F1: no --resume, no resume
+    assert prep("lastlook", 1)[0] == 0 and coll("lastlook", 1, "VERDICT: FIX\n")[0] == 0   # collected without the id: session unknown, as before
+    assert e.record("lastlook", 1, "fable")["session"] == "unknown" and prep("lastlook", 2, "--resume", "z-9")[0] == 0   # so this one resume goes unchecked
+    code, out = run(e, "round", "run", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "sol", "--brief", str(e.brief), "--head", e.head, "--resume", "a-1")
+    assert code == 2                                                              # round run has no --resume
+
+
+# row 14c: a reason reaches a ledger line; past 130 characters the parser refuses it (Sol design r1 F2; Brandon, 2026-09-23: "B1"; 09-23-review-briefs amendment 1's reason was about 150)
+def test_reason_cap(env):
+    e = env
+    before = e.ledger()
+    for args in (["verify", "--feature", "09-22-x", "--record-amendment"],
+                 ["round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable", "--degraded"],
+                 ["round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable", "--close-minor"]):
+        assert run(e, *args, "x" * 131)[0] == 2                                  # refused by the parser, before any command body
+    assert e.ledger() == before and not (e.feat / "rounds").exists()           # so nothing is written
+    assert run(e, "verify", "--feature", "09-22-x", "--record-amendment", "x" * 130)[0] == 64   # 130 reaches verify, which refuses only for want of a design PASS
+
+
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
 GOOD_LOG = "Print mode: starting with model gemini-3.8-flash-high\nPropagating selected model override\napplying agent mode accept-edits\nsilent auth succeeded\n"
 

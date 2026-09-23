@@ -504,10 +504,13 @@ def prepare(args, launch):
     nxt = 1 + max((r["round"] for r in mine if r.get("verdict") in VERDICTS), default=0)
     if args.round != nxt and not (mine and mine[-1].get("round") == args.round and mine[-1].get("verdict") not in VERDICTS):   # r1 (Sol): an old-style round with no verdict reruns under its number
         raise Exit(64, f"round {args.round}: {args.lane}'s next {args.kind} round is {nxt}; each lane counts its own rounds of a kind from 1, and a round with no verdict reruns under its number")   # 2026-09-22 KitnEssentials: a first diff round ran as r3 after design r1 and prereview r2
+    resume, last = getattr(args, "resume", None), mine[-1].get("session") if mine else None   # round run has no --resume
+    if resume and (args.fresh or not mine or last not in (None, "", "unknown", resume)):   # before any write (2026-09-23, Q2): the id is checked against the record
+        raise Exit(64, f"--resume {resume}: needs an earlier {args.kind} round of {args.lane}, no --fresh, and the agent its newest record names ({last})")
     if folder.exists():
         dead_rename(folder)
-    session = None
-    if not args.fresh and mine:
+    session = resume
+    if cli and not args.fresh and mine:          # an agent round resumes only on --resume (design r1, F1)
         session = mine[-1].get("session")
         session = None if session in (None, "", "unknown") else session
         if not session:
@@ -567,7 +570,7 @@ def run_round(args, primary, fdir, folder, pending, tree):
                    run={"cli_exit": code, "seconds": secs, "timeout": code is None})
 
 
-def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=None):
+def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=None, agent_id=None):
     primary = primary_of(repo)
     cfg = load_config(primary)
     fdir, _ = feature_dir(cfg, primary, feature)
@@ -590,13 +593,15 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     if not pend_path.is_file():                  # 2026-09-23: a collect after round run read as an error
         raise Exit(64, f"{folder.name} is already collected" + (" (round run collects its own round)" if lane in CLI_LANES else "") if rec_path.is_file() else f"nothing pending in {folder}")   # 0.1.9 last look F2
     pend = read_json(pend_path)
+    if agent_id and pend.get("session") not in (None, agent_id):   # a resumed round's agent is the one prepare named (2026-09-23, Q2)
+        raise Exit(64, f"--agent-id {agent_id}: this round was prepared to resume {pend['session']}")
     warnings += pend.get("warnings", [])
     reply = folder / "reply.md"
     text = read_text(reply) if reply.is_file() else ""
     transcript = read_text(folder / "transcript.log") if (folder / "transcript.log").is_file() else ""
     verdict = verdict_of(text)
     continuity = tag_line(text, "CONTINUITY") if pend.get("resumed") else None
-    session = pend.get("session") or session_of(lane, transcript) or "unknown"
+    session = pend.get("session") or agent_id or session_of(lane, transcript) or "unknown"   # an agent round's id comes from --agent-id (spec review, Q3)
     cli_version = (re.search(r"OpenAI Codex v(\S+)", transcript) or [None, "unknown"])[1] if lane != "kimi" else "unknown"
     clean = None
     if pend.get("worktree") and not Path(pend["worktree"]).is_dir():   # 2026-09-22 review: a removed tree left the round unfinalisable;
@@ -947,6 +952,13 @@ def doctor(args):
 
 # ---------------------------------------------------------------- argparse and the one exit
 
+def reason(text):
+    """The one home of the reason cap: a reason reaches a ledger line (Sol design r1 F2; Brandon, 2026-09-23: "B1"; amendment 1's was about 150)."""
+    if len(text) > 130:
+        raise argparse.ArgumentTypeError(f"{len(text)} characters; a reason stays within 130, so put the detail in a file and name it")
+    return text
+
+
 def parser():
     p = argparse.ArgumentParser(prog="parsec", description="The debate round as a tool (plugin parsec).")
     p.add_argument("--repo", default=os.getcwd(), help="a checkout; the primary is found from it")
@@ -965,18 +977,21 @@ def parser():
         q.add_argument("--reference", help="one reference-code subfolder")
         q.add_argument("--fresh", action="store_true", help="do not resume")
         q.add_argument("--fast", action="store_true", help="codex service_tier=priority, on Brandon's word only")
+        if name == "prepare":                    # 2026-09-23 (0.1.10 last look): an agent's confirming round was recorded as fresh
+            q.add_argument("--resume", metavar="AGENT_ID", help="opus or fable: the agent this round resumes; its newest record must name it or no agent")
     q = rnd.add_parser("collect", help="finalise a pending round, or mark one degraded or closed on Minor")
     for a in ("--feature", "--kind", "--lane"):
         q.add_argument(a, required=True)
     q.add_argument("--round", required=True, type=int)
-    q.add_argument("--degraded", metavar="REASON")
-    q.add_argument("--close-minor", metavar="REASON")
+    q.add_argument("--degraded", metavar="REASON", type=reason)
+    q.add_argument("--close-minor", metavar="REASON", type=reason)
+    q.add_argument("--agent-id", metavar="AGENT_ID", help="opus or fable: the agent that answered, recorded as the round's session")
     q = rnd.add_parser("close", help="remove the feature's review worktrees")
     q.add_argument("--feature", required=True)
     q.add_argument("--kind", choices=KINDS)       # 2026-09-22 r2 (Sol): a free string reached the name pattern
     q = sub.add_parser("verify", help="spec.md and tasks.md against the newest design record or amendment")
     q.add_argument("--feature", required=True)
-    q.add_argument("--record-amendment", metavar="REASON")
+    q.add_argument("--record-amendment", metavar="REASON", type=reason)
     q = sub.add_parser("task-brief", help="slice task N into build/task-NN-brief.md")
     q.add_argument("--feature", required=True)
     q.add_argument("--task", required=True, type=int)
@@ -1011,7 +1026,7 @@ def main(argv=None):
         if args.cmd == "round" and args.sub in ("run", "prepare"):
             return prepare(args, launch=args.sub == "run")
         if args.cmd == "round" and args.sub == "collect":
-            return collect(args.repo, args.feature, args.kind, args.round, args.lane, args.degraded, args.close_minor)
+            return collect(args.repo, args.feature, args.kind, args.round, args.lane, args.degraded, args.close_minor, agent_id=args.agent_id)
         if args.cmd == "round":
             return close_rounds(args)
         if args.cmd == "verify":
