@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.4 (2026-09-22)
+
+The fourth round's findings. A build in the main checkout works when git tracks the docs root.
+
+- The build's status and line endings checks skip a docs root inside the checkout, absolute or relative, never the whole checkout.
+- `round run` checks the config's lane before it makes a panel folder.
+- Tests for a deleted file, a failed `ls-files`, the quota reader's early return and a build in the main checkout.
+
 ## v0.1.3 (2026-09-22)
 
 The findings of the second and third rounds, fixed the same evening.
@@ -11,6 +19,8 @@ The findings of the second and third rounds, fixed the same evening.
 - A file that the work tree lost does not count as a flip; a failed `ls-files` now fails the check.
 - The quota probe stops at the first answer and ends its process tree; the doctor names every lane an update serves.
 - The pre-flight's rubric line counts rubric files, not sections. Tests for each, and for the record before the ledger line.
+- A round that lost its review tree collects as NONE; `round prepare` needs its seat.
+- `round close --kind` takes only the known kinds; a file with no line break yet is no flip.
 
 ## v0.1.2 (2026-09-22)
 
