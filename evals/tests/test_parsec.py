@@ -193,6 +193,11 @@ def test_rerun_rule(env):
     old.mkdir()
     (old / "record.json").write_text(json.dumps({"kind": "design", "round": 3, "lane": "sol", "verdict": "NONE", "end": "9"}), encoding="utf-8")
     assert rnd(e, 3, "sol", "design", "--fresh")[0] == 0 and (old.parent / "design-r3-sol.dead1" / "record.json").is_file()
+    stale = e.feat / "rounds" / "design-r4-kimi"                   # Kimi r2: an uncollected old-style round was refused toward round 1
+    stale.mkdir()
+    (stale / "pending.json").write_text("{}", encoding="utf-8")
+    code, out = rnd(e, 4, "kimi")
+    assert code == 64 and "never collected" in out
 
 
 # row 6: verdict reading (old items 34 and 67; the 2026-09-21 Kimi replies)
@@ -485,10 +490,18 @@ def test_inputs_and_preflight(env):
     conf.write_text(conf.read_text(encoding="utf-8").replace('"astra"', '"opus"'), encoding="utf-8")
     code, out = run(e, "round", "run", "--feature", "panels/09-22-bad", "--kind", "panel", "--round", "1", "--brief", str(e.brief))
     assert code == 64 and "is not a lane" in out and not (e.repo / "docs" / "panels" / "09-22-bad").exists()   # r3, r4 (Sol): a config typo wrote a package, then a panel folder
-    assert run(e, "round", "prepare", "--feature", "panels/09-22-t", "--kind", "panel", "--round", "3", "--lane", "fable", "--brief", str(e.brief))[0] == 64
-    assert not (e.repo / "docs" / "panels" / "09-22-t").exists()      # r1 (Sol): a wrong first number made the panel folder
+    code, out = run(e, "round", "prepare", "--feature", "panels/09-22-t", "--kind", "panel", "--round", "3", "--lane", "fable", "--brief", str(e.brief))
+    assert code == 64 and "a new panel's first round is 1" in out and not (e.repo / "docs" / "panels" / "09-22-t").exists()   # r1 (Sol): a wrong first number made the panel folder
     code, out = run(e, "round", "prepare", "--feature", "panels/09-22-t", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     assert code == 0 and (e.repo / "docs" / "panels" / "09-22-t" / "ledger.md").is_file()   # the one folder the tool makes itself
+    typo = e.repo / "docs" / "panels" / "09-22-typo"                # 2026-09-23 last look: collect and close made a mistyped panel folder; a bad brief or CLI left one
+    assert run(e, "round", "collect", "--feature", "panels/09-22-typo", "--kind", "panel", "--round", "1", "--lane", "fable")[0] == 64
+    assert run(e, "round", "close", "--feature", "panels/09-22-typo")[0] == 64
+    assert run(e, "round", "prepare", "--feature", "panels/09-22-typo", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.tmp / "nope.md"))[0] == 64
+    (e.tmp / "gone.toml").write_text('[sol]\nmodel = "m"\neffort = "high"\ncommand = ["parsec-no-such-cli"]\n', encoding="utf-8")
+    e.mp.setattr(parsec, "LANES_FILE", e.tmp / "gone.toml")
+    code, out = run(e, "round", "run", "--feature", "panels/09-22-typo", "--kind", "panel", "--round", "1", "--lane", "sol", "--brief", str(e.brief))
+    assert code == 64 and "not found on PATH" in out and not typo.exists()
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)

@@ -143,19 +143,16 @@ def child_env():
 
 # ---------------------------------------------------------------- feature, records, replies
 
-def feature_dir(cfg, primary, feature, make=True):
+def feature_dir(cfg, primary, feature, first=None):
+    """A missing panels/<name> passes only for prepare's round 1 (`first`); prepare makes it after its checks."""
     docs = resolve_under(primary, cfg["docs_root"])
     rel = Path(feature.replace("\\", "/"))
     fdir = docs / rel
     if docs not in fdir.resolve().parents:       # 2026-09-22 review (Sol): "../x" reached past the docs root
         raise Exit(64, f"--feature {feature} is not under the docs root {docs}")
-    if not fdir.is_dir():
-        if rel.parts[:1] == ("panels",) and len(rel.parts) == 2 and make:   # the one feature folder the tool makes itself; only for a round 1 (r1, Sol)
-            fdir.mkdir(parents=True)
-            (fdir / "ledger.md").write_text(f"# Panel {rel.parts[1]}\n\nMade by parsec on {stamp()}.\n",
-                                            encoding="utf-8", newline="\n")
-        else:
-            raise Exit(64, f"feature folder {fdir} does not exist (a mistyped name must not grow a second docs root)")
+    panel = rel.parts[:1] == ("panels",) and len(rel.parts) == 2
+    if not fdir.is_dir() and not (panel and first == 1):   # 2026-09-23 last look: collect and close made a mistyped panel folder
+        raise Exit(64, f"feature folder {fdir} does not exist" + (": a new panel's first round is 1" if panel and first is not None else " (a mistyped name must not grow a second docs root)"))
     return fdir, rel.as_posix()
 
 
@@ -457,7 +454,7 @@ def prepare(args, launch):
     args.lane = args.lane or cfg.get("reviewer", {}).get("codex_lane", "sol")   # the config's lane when none is named (2026-09-22 review)
     if args.lane not in (CLI_LANES if launch else tuple(AGENT_OF)):
         raise Exit(64, f"lane {args.lane} (from the config's codex_lane) is not a lane")   # r3, r4: before anything is written, a panel folder included
-    fdir, frel = feature_dir(cfg, primary, args.feature, args.round == 1)
+    fdir, frel = feature_dir(cfg, primary, args.feature, args.round)
     if args.kind in ("prereview", "diff", "lastlook") and not args.base:
         raise Exit(64, f"--base is required for {args.kind}")
     if not args.head:                            # 2026-09-22 16:45: two panel rounds died in the parser wanting a range a panel has not
@@ -466,17 +463,20 @@ def prepare(args, launch):
         args.head = git_out(["rev-parse", "--short", "HEAD"], primary).strip()
     if not Path(args.brief).is_file():
         raise Exit(64, f"brief not found: {args.brief}")
+    cli = args.lane in CLI_LANES
+    if cli:
+        program(row := lane_row(args.lane))      # before anything is written (2026-09-23 last look: a new panel's folder was)
     folder = round_folder(fdir, args.kind, args.round, args.lane)
     warnings = []
     if args.round > 5:
-        warnings.append(f"round {args.round}: past five rounds the skill asks Brandon (old item 24)")
+        warnings.append(f"{args.lane}'s {args.kind} round {args.round}: past five rounds of one lane and kind the skill asks Brandon (old item 24)")
+    if folder.exists() and not (folder / "record.json").is_file() and (folder / "pending.json").is_file():   # before the number check: an uncollected old-style round named round 1 (Kimi r2)
+        raise Exit(64, f"{folder} was never collected: run round collect first")
     mine = [r for r in records(fdir) if (r.get("kind"), r.get("lane")) == (args.kind, args.lane)]
     nxt = 1 + max((r["round"] for r in mine if r.get("verdict") in VERDICTS), default=0)
     if args.round != nxt and not (mine and mine[-1].get("round") == args.round and mine[-1].get("verdict") not in VERDICTS):   # r1 (Sol): an old-style round with no verdict reruns under its number
         raise Exit(64, f"round {args.round}: {args.lane}'s next {args.kind} round is {nxt}; each lane counts its own rounds of a kind from 1, and a round with no verdict reruns under its number")   # 2026-09-22 KitnEssentials: a first diff round ran as r3 after design r1 and prereview r2
     if folder.exists():
-        if not (folder / "record.json").is_file() and (folder / "pending.json").is_file():
-            raise Exit(64, f"{folder} was never collected: run round collect first")
         dead_rename(folder)
     session = None
     if not args.fresh and mine:
@@ -484,13 +484,12 @@ def prepare(args, launch):
         session = None if session in (None, "", "unknown") else session
         if not session:
             warnings.append("newest record of this lane has no session id: fresh round")
+    if not fdir.is_dir():                        # a new panel, round 1 (feature_dir): the one feature folder the tool makes
+        fdir.mkdir(parents=True)
+        (fdir / "ledger.md").write_text(f"# Panel {fdir.name}\n\nMade by parsec on {stamp()}.\n", encoding="utf-8", newline="\n")
     folder.mkdir(parents=True)
     shutil.copyfile(args.brief, folder / "brief.md")
-    tier = "priority" if args.fast else "default"
-    cli = args.lane in CLI_LANES
     if cli:
-        row = lane_row(args.lane)
-        program(row)                             # before any worktree is made
         model, effort, agent = row["model"], row.get("effort", "lane home"), None
         tree = worktree_path(cfg, primary, frel, args.kind, args.lane)
         ensure_worktree(primary, tree, args.head)
