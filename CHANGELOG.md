@@ -2,6 +2,17 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.8 (2026-09-23)
+
+Round summaries are easy to read on a phone. A mistyped panel name makes no folder.
+
+- The debate skill gives a new shape for the round summary. The title shows a colour and the verdict. One line shows what needs Brandon. Each result of the review has one bullet with its answer. Do not put the summary in a code block.
+- The five-round limit counts the rounds of one lane and one kind.
+- Only `round prepare` makes a panel folder, and only for round 1. It makes the folder after all of its checks.
+- `round prepare` checks the evidence files, the commits and the design files before it writes anything. It refuses an evidence file in the round folder that a rerun moves.
+- If you did not collect a round, the tool tells you to collect it. It does not tell you the next round number.
+- The prose budget is 10,200 words.
+
 ## v0.1.7 (2026-09-22)
 
 Each lane now counts its own rounds of a kind from 1. A first diff round is round 1, not the next number of the feature.

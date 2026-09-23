@@ -1,6 +1,6 @@
 {
   "name": "parsec",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Brainstorm, build and cross-vendor debate for Claude Code: an Opus author writes the spec and task list, a Gemini implementer builds each task, and Sol, Astra, Kimi, Opus and Fable review at the commitment boundaries. One Python tool runs the rounds.",
   "author": {
     "name": "Brandon Wascher",
