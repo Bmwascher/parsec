@@ -168,7 +168,7 @@ def behind():
 # ---------------------------------------------------------------- feature, records, replies
 
 def feature_dir(cfg, primary, feature, first=None):
-    """A missing panels/<name> passes only for prepare's round 1 (`first`); prepare makes it after its checks."""
+    """A missing panels/<name> passes only for a panel's round 1 (`first`); prepare makes it after its checks."""
     docs = resolve_under(primary, cfg["docs_root"])
     whole = resolve_under(primary, feature)      # 2026-09-23: "dev/docs/parsec/<x>" was refused by round run, accepted by doctor
     rel = whole.relative_to(docs) if whole.is_relative_to(docs) and whole != docs else Path(feature.replace("\\", "/"))
@@ -476,7 +476,7 @@ def prepare(args, launch):
     args.lane = args.lane or cfg.get("reviewer", {}).get("codex_lane", "sol")   # the config's lane when none is named (2026-09-22 review)
     if args.lane not in (CLI_LANES if launch else tuple(AGENT_OF)):
         raise Exit(64, f"lane {args.lane} (from the config's codex_lane) is not a lane")   # r3, r4: before anything is written, a panel folder included
-    fdir, frel = feature_dir(cfg, primary, args.feature, args.round)
+    fdir, frel = feature_dir(cfg, primary, args.feature, args.round if args.kind == "panel" else None)   # 0.1.9 last look F1: a diff round 1 made a panel folder
     if args.kind in ("prereview", "diff", "lastlook") and not args.base:
         raise Exit(64, f"--base is required for {args.kind}")
     if not args.head:                            # 2026-09-22 16:45: two panel rounds died in the parser wanting a range a panel has not
@@ -588,7 +588,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
         print(f"{pretty_name(lane, kind, n)}: record updated" + "".join(f"\nwarning: {w}" for w in warnings))
         return 0
     if not pend_path.is_file():                  # 2026-09-23: a collect after round run read as an error
-        raise Exit(64, f"{folder.name} is already collected (round run collects its own round)" if rec_path.is_file() else f"nothing pending in {folder}")
+        raise Exit(64, f"{folder.name} is already collected" + (" (round run collects its own round)" if lane in CLI_LANES else "") if rec_path.is_file() else f"nothing pending in {folder}")   # 0.1.9 last look F2
     pend = read_json(pend_path)
     warnings += pend.get("warnings", [])
     reply = folder / "reply.md"

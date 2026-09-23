@@ -128,6 +128,7 @@ def test_codex_flags_before_resume(env):
     assert e.record("design", 2, "astra")["resumed"] is True
     code, out = rnd(e, 1, "sol", "design", "--fresh")
     assert "gpt-5.6-sol" in e.calls()[-1] and "resume" not in e.calls()[-1]
+    assert "round run collects its own round" in run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "sol")[1]   # 0.1.9 last look F2: kept for a CLI round
     ctx = (e.wt / "_review" / "proj-09-22-x-design-sol" / ".parsec" / "context.md").read_text(encoding="utf-8")
     assert ctx.splitlines()[2].startswith("- your lane, Sol: you may run read-only commands") and "(git show, git log, git grep; rg is not installed)" in ctx   # 2026-09-23 audit: a driver's command ban cost a Sol round
 
@@ -508,7 +509,8 @@ def test_inputs_and_preflight(env):
     r = e.record("prereview", 1, "opus")
     assert code == 0 and r["verdict"] == "PASS" and r["agent"] == "reviewer-opus" and r["model"].startswith("claude-opus") and not (folder / "pending.json").exists()
     assert set(r["subject"]) == {"spec", "tasks"}
-    assert "in-session agent" in out and r["degraded"] is None and "already collected" in run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")[1]
+    again = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")[1]
+    assert "in-session agent" in out and r["degraded"] is None and "already collected" in again and "round run" not in again   # 0.1.9 last look F2: an agent round has no round run
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "lastlook", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base)
     (e.feat / "rounds" / "lastlook-r1-opus" / "reply.md").write_text("VERDICT: PASS\n", encoding="utf-8")
     run(e, "round", "collect", "--feature", "09-22-x", "--kind", "lastlook", "--round", "1", "--lane", "opus")
@@ -559,7 +561,7 @@ def test_inputs_and_preflight(env):
     assert run(e, "round", "collect", "--feature", "panels/09-22-typo", "--kind", "panel", "--round", "1", "--lane", "fable")[0] == 64
     assert run(e, "round", "close", "--feature", "panels/09-22-typo")[0] == 64
     assert run(e, "round", "prepare", "--feature", "panels/09-22-typo", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.tmp / "nope.md"))[0] == 64
-    for bad in (["--file", str(e.tmp / "nope.md")], ["--head", "0" * 12], ["--kind", "design", "--head", e.head]):   # 2026-09-23 pre-review: a bad --file, --head or kind left one too
+    for bad in (["--file", str(e.tmp / "nope.md")], ["--head", "0" * 12], ["--kind", "design", "--head", e.head], ["--kind", "diff", "--head", e.head, "--base", e.base]):   # 2026-09-23 pre-review: a bad --file, --head or kind left one too; 0.1.9 last look F1: so did a diff round 1
         assert run(e, "round", "prepare", "--feature", "panels/09-22-typo", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief), *bad)[0] == 64
     (e.tmp / "gone.toml").write_text('[sol]\nmodel = "m"\neffort = "high"\ncommand = ["parsec-no-such-cli"]\n', encoding="utf-8")
     e.mp.setattr(parsec, "LANES_FILE", e.tmp / "gone.toml")
