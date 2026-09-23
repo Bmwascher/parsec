@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-label="parsec: brainstorm, build and cross-vendor review for Claude Code">
+  <rect width="1200" height="320" rx="20" fill="#131a2c"/>
+  <g fill="#91a7ff">
+    <circle cx="912" cy="54" r="2" opacity=".5"/><circle cx="968" cy="118" r="1.6" opacity=".4"/>
+    <circle cx="1004" cy="40" r="1.4" opacity=".4"/><circle cx="1122" cy="44" r="2" opacity=".5"/>
+    <circle cx="1160" cy="112" r="1.6" opacity=".4"/><circle cx="930" cy="176" r="1.4" opacity=".35"/>
+    <circle cx="1150" cy="186" r="2" opacity=".4"/><circle cx="1010" cy="160" r="1.2" opacity=".35"/>
+  </g>
+  <g fill="none" stroke="#91a7ff" stroke-width="1.5">
+    <ellipse cx="1050" cy="262" rx="96" ry="22" opacity=".35"/>
+    <path d="M954 262 L1062 92 L1146 262" opacity=".45" stroke-dasharray="4 5"/>
+    <path d="M1052 108 A18 18 0 0 0 1071 107" opacity=".75"/>
+  </g>
+  <circle cx="1062" cy="92" r="6" fill="#ffc034"/>
+  <circle cx="1062" cy="92" r="13" fill="#ffc034" opacity=".2"/>
+  <circle cx="954" cy="262" r="4.5" fill="#91a7ff"/>
+  <circle cx="1146" cy="262" r="4.5" fill="#91a7ff"/>
+  <text x="1076" y="128" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="16" fill="#91a7ff" opacity=".85">p</text>
+  <g font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif">
+    <text x="64" y="128" font-size="92" font-weight="800" letter-spacing="-3" fill="#eef1ff">parsec</text>
+    <text x="68" y="176" font-size="25" fill="#aab3d4">Brainstorm, build and cross-vendor review for Claude Code</text>
+    <g font-size="19" font-weight="600" fill="#ffffff" text-anchor="middle">
+      <rect x="64" y="212" width="160" height="44" rx="22" fill="#4c6ef5"/><text x="144" y="240">Brainstorm</text>
+      <rect x="276" y="212" width="116" height="44" rx="22" fill="#2b8a3e"/><text x="334" y="240">Build</text>
+      <rect x="444" y="212" width="126" height="44" rx="22" fill="#7048e8"/><text x="507" y="240">Review</text>
+    </g>
+    <g stroke="#5c6690" stroke-width="2" fill="none" stroke-linecap="round">
+      <path d="M234 234 H264 M257 228 L264 234 L257 240"/>
+      <path d="M402 234 H432 M425 228 L432 234 L425 240"/>
+    </g>
+    <g font-size="15" fill="#8f98bb" text-anchor="middle">
+      <text x="144" y="284">Opus author</text>
+      <text x="334" y="284">Gemini implementer</text>
+      <text x="507" y="284">Sol · Opus · Fable</text>
+    </g>
+  </g>
+</svg>
