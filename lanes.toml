@@ -1,4 +1,4 @@
-# Lanes the TOOL launches. Claude seats (author, implementer, reviewer-opus,
+# Lanes the TOOL launches. Claude seats (author, backup-implementer, reviewer-opus,
 # reviewer-fable) are not here: their model and effort live in the agent files.
 # `command` is a list, so a test can substitute a fake CLI. Full model ids only:
 # what an alias resolves to was never measured (old item 81).
@@ -21,7 +21,7 @@ command = ["kimi"]
 home = "C:/Users/Brandon/.kimi-code-lane"
 update = ["kimi", "update"]
 
-[gemini]                                # the build lane, run by `build run`; no agent around it
+[gemini]                                # the implementer, run by `build run`; no agent around it
 model = "gemini-3.8-flash-high"
 command = ["agy"]
 update = ["agy", "update"]              # Brandon, 2026-09-22: agy's own "Update CLI" subcommand

@@ -1,6 +1,6 @@
 ---
-name: implementer
-description: The build seat for what the Gemini lane cannot take (a task that deletes, renames or moves a file; a task whose Gemini run failed; every task when agy is missing). Dispatch it in the background with the path of the task brief and the path of the implementer contract.
+name: backup-implementer
+description: The backup build seat for what the implementer, the Gemini lane, cannot take (a task that deletes, renames or moves a file; a task whose Gemini run failed; every task when agy is missing). Dispatch it in the background with the path of the task brief and the path of the implementer contract.
 model: claude-opus-5-5
 effort: medium
 background: true

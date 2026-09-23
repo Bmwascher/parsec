@@ -7,8 +7,8 @@ One file per CLI and per model, holding only what a driver acts on, each fact da
 | Seat | Read | Where the id and effort live |
 |---|---|---|
 | `author` | `opus.md` | `agents/author.md` |
-| `implementer` | `opus.md`, `templates/implementer-contract.md` | `agents/implementer.md` |
-| Build lane (Gemini) | `agy-cli.md` | `lanes.toml`, row `gemini` |
+| `backup-implementer` | `opus.md`, `templates/implementer-contract.md` | `agents/backup-implementer.md` |
+| Implementer (Gemini lane) | `agy-cli.md` | `lanes.toml`, row `gemini` |
 | `reviewer-opus` | `opus.md` | `agents/reviewer-opus.md` |
 | `reviewer-fable` | `fable.md` | `agents/reviewer-fable.md` |
 | Sol lane (default) | `codex-cli.md`, `sol.md` | `lanes.toml`, row `sol` |

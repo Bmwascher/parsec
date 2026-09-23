@@ -729,7 +729,7 @@ def build_run(args):
             raise Exit(64, f"{report} exists: --again archives it first")
         archive_task(fdir, args.task)
     row = lane_row("gemini")
-    prog = program(row)                          # missing: every task goes to the implementer
+    prog = program(row)                          # missing: every task goes to the backup implementer
     digest = sha256(brief)
     copy = checkout / f"AGY-TASK-BRIEF-{digest[:12]}.md"
     warnings, lines = [], []
@@ -949,7 +949,7 @@ def parser():
     q = sub.add_parser("task-brief", help="slice task N into build/task-NN-brief.md")
     q.add_argument("--feature", required=True)
     q.add_argument("--task", required=True, type=int)
-    bld = sub.add_parser("build", help="the Gemini build lane").add_subparsers(dest="sub", required=True)
+    bld = sub.add_parser("build", help="the implementer (the Gemini lane)").add_subparsers(dest="sub", required=True)
     q = bld.add_parser("run", help="run task N through agy in the checkout")
     q.add_argument("--feature", required=True)
     q.add_argument("--task", required=True, type=int)

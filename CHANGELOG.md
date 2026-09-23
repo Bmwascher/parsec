@@ -2,6 +2,13 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.6 (2026-09-22)
+
+The Gemini lane is now the implementer, and the Opus agent is the backup implementer.
+
+- The agent `implementer` is now `backup-implementer`. The build skill sends it the same tasks as before.
+- The skills, model notes, templates and README use the new names.
+
 ## v0.1.5 (2026-09-22)
 
 The design skill is now the brainstorm skill. Say "brainstorm" to start a feature.

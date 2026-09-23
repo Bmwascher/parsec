@@ -1,6 +1,6 @@
 # Claude Opus 5.5 (`claude-opus-5-5`)
 
-The `author` seat (from 2026-09-22), the `reviewer-opus` seat (the pre-review) and the `implementer` seat (the build fallback); also Brandon's daily driver from 2026-09-22. The author is dispatched even though the driver is the same model: its fresh context is the point, not the model. Both seats moved from Opus 5 (`claude-opus-5`) to Opus 5.5 on Brandon's word the day it released (2026-09-22); the measurements below were taken on Opus 5 and carry as starting points, UNMEASURED on 5.5.
+The `author` seat (from 2026-09-22), the `reviewer-opus` seat (the pre-review) and the `backup-implementer` seat; also Brandon's daily driver from 2026-09-22. The author is dispatched even though the driver is the same model: its fresh context is the point, not the model. Both seats moved from Opus 5 (`claude-opus-5`) to Opus 5.5 on Brandon's word the day it released (2026-09-22); the measurements below were taken on Opus 5 and carry as starting points, UNMEASURED on 5.5.
 
 ## The guide says, so the plugin does
 
@@ -20,5 +20,5 @@ Claude Code below 2.1.280 rejects the id with a 400 that names the version (seen
 
 ## Unmeasured
 
-- The implementer at `medium` and the pre-review at `high` on 5.5.
+- The backup-implementer at `medium` and the pre-review at `high` on 5.5.
 - Effort per task: one effort per seat, by design.

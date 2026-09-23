@@ -1,6 +1,6 @@
 # Implementer contract
 
-Read by the Opus `implementer` alone; the Gemini lane gets the brief and nothing else. The brief is one task from a task list that a reviewed design produced. Your job is to build exactly that task.
+Read by the `backup-implementer` alone; the Gemini lane gets the brief and nothing else. The brief is one task from a task list that a reviewed design produced. Your job is to build exactly that task.
 
 ## What to build
 

@@ -4,9 +4,9 @@
 
 **Brainstorm, build and cross-vendor review for Claude Code, in one lean plugin.**
 
-An Opus author writes the plan. A fast Gemini lane types the code. Models from three different companies check the work at the moments where a mistake gets expensive.
+An Opus author writes the plan. A fast Gemini implementer types the code. Models from three different companies check the work at the moments where a mistake gets expensive.
 
-![version](https://img.shields.io/badge/version-0.1.5-4c6ef5)
+![version](https://img.shields.io/badge/version-0.1.6-4c6ef5)
 ![python](https://img.shields.io/badge/python-3.12-3776ab)
 ![platform](https://img.shields.io/badge/platform-Windows-0078d4)
 ![license](https://img.shields.io/badge/license-MIT-2f9e44)
@@ -39,7 +39,7 @@ An Opus author writes the plan. A fast Gemini lane types the code. Models from t
 parsec is a [Claude Code](https://claude.com/claude-code) plugin that takes a feature from a rough idea to reviewed, committed code. It does three things:
 
 1. **Brainstorm.** It interviews you, then has an Opus author write a spec and a step-by-step task list with the real code in every step.
-2. **Build.** A Gemini lane copies each task into the codebase. The session runs the tests, checks the diff and makes the commit.
+2. **Build.** The implementer, a Gemini lane, copies each task into the codebase. The session runs the tests, checks the diff and makes the commit.
 3. **Review.** At each point where you are about to commit to something, a model from a *different company* reads the work cold and argues with it until the findings are settled.
 
 Five skills carry the rules, and one Python file (`tools/parsec.py`) does the mechanical work: packaging review rounds, launching the other companies' command-line tools, and recording every verdict.
@@ -56,7 +56,7 @@ A model that reviews its own work tends to agree with itself. A model from anoth
 - **before building**, when a flaw in the plan is cheap to fix;
 - **after building**, when a flaw in the diff has not reached the main branch yet.
 
-It also splits *thinking* from *typing*. The expensive model decides everything and writes the code into the plan. A cheap, fast model only transcribes it. When a transcription goes wrong, the tool can tell, and the task moves to a stronger seat.
+It also splits *thinking* from *typing*. The expensive model decides everything and writes the code into the plan. A cheap, fast model only transcribes it. When a transcription goes wrong, the tool can tell, and the task moves to the backup implementer, an Opus agent.
 
 ---
 
@@ -82,7 +82,7 @@ flowchart TD
     A --> T[Author writes the task list<br/>with full code per task]
     T --> G{Go?}
     G --> DD[Design debate<br/>cross-vendor lane vs. author]
-    DD --> B[Build: Gemini types each task<br/>session tests, checks, commits]
+    DD --> B[Build: the Gemini implementer types each task<br/>session tests, checks, commits]
 
     B --> P[Opus pre-review]
     BW --> P
@@ -99,19 +99,67 @@ flowchart TD
 
 ## Who does what
 
-A **seat** is a job. A **lane** is a model the tool launches from the command line. Seats inside Claude Code are agents; their model lives in the agent file. Lanes live in [`lanes.toml`](lanes.toml).
+The roles below are in the order they meet the work.
 
-| Seat or lane | Model | Job |
-|---|---|---|
-| `author` | Claude Opus 5.5, high effort | Writes the spec and task list; answers design findings with an edit or cited evidence |
-| **Implementer** (Gemini lane) | Gemini 3.8 Flash (via `agy`) | Builds every task, typing its code exactly as written. Decides nothing. |
-| **Backup implementer** (`implementer` agent) | Claude Opus 5.5, medium effort | Builds what Gemini can't: deletes, renames, moves, any task Gemini got wrong once, and every task when `agy` is missing |
-| `reviewer-opus` | Claude Opus 5.5, high effort | The pre-review at the start of the diff gate |
-| **Sol lane** (default) | GPT-6 Sol (via `codex`) | The cross-vendor reviewer for design and diff debates |
-| **Astra lane** | GPT-6 Astra (via `codex`) | The alternate cross-vendor reviewer, used by name |
-| **Kimi lane** | Kimi K3 (via `kimi`) | The backup reviewer, used only with your approval (or the config's standing approval) |
-| `reviewer-fable` | Claude Fable 5.1, high effort | The last look, panel seats, polls, and tie-breaking advice |
-| Driver | Whatever model your session runs | Runs the flow, checks every claim, makes every commit |
+A **seat** is a job done by a Claude agent inside Claude Code; its model lives in the agent file under [`agents/`](agents/). A **lane** is a model from another tool that parsec launches from the command line; lanes live in [`lanes.toml`](lanes.toml).
+
+### Driver
+
+**Model:** whatever model your Claude Code session runs.
+
+The driver is your session itself, so every flow starts here. It sorts the request, runs the tool, dispatches every other seat, checks each reviewer's claims against the code, runs the tests and makes every commit. It posts a summary after each round without waiting to be asked.
+
+### Author
+
+**Seat:** `author` · **Model:** Claude Opus 5.5, high effort
+
+Writes the spec, then the task list with the full test and implementation code in every task. In a debate it answers each design finding with an edit or a refutation backed by evidence. When a review finds a blocking defect after the build, it writes the fix task.
+
+### Implementers
+
+The implementers build the tasks the author wrote. Whichever one builds a task, the driver runs its tests, checks the diff and makes the commit.
+
+#### Primary: the Gemini lane
+
+**Lane:** `gemini` · **Model:** Gemini 3.8 Flash, through the `agy` CLI
+
+Builds every task by typing its code exactly as written. It decides nothing, so a wrong task shows up as a failed test, never as a quiet workaround.
+
+#### Secondary: the backup implementer
+
+**Seat:** `backup-implementer` · **Model:** Claude Opus 5.5, medium effort
+
+Takes the tasks Gemini can't:
+
+- a task that deletes, renames or moves a file, since Gemini's print mode has no delete tool;
+- a task Gemini got wrong once;
+- every task, when `agy` isn't installed.
+
+### Reviewers
+
+Reviewers never touch the code. Each one reads a package, reports findings graded Critical, Important or Minor, and ends with a verdict.
+
+#### Pre-review: `reviewer-opus`
+
+**Model:** Claude Opus 5.5, high effort
+
+Opens the diff gate after the build. It catches the obvious before any cross-vendor quota is spent.
+
+#### Cross-vendor reviewers
+
+These are the reviewers from other companies. They run the design debate before the build and the diff debate after it.
+
+| Rank | Lane | Model | When it runs |
+|---|---|---|---|
+| **Primary** | `sol` | GPT-6 Sol, through `codex` | Every debate, unless you name another lane |
+| **Secondary** | `astra` | GPT-6 Astra, through `codex` | When you say "use Astra", or when the project's config makes it the default |
+| **Backup** | `kimi` | Kimi K3, through `kimi` | Only when codex is unavailable and you approve, or the config approves it in advance |
+
+#### Last look: `reviewer-fable`
+
+**Model:** Claude Fable 5.1, high effort
+
+A fresh agent that reads the final head once every other review has passed. Its PASS names the exact commit that ships. The same seat also sits on panels, answers polls and gives advice when two positions need an outside view.
 
 > [!TIP]
 > Model notes in [`models/`](models/) record what each model and CLI actually does, each fact dated or marked UNMEASURED. Swapping a model means re-deciding its effort level from that model's own guide, because "high" doesn't mean the same amount of thinking across vendors.
@@ -357,7 +405,7 @@ A failed attempt is never overwritten. It is renamed `.dead1`, `.dead2` and so o
 | `round close` | Removes the feature's review worktrees |
 | `verify` | Checks `spec.md` and `tasks.md` against the newest design record or amendment |
 | `task-brief` | Slices task N into its own brief and prints its SHA-256 |
-| `build run` | Runs task N through Gemini in the checkout and writes the task report |
+| `build run` | Runs task N through the implementer (Gemini) in the checkout and writes the task report |
 | `build archive` | Renames task N's report and log to `.dead<k>` before a retry |
 | `remove-worktree` | Removes a review worktree, unlinking junctions first so nothing real is deleted |
 | `doctor` | The health table, one lane's pre-flight (`--lane`), or the updates (`--update`) |
@@ -440,10 +488,10 @@ The plugin cache is keyed on the version string, so a missed bump means a stale 
 ```text
 parsec/
 ├── .claude-plugin/     plugin.json and marketplace.json
-├── agents/             the four Claude seats: author, implementer (the backup), reviewer-opus, reviewer-fable
+├── agents/             the four Claude seats: author, backup-implementer, reviewer-opus, reviewer-fable
 ├── commands/           /parsec:doctor
 ├── skills/             brainstorm, build, debate, panel, setup
-├── templates/          spec, task list, ledger, briefs, driver rules, implementer contract
+├── templates/          spec, task list, ledger, briefs, driver rules, the backup implementer's contract
 ├── models/             dated notes on each model and CLI
 ├── lanes/              the Kimi reviewer's agent file
 ├── tools/parsec.py     the one tool

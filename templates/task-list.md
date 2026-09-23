@@ -31,7 +31,7 @@ Each task is a `## Task N: <name>` section holding:
   4. Run the tests and see them pass (green); the whole suite, output clean.
   5. Commit, as the LAST step, after a branch check, because phase chats share a checkout. The commit message is given in full.
 
-The commit step belongs to the session. The test steps belong to the session on the Gemini lane (print mode runs no command) and to the `implementer` on its lane; they are written here so the record is complete.
+The commit step belongs to the session. The test steps belong to the session on the Gemini lane (print mode runs no command) and to the `backup-implementer` on its lane; they are written here so the record is complete.
 
 ## The three norms, written where they act
 
