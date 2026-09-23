@@ -6,7 +6,7 @@ REPO = Path(__file__).resolve().parents[2]
 SKILLS = ["brainstorm", "build", "debate", "setup", "panel"]
 PROSE = [f"skills/{s}/SKILL.md" for s in SKILLS] + [
     "templates/driver-rules.md", "templates/spec.md", "templates/task-list.md", "templates/brief.md",
-    "templates/brief-design.md", "templates/brief-diff.md", "templates/brief-panel.md", "templates/ledger.md",
+    "templates/brief-design.md", "templates/brief-diff.md", "templates/brief-lastlook.md", "templates/brief-panel.md", "templates/ledger.md",
     "templates/implementer-contract.md", "agents/backup-implementer.md", "agents/reviewer-opus.md", "agents/reviewer-fable.md",
     "agents/author.md", "lanes/kimi-reviewer.md", "commands/doctor.md", "models/index.md", "models/codex-cli.md",
     "models/kimi-cli.md", "models/astra.md", "models/kimi-k3.md", "models/fable.md", "models/opus.md", "models/sol.md",
