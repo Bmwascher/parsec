@@ -20,7 +20,7 @@ One file per CLI and per model, holding only what a driver acts on, each fact da
 
 - Ground every claim in what was run: a command, a file, a line. A claim without that is struck from a brief and from a report.
 - State what is out of scope, in the brief and in the reply.
-- A fresh context reviews better than self-critique (a design choice, UNMEASURED): the last look is a fresh agent, and a confirming question resumes it only about its own findings and its fix-now Minors.
+- A fresh context reviews better than self-critique (a design choice, UNMEASURED): so both Fable looks are fresh agents.
 - The brief shape is `templates/brief.md`; nothing here restates it.
 
 ## Citations

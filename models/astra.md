@@ -14,10 +14,7 @@ The reviewer lane. Vendor guide: OpenAI's Astra guide, fetched 2026-09-05 for th
 - Effort `high`, pinned per call in `lanes.toml` (2026-09-22).
 - Fast tier: the catalog names one tier, `priority`, "2x speed" on Astra, "increased usage"; reasoning effort unchanged (read 2026-09-22). Pinned off by the tool; on only with `--fast` on Brandon's word.
 - Tandem review of the rethink's five design files, 2026-09-22, fast tier: 10 fresh rounds and 16 resumes on five sessions, 60 to 150 s per resumed round, 67k to 78k tokens each; every continuity answer matched the record; findings cited `file:line` throughout.
-- Rounds 1 to 3 on one session kept context across fix passes (no re-reading asked for; the tandem above, 2026-09-22).
 
 ## Unmeasured
 
-- "A higher effort on Sol spread to its subagents and burnt tokens" is carried from the old notes undated and was never measured on Astra.
-- The tier-gating 400 on Astra (see `codex-cli.md`).
 - Long rounds: the watcher's "still running" pattern past 10 minutes.

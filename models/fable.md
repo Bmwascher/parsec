@@ -1,6 +1,6 @@
 # Claude Fable 5.1 (`claude-fable-5-1`)
 
-The `reviewer-fable` seat: the last look on both halves, a panel lane, an adjudication and a poll. The `author` seat moved to Opus 5.5 on 2026-09-22 after a blind panel ranked the Opus pair above the Fable pair on fidelity, correctness, tests and buildability (`opus.md`).
+The `reviewer-fable` seat: the design look and the last look, a panel lane, an adjudication and a poll.
 
 ## The guide says, so the plugin does
 
@@ -14,5 +14,4 @@ Fable 5.1 guide, fetched 2026-09-21: start at effort `high` for authoring and re
 
 ## Unmeasured
 
-- Authoring: owed item 12 measures Opus and Fable each writing the round tool's spec and task list from the same notes, with an Astra round 1 on each.
 - Effort `medium` on either seat.

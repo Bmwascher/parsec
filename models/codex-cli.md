@@ -6,10 +6,6 @@ What a driver acts on. Version in use: codex-cli 0.156.0 (2026-09-22; written on
 
 Probed 2026-07-24 on 0.144.1: `codex exec ... resume <unknown id>` exits 1 with `thread/resume failed: no rollout found for thread id` and writes no reply file. A round that shows this line is not retried on the same id: the record's session id is wrong or its rollout is gone, and the next round runs `--fresh` with the earlier briefs and replies passed by `--file`.
 
-## The tier-gating 400
-
-A 400 "not supported when using Codex with a ChatGPT account" on a model id means the tier lacks the model or the CLI predates it ("A missing model is a stale CLI first" below) (probed 2026-07-12 on Sol; free and Go tiers had Terra only). Astra answered at `low` and `high` on 2026-09-04. The same 400 on Astra would need its own probe.
-
 ## The free quota read
 
 `codex app-server --stdio` answers the JSON-RPC method `account/rateLimits/read` (probed 2026-07-24; an experimental surface, drift expected). The doctor prints it as information only; it never fails a pre-flight.
@@ -24,7 +20,7 @@ A 400 "not supported when using Codex with a ChatGPT account" on a model id mean
 
 ## A missing model is a stale CLI first
 
-A new id answers `400 The '<id>' model is not supported when using Codex with a ChatGPT account` on a CLI that predates it, and `models_cache.json` omits it: seen 2026-09-22 on 0.153.4 for `gpt-6-sol` and `gpt-6-luna`; the update to 0.156.0 fixed both. Update first; read entitlement second.
+A new id answers `400 The '<id>' model is not supported when using Codex with a ChatGPT account` on a CLI that predates it, and `models_cache.json` omits it: seen 2026-09-22 on 0.153.4 for `gpt-6-sol` and `gpt-6-luna`; the update to 0.156.0 fixed both. The same 400 on 2026-07-12 (Sol, free and Go tiers) meant the tier lacked the model. Update first; read entitlement second.
 
 ## No rg in the reviewer shell
 
