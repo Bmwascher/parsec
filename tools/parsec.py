@@ -30,6 +30,7 @@ STILL_MINUTES = (10, 15, 20, 25)
 KINDS = ("design", "prereview", "diff", "lastlook", "panel")
 CLI_LANES = ("astra", "sol", "kimi")
 AGENT_OF = {"opus": "reviewer-opus", "fable": "reviewer-fable"}
+MARKERS = {"FIX": "🔴", "PASS": "🟢", "ESCALATE": "🟡", "BLIND": "🟡"}   # the debate skill's summary shape; NONE and WROTE-FILES are white
 VERDICTS = ("PASS", "FIX", "ESCALATE", "BLIND")
 SHELL_READS = "you may run read-only commands that read the tree or its history (git show, git log, git grep; rg is not installed); never a build, a test, a write or a fetch"   # 2026-09-23 audit: a driver's command ban cost a Sol round
 FILE_READS = "read with your file tools only; you have no shell; never a write or a fetch, except a seat's report path"   # Fable was told it had a shell; lanes/kimi-reviewer.md disallows Bash
@@ -217,6 +218,11 @@ def tag_line(text, tag):
         if s.upper().startswith(tag + ":"):
             return s[len(tag) + 1:].strip(" *")
     return None
+
+
+def severity_counts(text):                       # a reply's counts line, number before or after the word
+    got = [re.search(rf"\b{w}:?\s+(\d+)|(\d+)\s+{w}\b", text) for w in ("Critical", "Important", "Minor")]
+    return " · ".join(f"{w} {m[1] or m[2]}" for w, m in zip(("Critical", "Important", "Minor"), got)) if all(got) else None
 
 
 def verdict_of(text):
@@ -647,6 +653,9 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     code = 67 if run["timeout"] else 66 if verdict == "WROTE-FILES" else 65 if verdict == "NONE" else (run["cli_exit"] or 0)
     if code and transcript:
         print("transcript tail:\n" + "\n".join(transcript.splitlines()[-5:]))
+    took = f"{round(run['seconds'] / 60)} min, " if run["seconds"] is not None else ""   # 2026-09-23 phase 6: a prose summary; the head is printed to paste
+    print(f"\n### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took}{'resumed' if pend.get('resumed') else 'fresh'})"
+          + (f"\n\n{severity_counts(text)}" if severity_counts(text) else ""))
     return code
 
 

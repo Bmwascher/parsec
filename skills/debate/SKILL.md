@@ -15,7 +15,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 - Pass `--fast` only on Brandon's explicit word for THAT debate ("use fast"), never from a config or an earlier debate.
 - Pass `--reference <subfolder>` when the spec declares a port or touches a module that has a reference; a reference outside the reference-code folder goes in as `--file` evidence (field phase 6, 2026-09-23).
 - Pass earlier briefs and replies with `--file` to a lane that joins mid-debate; its own rounds start at 1. The brief names each reply's lane and round.
-- Post the summary after every round (every kind, a PASS included, and to a delegator too), without waiting for Brandon, as rendered Markdown in this shape. Never put it inside a code block: a fenced table wraps into unreadable pipes on his phone (2026-09-23).
+- Post the summary after every round (every kind, a PASS included, and to a delegator too), without waiting for Brandon, as rendered Markdown in this shape; the tool prints the heading and counts lines, pasted as is (a phase 6 summary had neither, 2026-09-23). Never put it inside a code block: a fenced table wraps into unreadable pipes on his phone (2026-09-23).
 
   ```markdown
   ### 🔴 Astra R2 Design Round: FIX (7 min, resumed)
