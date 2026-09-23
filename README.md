@@ -294,12 +294,17 @@ You talk to it in plain words, and the skills trigger on what you say.
 
 Every long step runs **in the background with a readable name**, so you can see what's happening at a glance. After each review round, the session posts a short summary without waiting for you:
 
-```text
-Sol R2 Design Round: FIX   (7 min, resumed)
-Critical 0, Important 2, Minor 1. Round 1's three findings: 2 closed, 1 still open.
-| # | Severity | Finding | My answer |
-Next: author edits, then round 3.
-```
+> ### 🔴 Sol R2 Design Round: FIX (7 min, resumed)
+> **Needs you:** F4, contested twice. I recommend option a.
+>
+> Critical 0 · Important 2 · Minor 1<br>
+> Round 1: F1 closed · F2 reopened narrower · F4 still open
+>
+> - **F2 · Important (reopened):** the claim says one refresh; the gap is 1.5 s.<br>→ **Fix:** the claim becomes "at most 1.5 s late".
+> - **F4 · Important:** the swap rests on a group event nobody has verified.<br>→ **You decide** (see above).
+> - **F5 · Minor:** the second-pull claim needs a precondition.<br>→ **Refute:** stated in the spec's section 3.
+>
+> **Next:** author edits, then round 3.
 
 <details>
 <summary><b>The background task names you'll see</b></summary>
@@ -347,7 +352,7 @@ Wording-only findings never cost a round either. Code defects matter most, then 
 - **Every finding gets an answer:** a fix, a refutation with cited evidence, or an escalation to you. Silence is not an answer.
 - **A refutation needs proof.** The driver checks it against the source before it goes into the next brief. For a claim about a test, that can mean breaking the code in a scratch copy and showing the test fails.
 - **A debate ends** on a round with no new Critical or Important finding and no contested point left open.
-- **Five rounds is the cap.** After that the session pauses and asks you. A spent budget never counts as a pass.
+- **Five rounds is the cap,** for each lane in each phase. After that the session pauses and asks you. A spent budget never counts as a pass.
 - **A point contested twice** with evidence on both sides goes to you at once.
 - **Reviewers keep their memory.** A codex lane is resumed each round and must answer a continuity question. If it can't, the next round starts fresh with its earlier replies attached as evidence.
 
@@ -499,7 +504,7 @@ The plugin stays lean because its size limits fail the build. An addition that w
 | `tools/parsec.py` | 1,000 lines |
 | All tests | 1,500 lines |
 | The frozen checkers | 522 lines |
-| All skill, template, agent and model prose | 10,000 words |
+| All skill, template, agent and model prose | 10,200 words |
 | Any one skill | 1,600 words |
 
 ### House rules

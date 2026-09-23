@@ -15,16 +15,30 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 - Pass `--fast` only on Brandon's explicit word for THAT debate ("use fast"), never from a config or an earlier debate.
 - Pass `--reference <subfolder>` when the spec declares a port or touches a module that has a reference.
 - Pass earlier briefs and replies with `--file` to a lane that joins mid-debate; its own rounds start at 1.
-- Post the summary after every round, in this shape, without waiting for Brandon:
+- Post the summary after every round, without waiting for Brandon, as rendered Markdown in this shape. Never put it inside a code block: a fenced table wraps into unreadable pipes on his phone (2026-09-23).
 
-  ```
-  Astra R2 Design Round: FIX   (7 min, resumed)
-  Critical 0, Important 2, Minor 1. Round 1's three findings: 2 closed, 1 still open.
-  | # | Severity | Finding | My answer |
-  Next: author edits, then round 3.
+  ```markdown
+  ### 🔴 Astra R2 Design Round: FIX (7 min, resumed)
+  **Needs you:** F4, contested twice. I recommend option a.
+
+  Critical 0 · Important 2 · Minor 1
+  Round 1: F1 closed · F2 reopened narrower · F4 still open
+
+  - **F2 · Important (reopened):** <finding>.
+    → **Fix:** <what changes>.
+  - **F4 · Important (still open):** <finding>.
+    → **You decide** (see above).
+  - **F5 · Minor:** <finding>.
+    → **Refute:** <evidence in a few words>.
+
+  **Next:** author edits, then round 3.
   ```
 
-  Only the verdict word is exact; the reviewer's own words stay in `reply.md`. A refuted finding shows its evidence in a few words.
+  - The marker before the name: 🔴 FIX, 🟢 PASS, 🟡 ESCALATE or BLIND, ⚪ NONE or WROTE-FILES.
+  - "Needs you" comes second and only when something waits on Brandon; leave it out otherwise.
+  - Findings keep the reviewer's own IDs, so they match `reply.md` and the next round's carry-over line, ordered by severity, then ID. A reopened or still-open finding says so in its bullet.
+  - Every answer is **Fix** (what changes), **Refute** (the evidence in a few words) or **You decide**.
+  - Only the verdict word is exact; the reviewer's own words stay in `reply.md`.
 - Collect a round whose tool was killed (`round collect`), then rerun it on its session asking only for the verdict.
 - Commit no round folder while the debate is open (`setup`, "Tracked docs root").
 - `round close --feature <folder>` after the last look passes (not after the diff debate's PASS), or on Brandon's word to stop.
@@ -37,7 +51,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 - **Adjudication.** When Opus drives, it may ask `reviewer-fable` to adjudicate before it refutes a Critical or Important finding, giving both positions as file paths in the feature folder; the call is poll-shaped (no report path, the answer in the reply, `Fable Poll`). The answer is advice; the twice-contested rule still applies.
 - **The ending, stated once**: a debate ends on an ADJUDICATED DRY ROUND, no new Critical or Important finding and no contested point open. A PASS names its subject.
 - **Minor and prose-only findings NEVER cost a round** (Brandon, 2026-09-21: code defects matter most, then tests; wording never earns a round of quota). If a round still ends FIX and every open finding is graded Minor, or touches only wording and no code, test, interface or behaviour: fix the wording, run `round collect --feature <folder> --kind <kind> --round N --lane <lane> --close-minor "<reason>"`, say so in the round summary, and the debate is over. No confirming round. After a design debate the edited files are recorded with `verify --feature <folder> --record-amendment "<reason>"`. In the diff gate such fixes are committed BEFORE the last look, which reviews the final head and so covers them; after the last look they are recorded, not applied, because any edit moves the head off the commit the PASS covers (old item 23). The finish report reads everything recorded (`build`).
-- **After 5 rounds** it pauses and asks Brandon; a spent budget never certifies. A point contested twice with evidence on both sides goes to him at once.
+- **After 5 rounds** of one lane and kind, it pauses and asks Brandon; a spent budget never certifies. A point contested twice with evidence on both sides goes to him at once.
 - **A refusal on content grounds** is verdict NONE: reword in plainer terms and rerun under the same round number on the same session (old item 80).
 - **If codex is unavailable**, ask before substituting Kimi, unless the config's `kimi_substitution` is `approved`. A debate finished on Kimi is a FULL gate with the lane switch recorded (consecutive round lines name their lanes). A gate run with no cross-vendor lane is degraded, never PASS: `round collect --feature <folder> --kind <kind> --round N --lane <lane> --degraded "<reason>"`.
 - **The diff gate's order**: Opus pre-review (`--kind prereview`, `reviewer-opus`), the cross-vendor debate (`--kind diff`), the Fable last look (`--kind lastlook`) by a FRESH `reviewer-fable`; only the one confirming question about its own finding resumes that agent.
