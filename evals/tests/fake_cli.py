@@ -21,6 +21,8 @@ if env.get("FAKE_CHILD_PID_FILE"):                       # a grandchild that mus
 if argv[:1] == ["app-server"]:                           # codex app-server: one quota answer, then it stays open
     print(json.dumps({"id": 2, "result": {"rateLimits": {"primary": {"usedPercent": 40, "windowDurationMins": 300}}}}), flush=True)
     time.sleep(600)
+if env.get("FAKE_DELETE"):                               # a lane that deletes a tracked file
+    Path(env["FAKE_DELETE"]).unlink()
 if env.get("FAKE_WRITE"):                                # a reviewer that writes into the tree
     Path(env["FAKE_WRITE"]).write_bytes(b"written by the reviewer\r\n" if "FAKE_CRLF" in env.get("FAKE_AGY_LOG", "") else b"written by the reviewer\n")   # bytes: write_text made CRLF on Windows (2026-09-22 review)
 if "--log-file" in argv:                                 # agy: the log the success test reads

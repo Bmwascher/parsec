@@ -454,10 +454,10 @@ def pretty_name(lane, kind, n):
 def prepare(args, launch):
     primary = primary_of(args.repo)
     cfg = load_config(primary)
-    fdir, frel = feature_dir(cfg, primary, args.feature)
     args.lane = args.lane or cfg.get("reviewer", {}).get("codex_lane", "sol")   # the config's lane when none is named (2026-09-22 review)
     if args.lane not in (CLI_LANES if launch else tuple(AGENT_OF)):
-        raise Exit(64, f"lane {args.lane} (from the config's codex_lane) is not a lane")   # r3: a typo there was a traceback after the package
+        raise Exit(64, f"lane {args.lane} (from the config's codex_lane) is not a lane")   # r3, r4: before anything is written, a panel folder included
+    fdir, frel = feature_dir(cfg, primary, args.feature)
     if args.kind in ("prereview", "diff", "lastlook") and not args.base:
         raise Exit(64, f"--base is required for {args.kind}")
     if not args.head:                            # 2026-09-22 16:45: two panel rounds died in the parser wanting a range a panel has not
@@ -718,9 +718,9 @@ def build_run(args):
     at = git_out(["rev-parse", "HEAD"], checkout).strip()
     if not args.head or not (at.startswith(args.head) or args.head.startswith(at)):   # 2026-09-22 17:23: Gemini built on a tree the brief told it to refuse
         raise Exit(64, f"{checkout} is at {at[:8]}, not --head {args.head}: the lane never checks, so the tool does")
-    docs = resolve_under(primary, cfg["docs_root"])   # r2, r3 (Sol): open rounds, builds and panels under a docs root inside the tree are not dirt, absolute or relative
-    rel = next((docs.relative_to(r.resolve()).as_posix() for r in (checkout, primary) if docs.is_relative_to(r.resolve())), None)
-    dirt = lambda: [l for l in git_out(["status", "--porcelain", "--untracked-files=all"], checkout).splitlines() if l.strip() and not (rel and re.match(rf'"?{re.escape(rel)}/(panels/|[^/]+/(rounds|build)/)', l[3:]))]
+    docs = resolve_under(primary, cfg["docs_root"])   # r2 to r4 (Sol, Opus): the docs root inside the tree is the plugin's, never dirt; the whole tree never is
+    rel = next((docs.relative_to(r.resolve()).as_posix() for r in (checkout, primary) if docs.is_relative_to(r.resolve()) and docs != r.resolve()), None)
+    dirt = lambda: [l for l in git_out(["status", "--porcelain", "--untracked-files=all"], checkout).splitlines() if l.strip() and not (rel and re.match(rf'"?{re.escape(rel)}/', l[3:]))]
     if dirt():                                   # 2026-09-22 review (Sol): a leftover made the status test vacuous
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
     eol_before = eol_map(checkout)
@@ -754,7 +754,7 @@ def build_run(args):
     checks = [(f"route line present: {r}", r in log_text) for r in ROUTE_LINES]
     checks += [("no soft-denied step", SOFT_DENY not in log_text), ("final message non-empty", bool(message)),
                ("git status non-empty (an empty diff is never done)", bool(status)),
-               ("line endings kept on every modified file", all(eol_before.get(p, w) in (w, "w/none", "w/") or w in ("w/none", "w/") for p, w in eol_map(checkout).items())),   # r2 (Sol): no ending yet, or a file gone, is nothing to flip
+               ("line endings kept on every modified file", all(eol_before.get(p, w) in (w, "w/none", "w/") or w in ("w/none", "w/") for p, w in eol_map(checkout).items() if not (rel and p.startswith(rel + "/")))),   # r2 (Sol): no ending yet, or a file gone, is nothing to flip; r4: nor the docs root
                ("finished within the cap", code is not None)]   # 2026-09-22 review: a capped run failed with no named reason
     ok = all(c for _, c in checks)
     lines = ["", "---", f"parsec build run: task {args.task:02d}, lane gemini, model {row['model']}, {secs} s, "
@@ -862,7 +862,7 @@ def preflight(args):
         _, warnings, found, wanted = context_lines(cfg, primary, None)
         fail += [w for w in warnings if "not found" in w]
         files = len([c for c in cfg.get("context", []) if c.get("role", "rubric") == "rubric"])
-        rub = f"rubric: {files} files, {found} of {wanted} sections found" if files else "rubric: none configured"   # r3: a rubric without sections is still a rubric
+        rub = f"rubric: {files} file{"s" * (files != 1)}, {found} of {wanted} sections found" if files else "rubric: none configured"   # r3: a rubric without sections is still a rubric
         wt = resolve_under(primary, cfg["worktrees"])
         lines.append(f"{rub}   worktrees folder {'ok' if wt.is_dir() else 'MISSING: ' + str(wt)}")
         if not wt.is_dir():

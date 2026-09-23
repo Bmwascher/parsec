@@ -422,8 +422,9 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "doctor", "--lane", "nope", "--kind", "design", "--feature", "09-22-x")
     assert code == 64 and "not a lane or a seat" in out          # 2026-09-22 review: a typo raised KeyError
     e.mp.setenv("FAKE_CHILD_PID_FILE", str(e.tmp / "quota.pid"))
+    t0 = time.time()
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
-    assert code == 0 and "quota: 5 h 60% left" in out, out
+    assert code == 0 and "quota: 5 h 60% left" in out and time.time() - t0 < 8, out   # r4 (Sol): the reader returns at its first answer
     pid = (e.tmp / "quota.pid").read_text()
     assert not WIN or pid not in subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True).stdout   # r3 (Sol): the .CMD's child outlived the probe
     e.mp.delenv("FAKE_CHILD_PID_FILE")
@@ -476,11 +477,11 @@ def test_inputs_and_preflight(env):
     e.mp.setattr(parsec, "ledger_line", lambda *a: 1 / 0)          # a stop between the record and the ledger line
     with pytest.raises(ZeroDivisionError):
         run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "7", "--lane", "kimi")
-    assert not (seven / "pending.json").exists() and (seven / "record.json").is_file()   # r3 (Sol): no replay after the record
+    assert not (seven / "pending.json").exists() and e.record("design", 7, "kimi")["verdict"] == "PASS"   # r3 (Sol): no replay after the record
     e.mp.setattr(parsec, "ledger_line", keep)
     conf.write_text(conf.read_text(encoding="utf-8").replace('"astra"', '"opus"'), encoding="utf-8")
-    code, out = run(e, "round", "run", "--feature", "09-22-x", "--kind", "design", "--round", "10", "--brief", str(e.brief), "--head", e.head)
-    assert code == 64 and "is not a lane" in out and not (e.feat / "rounds" / "design-r10-opus").exists()   # r3: a config typo wrote a package
+    code, out = run(e, "round", "run", "--feature", "panels/09-22-bad", "--kind", "panel", "--round", "1", "--brief", str(e.brief))
+    assert code == 64 and "is not a lane" in out and not (e.repo / "docs" / "panels" / "09-22-bad").exists()   # r3, r4 (Sol): a config typo wrote a package, then a panel folder
     code, out = run(e, "round", "prepare", "--feature", "panels/09-22-t", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     assert code == 0 and (e.repo / "docs" / "panels" / "09-22-t" / "ledger.md").is_file()   # the one folder the tool makes itself
 
@@ -569,8 +570,25 @@ def test_build_run_success_test(env):
     e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG.replace("silent", "FAKE_CRLF silent"))
     e.mp.setenv("FAKE_WRITE", str(co / "lf.txt"))                 # the fake writes CRLF when its log says FAKE_CRLF
     assert "FAILED: line endings kept" in b2()[1]                  # LF to CRLF is a flip too (r2, Sol)
+    clean()
+    e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG)
+    e.mp.delenv("FAKE_WRITE")
+    e.mp.setenv("FAKE_DELETE", str(co / "lf.txt"))
+    assert "ok: line endings kept" in b2()[1]                      # r4 (Sol): a file the work tree lost has nothing to flip
+    clean()
+    real = parsec.git_out
+    e.mp.setattr(parsec, "git_out", lambda a, c: (_ for _ in ()).throw(parsec.Exit(64, "ls-files failed")) if a[0] == "ls-files" else real(a, c))
+    assert b2()[0] == 64                                           # r4 (Sol): a failed ls-files fails the build, never passes the check
+    e.mp.setattr(parsec, "git_out", real)
+    (e.repo / ".gitignore").write_text(".claude/\nignored.txt\n", encoding="utf-8")   # r4 (Opus): the primary itself, its docs root tracked
+    git("add", ".gitignore", "docs", cwd=e.repo)
+    git("commit", "-qm", "docs tracked", cwd=e.repo)
+    (e.feat / "ledger.md").write_text(e.ledger() + "- a line\n", encoding="utf-8")
+    e.mp.setenv("FAKE_WRITE", str(e.repo / "new.txt"))
+    code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(e.repo), "--head", git("rev-parse", "HEAD", cwd=e.repo), "--again")
+    assert code == 0 and "result: ok" in out, out                  # the feature's own ledger and spec are not dirt either
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead9" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead11" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)
