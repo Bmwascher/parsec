@@ -55,4 +55,4 @@ Never: `TODO`, `...`, "add the rest", "similar to task 2", a fence of changed li
 
 - Every file in every task is in the file map, and every map entry is touched by a task.
 - Every task's consumed items are produced by an earlier task.
-- Every fenced block is complete, every edit quotes its anchor, and the whole of the spec's behaviour section is covered by some task's test or named check.
+- Every fenced block is complete, every edit short of a whole file quotes its anchor, and the whole of the spec's behaviour section is covered by some task's test or named check.
