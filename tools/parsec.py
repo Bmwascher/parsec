@@ -882,7 +882,7 @@ def preflight(args):
         raise Exit(64, f"lane {args.lane} is not a lane or a seat")   # 2026-09-22 review: a typo raised KeyError
     if args.feature:
         try:
-            feature_dir(cfg, primary, args.feature, 1)   # 2026-09-23: doctor accepted a --feature that round run then refused
+            feature_dir(cfg, primary, args.feature, 1 if args.kind == "panel" else None)   # 2026-09-23: doctor accepted a --feature that round run then refused; a new panel only for a panel round (Sol)
         except Exit as e:
             fail.append(str(e))
     if args.kind != "build":

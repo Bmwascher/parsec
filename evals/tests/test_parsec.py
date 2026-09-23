@@ -444,6 +444,8 @@ def test_inputs_and_preflight(env):
     assert code == 0 and "2 of 2 sections found" in out and "fast off" in out and out.startswith("### 🟢 Pre-flight: Astra"), out
     assert "(lanes.toml), fast\n" in run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x", "--fast")[1]
     assert run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "docs/09-22-x")[0] == 0   # 2026-09-23: the docs-root prefix was refused by round run only
+    assert run(e, "doctor", "--lane", "opus", "--kind", "panel", "--feature", "panels/09-23-new")[0] == 0   # a new panel's pre-flight passes, for a panel round only (2026-09-23, Sol)
+    assert run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "panels/09-23-new")[0] == 64
     code, out = run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "09-22-nope")
     assert code == 64 and out.startswith("### 🔴 Pre-flight: Opus · design debate · FAILED")   # and doctor never checked --feature at all
     (e.repo / "AGENTS.md").write_text("# Rules\n\n## Lua style (renamed)\n\n## Git\n", encoding="utf-8")
