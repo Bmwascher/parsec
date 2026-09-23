@@ -28,7 +28,7 @@ Carried from superpowers' brainstorming: YAGNI; design for isolation; follow the
 
 ## The feature folder
 
-Made when the request is classified as architectural and named: `<docs-root>\<MM-DD>-<topic>\` (`setup-config-draft` rules, `setup`). The folder, the branch and the worktree share one `<topic>` when the plugin names them; names a handoff gives are recorded as given. Four loose files at most: `notes.md`, `spec.md`, `tasks.md`, `ledger.md`; `rounds\`, `build\` and `pages\` appear when their first file is written.
+Made when the request is classified as architectural and named, one folder per feature; its name and layout are `setup`'s "Feature folder" and "Inside it" rows.
 
 ## Who writes
 
@@ -36,11 +36,11 @@ Keep `notes.md` as a running record: each question, Brandon's exact answer, the 
 
 The session never writes the two files itself: the author's fresh context proves the notes complete and keeps the session small.
 
-Brandon reviews the written spec. Approving the spec is not a go. After approval, the same `author` agent, resumed, writes the task list (`Author: task list`), with the full test and implementation code in every task; the project's test policy outranks the plugin's, and a task with nothing worth testing says so and names its check.
+Brandon reviews the written spec before the task list, from its decision summary posted in chat (a delegator relays it), even under a pre-approved handoff: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Approving the spec is not a go. After approval, the same `author` agent, resumed, writes the task list (`Author: task list`), with the full test and implementation code in every task.
 
 ## The go (its one home)
 
-Nothing is built without one. When the task list exists, the driver asks for it, before the first debate round: "Go?" A pre-approved handoff is already a go; a go given earlier in the conversation is recorded when it is given. The ledger line: `templates/ledger.md`.
+Nothing is built without one. When the task list exists, the driver asks for it, before the first debate round: "Go?" A pre-approved handoff is already a go to build, never approval of the spec; a go given earlier in the conversation is recorded when it is given. The ledger line: `templates/ledger.md`.
 
 ## The pre-build debate
 
@@ -60,4 +60,4 @@ The tool is `${CLAUDE_PLUGIN_ROOT}/tools/parsec.py`, run with `python`. `brainst
 ## Known clashes, not fixed
 
 - "Spec" means the design document here and a busted test file in the projects. Noted, not renamed.
-- A fence in a task must hold a complete chunk; a bare backticks-only line inside fenced Lua closes it, so the `author` indents such lines. `brainstorm` never promises a clean run of the project's plan linter, which ignores the project's luacheck config (measured 2026-09-21).
+- `brainstorm` never promises a clean run of the project's plan linter, which ignores the project's luacheck config (measured 2026-09-21).
