@@ -2,6 +2,19 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.11 (2026-09-23)
+
+The spec and the task list are shorter to review and easier to build. The tool now records the second question to Opus or Fable as a resume of the same agent.
+
+- Each spec opens with a decision summary of 150 words or less. The driver posts it in chat. Brandon reviews the spec before the task list, also when the handoff gives the go.
+- The task list uses one edit format: a quoted anchor line, then the new text. Each task has a list of checks and its own commit.
+- The author rewrites each section that a review result changes. Then the author checks the summary, the goal and the behaviour again.
+- The ledger template gives one shape for each decision, waiver, owed look, gate result and smoke test. A hand-written line has 200 characters or less. The tool refuses a reason that has more than 130 characters.
+- The setup skill is the one home of the feature folder. All the files of a feature stay in that folder.
+- `round collect --agent-id` records the agent of an Opus or Fable round. `round prepare --resume` records the next round as a resume of that agent and checks the ID against the last record. Without it, an Opus or Fable round starts fresh.
+- The model notes are shorter by 314 words. The Fable note names the design look.
+- The readme and the project rules now say that the final PASS can also name the commit of a "fix now" Minor.
+
 ## v0.1.10 (2026-09-23)
 
 Each review brief now tells the reviewer what is final, what changed and what to check. Fable also reviews the plan before the build.
