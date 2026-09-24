@@ -225,7 +225,7 @@ The plugin install line compares the installed copy with the head of the reposit
 > - 🟢 **plugin install:** 0.1.13 at bfa158f6: ok
 > - 🟢 **lane astra:** gpt-6-astra, effort high, codex-cli 0.156.0, Logged in using ChatGPT
 > - 🟢 **lane sol:** gpt-6-sol, effort high, codex-cli 0.156.0, Logged in using ChatGPT
-> - 🟢 **lane kimi:** kimi-code/k3, effort lane home, 0.43.1, credentials present in the lane home
+> - 🟢 **lane kimi:** kimi-code/k3, effort lane home, 2.1.1, credentials present in the lane home
 > - 🟢 **lane gemini:** gemini-3.8-flash-high, effort the model, 1.2.5, login: the first run's log
 
 </details>
