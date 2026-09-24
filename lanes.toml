@@ -19,7 +19,7 @@ update = ["npm", "install", "-g", "@openai/codex@latest"]
 model = "kimi-code/k3"
 command = ["kimi"]
 home = "C:/Users/Brandon/.kimi-code-lane"
-update = ["kimi", "update"]
+update = ["kimi", "update", "-y"]           # -y: the doctor has no one to answer the confirmation (kimi 0.43.0+)
 
 [gemini]                                # the implementer, run by `build run`; no agent around it
 model = "gemini-3.8-flash-high"

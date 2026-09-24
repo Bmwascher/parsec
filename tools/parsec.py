@@ -208,7 +208,7 @@ def records(fdir):
 
 
 def strip_line(line):
-    return re.sub(r"^[\s\-\*>#]*\**", "", line).strip()
+    return re.sub(r"^[\s\-\*>#•]*\**", "", line).strip()   # 2026-09-24: kimi starts each reply block with "• " (0.43.1 and 2.1.1)
 
 
 def tag_line(text, tag):

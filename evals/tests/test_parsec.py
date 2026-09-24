@@ -221,9 +221,11 @@ def test_symbolic_head_resolved_in_primary(env):
 @pytest.mark.parametrize("text,want", [
     ("VERDICT: PASS\n", "PASS"), ("  - **VERDICT: FIX** - a sentence after\n", "FIX"), ("> VERDICT: ESCALATE\n", "ESCALATE"),
     ("VERDICT: BLIND\n", "BLIND"), ("end with VERDICT: PASS, FIX or ESCALATE\n", "NONE"), ("VERDICT: FAIL\n", "NONE"),
-    ("VERDICT: PASS\nmore text and the reply was cut", "PASS"), ("no verdict line\n", "NONE"), ("VERDICT: PA", "NONE")])
+    ("VERDICT: PASS\nmore text and the reply was cut", "PASS"), ("no verdict line\n", "NONE"), ("VERDICT: PA", "NONE"),
+    ("• VERDICT: PASS smoke\n", "PASS")])   # 2026-09-24: a kimi 2.1.1 reply block
 def test_verdict_reading(text, want):
     assert parsec.verdict_of(text) == want
+    assert parsec.tag_line("• CONTINUITY: yes\n", "CONTINUITY") == "yes"
 
 
 def test_continuity_and_wrote_files(env):
