@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.14 (2026-09-24)
+
+The Kimi lane works on Kimi CLI 2.1.1. The tool now reads a Kimi verdict that starts a reply block.
+
+- Kimi starts each reply block with a bullet. The tool removes the bullet before it reads a `VERDICT:` or `CONTINUITY:` line. Before this change, such a line read NONE.
+- `doctor --update` runs `kimi update -y`. Without `-y`, Kimi asks for a yes, and the doctor cannot answer.
+- The Kimi CLI note gives the measurements on 2.1.1. The weekly Kimi quota stopped one case of two rounds at once, so that case has no measurement on 2.1.1.
+
 ## v0.1.13 (2026-09-23)
 
 The skills, templates and model notes are shorter by about 260 words. No rule changed.
