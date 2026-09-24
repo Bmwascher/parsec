@@ -225,6 +225,9 @@ def test_symbolic_head_resolved_in_primary(env):
     ("• VERDICT: PASS smoke\n", "PASS")])   # 2026-09-24: a kimi 2.1.1 reply block
 def test_verdict_reading(text, want):
     assert parsec.verdict_of(text) == want
+
+
+def test_tag_line_strips_the_kimi_bullet():
     assert parsec.tag_line("• CONTINUITY: yes\n", "CONTINUITY") == "yes"
 
 
