@@ -15,7 +15,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 
 ## Bounded work
 
-Skips all of the above: no `verify`, Brandon's yes is the go, the session builds and commits it, then runs the diff gate (`debate`, `--kind diff`), whose ledger head records the base. A BLOCKING code finding there is fixed by the session directly (no task list, no `author`, no `verify`), and the next round runs on the new head.
+Skips all of the above: no `verify`, Brandon's yes is the go, the session builds and commits it, then runs the diff gate (`debate`, `--kind diff`). A BLOCKING code finding there is fixed by the session directly (no task list, no `author`, no `verify`), and the next round runs on the new head.
 
 ## Each task, in order
 
@@ -57,4 +57,4 @@ The finish is STOP AND REPORT unless Brandon, a handoff or the project's finishi
 
 ## Ledger lines this skill writes
 
-Each task's commit and result with the lane that built it; whether it made the worktree; each gate result; the smoke; the finish.
+Step 5's task line, the worktree line (Start), each gate result, the smoke, the finish.

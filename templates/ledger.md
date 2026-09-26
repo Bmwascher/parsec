@@ -21,7 +21,7 @@ The hand-written shapes:
 - The handoff facts: `- <time> handoff: <branch, base, finish rule, report destination>`.
 - The go: `- <time> go: Brandon, "<his words>"` (or `pre-approved handoff`).
 - The spec's approval: `- <time> spec approved: Brandon, "<his words>"`.
-- A task result: `- <time> task 03: <commit>, <lane>, <tests: green | red: reason>`.
+- A task result: `- <time> task 03: <commit>, <lane>, <tests: green | red: reason>[, whitespace trimmed]`.
 - A decision on a finding: `- <time> decision <ID> (<kind> r<n> <lane>): <fix | ride | accepted as R<k> | change the approach>, Brandon, "<his words>"`; a ride on the reviewer's triage ends `<lane> triage` instead.
 - A waiver: `- <time> waiver: <the look skipped, or the stand-in>, Brandon, "<his words>"`.
 - An owed look: `- <time> owed: <the look or check>, <why>, <what clears it>`.

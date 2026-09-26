@@ -44,4 +44,4 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 
 ## What the tool records
 
-Every round leaves `rounds\<kind>-r<n>-<lane>\` with the brief, the reply, `record.json` and one ledger line; a dead attempt is renamed `.dead<k>`. The driver never retypes anything a model wrote into an argument: free text on a command line is a short plain phrase, no quotes or backticks.
+Every round leaves `rounds\<kind>-r<n>-<lane>\` with the brief, the reply, `record.json` and one ledger line; a dead attempt is renamed `.dead<k>`. The driver never retypes anything a model wrote into an argument: free text in the tool's arguments is a short plain phrase, no quotes or backticks.

@@ -51,7 +51,7 @@ One debate over both files, `--kind design`, run by `debate` on the cross-vendor
 
 ## Ledger lines this skill writes
 
-Shapes in `templates/ledger.md`: the head (the base is written here, once, and nowhere else), the handoff facts, the go.
+Shapes in `templates/ledger.md`: the head (the base is written here, once, and nowhere else), the handoff facts, the spec's approval, the go.
 
 ## Known clashes, not fixed
 
