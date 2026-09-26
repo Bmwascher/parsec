@@ -8,7 +8,7 @@ The tool now adds the insert to each brief and prints the full round summary. Th
 
 - `round prepare` and `round run` add the insert for the kind of round at the end of part 2 of the brief. The driver writes only the shared text. A resumed question to the same agent and a brief with no part 3 get no insert. The tool refuses a brief that already has an insert.
 - The tool prints the round summary with one bullet for each problem that the reviewer found. When these lines of the reply do not agree with its counts line, each bullet shows `?`, and the tool gives a warning. The tool also gives a warning when a reply has no counts line.
-- The `VERDICT:` line must be the last line of the reply. Before this change, a reply with text after its verdict line gave a verdict.
+- The `VERDICT:` line must be the last line of the reply. Before this change, a reply with text after its verdict line gave a verdict. When the last line is not a verdict line, the tool gives a warning to run the round again on the same session.
 - The warning for an old tool version says that the skills stay old until a new session starts. It gives the path of the new tool.
 - For a round with no reply, the ledger line says `no reply`.
 - The page size for `diff.patch` agrees with the limit of the Read tool.
