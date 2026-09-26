@@ -676,6 +676,9 @@ def test_summary_bullets(env):
     assert "the reply's last line is not a VERDICT line with one verdict word" in rnd(e, 3)[1]
     e.mp.setenv("FAKE_REPLY", "draft text only\n")                      # Sol diff r1 F2: no counts line and no verdict
     assert "the reply's last line is not a VERDICT line" in rnd(e, 3)[1]   # a NONE round reruns under its number
+    e.mp.setenv("FAKE_REPLY", "- M1 · Minor: wording.\n- I1 · Important: the hold is lost.\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")   # 0.1.15 last look F1: a Minor first in the reply
+    out = rnd(e, 3)[1]
+    assert out.index("- **I1 · Important:**") < out.index("- **M1 · Minor:**"), out
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)

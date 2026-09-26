@@ -235,14 +235,14 @@ GRADES = ("Critical", "Important", "Minor")
 
 
 def summary_bullets(text, counts):
-    """2026-09-25 audit: a pasted heading alone reached about a third of rounds. One bullet per finding, its ID where
+    """2026-09-25 audit: a pasted heading alone reached about a third of rounds. One bullet per finding, by grade, its ID where
     the reply's finding lines match the counts line, else '?' (four finding shapes in five sampled replies, Fable poll)."""
     found = {}
     for line in text.splitlines():
         if (m := FINDING.match(strip_line(line))) and m[1] not in found:
             found[m[1]] = (m[2], re.sub(r"^[^:—()]{0,40}\)\W*", "", m[3].replace("**", "")).strip()[:120])   # "F1 (Important, new): x" gives x
     ok = counts is not None and tuple(sum(g == s for g, _ in found.values()) for s in GRADES) == counts
-    rows = [(i, g, t) for i, (g, t) in found.items()] if ok else [("?", s, "") for s, n in zip(GRADES, counts or ()) for _ in range(n)]
+    rows = sorted(((i, g, t) for i, (g, t) in found.items()), key=lambda r: GRADES.index(r[1])) if ok else [("?", s, "") for s, n in zip(GRADES, counts or ()) for _ in range(n)]
     return ok, [f"- **{i} · {g}:** {t}\n\n  → **<Fix | Refute | Ride | You decide>:** " for i, g, t in rows]
 
 
