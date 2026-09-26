@@ -1,6 +1,6 @@
 # Task list template
 
-The task list (`tasks.md`) is what gets built. The `author` writes `tasks.md` and follows this file. A zero-judgment lane transcribes each task, so every task holds the FULL code, test and implementation, and decides nothing.
+The task list (`tasks.md`) is what gets built. A zero-judgment lane transcribes each task, so every task holds the FULL code, test and implementation, and decides nothing.
 
 ## Header
 
@@ -29,7 +29,7 @@ Each task is a `## Task N: <name>` section holding:
 
 - **Files**: the paths it creates or changes.
 - **Consumes / produces**: what it needs from earlier tasks and what later tasks take from it.
-- **Checks**: each command that checks the task and the result it expects (a test run, a grep, the budget test).
+- **Checks**: each command that checks the task and the result it expects (a test run, a grep, the budget test). A check never names a discarding git command (2026-09-24).
 - **Steps**, as checkbox items, in this order:
   1. Write the failing test, the FULL code of each edit in the edit format above, and the expected failure named.
   2. Run it and see the expected failure (red).
@@ -37,7 +37,7 @@ Each task is a `## Task N: <name>` section holding:
   4. Run the tests and see them pass (green); the whole suite, output clean.
   5. Commit, as the LAST step, after a branch check, because phase chats share a checkout. Every task ends with its own commit. The commit message is given in full.
 
-The commit step belongs to the session. The test steps belong to the session on the Gemini lane (print mode runs no command) and to the `backup-implementer` on its lane; they are written here so the record is complete.
+The commit step belongs to the session. The test steps belong to the session on the Gemini lane and to the `backup-implementer` on its lane; they are written here so the record is complete.
 
 ## The three norms, written where they act
 
