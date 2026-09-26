@@ -21,7 +21,7 @@ Skips all of the above: no `verify`, Brandon's yes is the go, the session builds
 
 1. **Before task 1**: `doctor --lane gemini --kind build --feature <folder>` in the background (`Pre-flight: Gemini`), posted as is. When it finds no agy, every task goes to the `backup-implementer`.
 2. `task-brief --feature <folder> --task N` writes `build\task-NN-brief.md` (the task, the header and the global constraints, byte for byte) and prints its SHA-256.
-3. `build run --feature <folder> --task N --checkout <path> --head <commit>` in the background, named `Task N Implement`, where `--head` is the commit the task builds on (the ledger base, then the previous task's commit). The tool refuses any other checkout, refuses a dirty checkout (discard a failed run's writes first) and fails a task that flipped a modified file's line endings; the lane checks none of these (2026-09-22). The tool runs agy, writes `build\task-NN-report.md` and prints the success test. The session reads that, never agy's exit code.
+3. `build run --feature <folder> --task N --checkout <path> --head <commit>` in the background, named `Task N Implement`, where `--head` is the commit the task builds on (the ledger base, then the previous task's commit). The tool refuses any other checkout, refuses a dirty checkout and fails a task that flipped a modified file's line endings; the lane checks none of these (2026-09-22). The tool runs agy, writes `build\task-NN-report.md` and prints the success test. The session reads that, never agy's exit code.
 4. **The session checks the task itself before the next**: run the task's **Checks** in the background (a Gemini task's first run, since print mode runs no command; red-then-green is observed only on the `backup-implementer` lane); read the diff against the task's files and its fenced code; then make the task's commit with the task's own commit step. The session is the one commit owner on both lanes. No per-task reviewer subagent.
 5. Ledger line: the task's commit and result, with the lane that built it.
 
@@ -33,17 +33,17 @@ Dispatch `agents/backup-implementer.md` in the background, named `Task N Impleme
 - a task whose Gemini run failed the success test once, or whose diff did not match its code (below);
 - every task when the pre-flight finds no agy.
 
-Run `build archive --feature <folder> --task N` before ANY redispatch of a task that already has a report, so no attempt's evidence is overwritten. The `backup-implementer` reports blocked itself.
+Run `build archive --feature <folder> --task N` before ANY redispatch of a task that already has a report, so no attempt's evidence is overwritten. Before ANY redispatch, stash the attempt's writes (`git stash push --include-untracked -m "<feature> task N attempt k" -- <its files>`, 2026-09-24). The `backup-implementer` reports blocked itself.
 
 ## A failing task
 
-A task whose CODE is wrong is the author's defect. Gemini never reports blocked (2026-09-22), so on that lane the failed test run is the signal, and the session names the cause in this order:
+A task whose CODE is wrong is the author's defect. Gemini never reports blocked (2026-09-22), so on that lane the failed test run is the signal, and the session names the cause in this order (agy's log: `models/agy-cli.md`):
 
-1. **The diff does not match the task's code**: a transcription failure. The task goes to the `backup-implementer` as its second dispatch.
+1. **The diff does not match the task's code**: a transcription failure. The task goes to the `backup-implementer` as its second dispatch. A whitespace-only mismatch is not: the session trims it and notes it in the task's ledger line (2026-09-23).
 2. **The diff matches**: check the base first. The checkout must sit at the previous task's commit and every file the task consumes must exist (2026-09-22: a run on a checkout one commit early). A wrong base is the session's to fix before it dispatches the task again; that redispatch still counts.
 3. **The base is right**: the task is wrong. The `author`, resumed, amends it; `verify --feature <folder> --record-amendment "<reason>"` records it; the gate's `context.md` lists it. No extra round unless the amendment changes something another task consumes; then Brandon is asked.
 
-A second failed dispatch of the same task, for ANY reason, amendment cycles included, goes to Brandon. A debate pauses after five rounds of one lane and kind; the build loop's stop is this rule.
+A second failed dispatch of the same task, for ANY reason, amendment cycles included, goes to Brandon.
 
 ## After a compaction
 

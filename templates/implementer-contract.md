@@ -24,4 +24,4 @@ Write the full report to the report path the dispatch names, with RED evidence (
 - `needs context`: a file, rule or decision the brief did not give.
 - `refused`: the CLI or model declined; quote its own message.
 
-An empty diff is never `done`: a lane can decline the work and still exit 0, so the session reads the diff, not the status.
+An empty diff is never `done`: a lane can decline the work and still exit 0.
