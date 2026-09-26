@@ -12,7 +12,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 Say which it is before anything else. It only ever gets heavier, never lighter.
 
 - **Spike**: exploration with nothing to keep. No feature folder, no spec, no debate. Say what was learned and stop.
-- **Bounded work**: a change small enough to make without a design (a fix, a rename, a guard). No spec, no task list. Brandon's yes is the go; the session builds and commits it, then runs the diff gate (`build`, "Bounded work").
+- **Bounded work**: a change small enough to make without a design (a fix, a rename, a guard). No spec, no task list. Brandon's yes is the go (`build`, "Bounded work").
 - **Architectural**: everything else. The full flow below.
 
 ## What is asked, and what is not
@@ -36,7 +36,7 @@ Keep `notes.md` as a running record: each question, Brandon's exact answer, the 
 
 The session never writes the two files itself: the author's fresh context proves the notes complete and keeps the session small.
 
-Brandon reviews the written spec before the task list, from its decision summary posted in chat (a delegator relays it), even under a pre-approved handoff: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Approving the spec is not a go. After approval, the same `author` agent, resumed, writes the task list (`Author: task list`).
+Brandon reviews the written spec before the task list, from its decision summary posted in chat, even under a pre-approved handoff: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Approving the spec is not a go. After approval, the same `author` agent, resumed, writes the task list (`Author: task list`).
 
 ## The go (its one home)
 
@@ -52,10 +52,6 @@ One debate over both files, `--kind design`, run by `debate` on the cross-vendor
 ## Ledger lines this skill writes
 
 Shapes in `templates/ledger.md`: the head (the base is written here, once, and nowhere else), the handoff facts, the go.
-
-## Running the tool
-
-The tool is `${CLAUDE_PLUGIN_ROOT}/tools/parsec.py`, run with `python`. `brainstorm` itself runs none of its subcommands; `debate` runs the rounds and `build` runs `verify`.
 
 ## Known clashes, not fixed
 
