@@ -17,7 +17,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 - Pass earlier briefs and replies with `--file` to a lane that joins mid-debate; its own rounds start at 1. The brief names each reply's lane and round.
 - Post the summary after every round (every kind, a PASS included), without waiting for Brandon, as rendered Markdown, never inside a code block (a fenced table wraps into unreadable pipes on his phone, 2026-09-23). The tool prints it: the heading, the counts line and one bullet per finding. Paste it as is and fill it in (2026-09-25: the heading alone reached about a third of rounds):
   - a **Needs you:** line under the heading, only when something waits on Brandon;
-  - after the counts, one line on the earlier round's findings (`Round 1: F1 closed · F2 reopened narrower`);
+  - after the counts, one line on the earlier round's findings (`Round 1: F1 closed · F2 reopened narrower · F4 still open`), and a reopened or still-open finding says so in its bullet;
   - each answer: **Fix** (what changes), **Refute** (the evidence in a few words), **Ride** (a Minor left for later) or **You decide**; a `?` takes the reply's own ID, or F1, F2 and on in its order when it gives none, kept in every later round;
   - **Next:** and what follows.
 

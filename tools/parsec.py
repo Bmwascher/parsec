@@ -159,10 +159,11 @@ def installed_entry():
 def behind():
     """2026-09-23: three phase sessions ran 0.1.6 for hours after 0.1.7 was installed; a skill names the path it loaded."""
     try:
-        mine, inst = read_json(PLUGIN / ".claude-plugin" / "plugin.json")["version"], installed_entry()[1].get("version")
+        entry = installed_entry()[1]
+        mine, inst = read_json(PLUGIN / ".claude-plugin" / "plugin.json")["version"], entry.get("version")
         key = lambda v: tuple(int(x) for x in v.split("."))
         return (f"this tool is parsec {mine}, but {inst} is installed: this session's skills and templates stay at {mine} until a new session, "   # 2026-09-25 audit: a re-invoked skill kept its old path (fld-7, fld-13)
-                f"so start one; the new tool is {Path(installed_entry()[1].get('installPath', '?')) / 'tools' / 'parsec.py'}") if inst and key(inst) > key(mine) else None
+                f"so start one; the new tool is {Path(entry.get('installPath') or '?') / 'tools' / 'parsec.py'}") if inst and key(inst) > key(mine) else None   # pre-review F6: a null path hid it
     except Exception:                            # a warning never stops a command (2026-09-23 pre-review)
         return None
 
@@ -306,18 +307,19 @@ def context_lines(cfg, primary, reference):
 INSERTS = {"design": ("design",), "prereview": ("diff",), "diff": ("diff",), "lastlook": ("diff", "lastlook")}   # a panel's brief is the host's own
 
 
-def assemble(brief, kind, lane, warnings):
+def assemble(brief, kind, lane, resume, warnings):
     """The shared text plus the kind's insert at the end of part 2 (2026-09-25 audit: every field phase derived seat
-    briefs by shell edit, and fld-10's last look lost its insert); a Claude seat's design round is the Fable look."""
+    briefs by shell edit, and fld-10's last look lost its insert); a Claude seat's design round is the Fable look.
+    A confirming question (--resume) and a brief with no part 3 (a verdict-only rerun) stay narrow (pre-review F1)."""
     text = Path(brief).read_bytes()
-    names = INSERTS.get(kind, ()) + (("lastlook",) if kind == "design" and lane in AGENT_OF else ())
+    names = () if resume else INSERTS.get(kind, ()) + (("lastlook",) if kind == "design" and lane in AGENT_OF else ())
     if names and re.search(rb"(?m)^#+ (Design|Diff|Fable-look|Panel) insert", text):
         raise Exit(64, f"{brief} already carries an insert: write the shared text only, and the tool adds the {kind} insert")
-    add = b"".join(b"\n##" + (PLUGIN / "templates" / f"brief-{n}.md").read_bytes().replace(b"\r\n", b"\n").rstrip(b"\n") + b"\n" for n in names)
-    at = re.search(rb"(?m)^## 3\.", text)
-    if names and not at:
-        warnings.append("the brief has no `## 3.` part: the insert went at the end")
-    return text[:at.start()] + add.lstrip(b"\n") + b"\n" + text[at.start():] if at and names else text + add
+    if not (at := re.search(rb"(?m)^## 3\.", text)):
+        warnings += ["the brief has no `## 3.` part, so no insert was added (a verdict-only rerun needs none)"] if names else []
+        return text
+    add = b"".join(b"### " + (PLUGIN / "templates" / f"brief-{n}.md").read_bytes().replace(b"\r\n", b"\n").lstrip(b"# ").rstrip(b"\n") + b"\n\n" for n in names)
+    return text[:at.start()] + add + text[at.start():]
 
 
 def write_package(root, args, cfg, primary, fdir, kind):
@@ -539,7 +541,7 @@ def prepare(args, launch):
     if cli:
         program(row := lane_row(args.lane))      # before anything is written (2026-09-23 last look: a new panel's folder was)
     warnings = []
-    sent = assemble(args.brief, args.kind, args.lane, warnings)   # before any write: a refused brief leaves nothing behind
+    sent = assemble(args.brief, args.kind, args.lane, getattr(args, "resume", None), warnings)   # before any write: a refused brief leaves nothing behind
     if args.round > 5:
         warnings.append(f"{args.lane}'s {args.kind} round {args.round}: past five rounds of one lane and kind the skill asks Brandon (old item 24)")
     if folder.exists() and not (folder / "record.json").is_file() and (folder / "pending.json").is_file():   # before the number check: an uncollected old-style round named round 1 (Kimi r2)
@@ -646,8 +648,8 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     text = read_text(reply) if reply.is_file() else ""
     transcript = read_text(folder / "transcript.log") if (folder / "transcript.log").is_file() else ""
     verdict, counts = verdict_of(text), severity_counts(text)
-    if verdict == "NONE" and tag_line(text, "VERDICT") is not None:
-        warnings.append("the VERDICT line is not the reply's last line: rerun on the session, asking only for the verdict")
+    if verdict == "NONE" and tag_line(text, "VERDICT") is not None:   # pre-review F3: a last line naming no single verdict word too
+        warnings.append("the reply's last line is not a VERDICT line with one verdict word: rerun on the session, asking only for the verdict")
     elif verdict in VERDICTS and counts is None:   # 2026-09-25 audit: fld-7's derived briefs lost the counts line unseen
         warnings.append("the reply has no counts line: count the findings by hand")
     continuity = tag_line(text, "CONTINUITY") if pend.get("resumed") else None
@@ -682,13 +684,12 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     rec = {**{k: v for k, v in pend.items() if k not in ("warnings",)}, "cli_version": cli_version, "session": session,
            "continuity": continuity, "end": stamp(end), "seconds": run["seconds"], "cli_exit": run["cli_exit"],
            "verdict": verdict, "clean_tree": clean, "tier": tier, "tier_check": check, "degraded": degraded,
-           "closed_on_minor": None, "reply": str(reply), "warnings": warnings}
+           "closed_on_minor": None, "reply": str(reply) if text.strip() else None, "warnings": warnings}   # pre-review F2: a dead round's path is its rerun's
     write_json(rec_path, rec)
     pend_path.unlink()                           # before the ledger line: the record is the truth, a replay would overwrite it (r2, Sol)
     cont = "" if continuity is None and not pend.get("resumed") else (", continuity answered" if continuity else ", continuity: not answered")
-    said = "reply.md" if text.strip() else "transcript.log, no reply" if transcript else "no reply"   # 2026-09-25 fld-15: a dead round named a reply the rerun wrote
-    ledger_line(fdir, f"{kind} r{n} {lane}: {verdict}{cont}" + (", tier: fast" if tier == "fast" else "")
-                + (f", degraded ({degraded})" if degraded else "") + f", rounds\\{folder.name}\\{said}", warnings)
+    ledger_line(fdir, f"{kind} r{n} {lane}: {verdict}{cont}" + (", tier: fast" if tier == "fast" else "") + (f", degraded ({degraded})" if degraded else "")
+                + (f", rounds\\{folder.name}\\reply.md" if text.strip() else ", no reply"), warnings)   # 2026-09-25 fld-15: a dead round named the reply its rerun wrote
     sub = "  ".join(f"{k} {v[:6]}" for k, v in pend.get("subject", {}).items())
     print(f"{pretty_name(lane, kind, n)}\nverdict: {verdict}    " + ("in-session agent" if lane in AGENT_OF else f"cli exit: {run['cli_exit']}    {run['seconds']} s    "
           f"{'resumed' if pend.get('resumed') else 'fresh'} session {session}    tier {tier}") + (f"\ndegraded: {degraded}" if degraded else ""))

@@ -170,18 +170,23 @@ def test_brief_bytes_reach_stdin(env):
     e = env
     e.mp.setenv("FAKE_STDIN_COPY", str(e.tmp / "stdin.bin"))
     rnd(e, 1)
-    sent = (e.feat / "rounds" / "design-r1-astra" / "brief.md").read_bytes()
-    assert sent.startswith(TRICKY.encode("utf-8")) and sent.endswith(b"\n### Design insert\n\n" + (REPO / "templates" / "brief-design.md").read_bytes()[len(b"# Design insert\n\n"):].replace(b"\r\n", b"\n"))
-    assert (e.tmp / "stdin.bin").read_bytes() == sent and e.record("design", 1, "astra")["brief_sha256"] == parsec.sha256(e.feat / "rounds" / "design-r1-astra" / "brief.md")
-    assert "no `## 3.` part" in "".join(e.record("design", 1, "astra")["warnings"])
+    assert (e.tmp / "stdin.bin").read_bytes() == TRICKY.encode("utf-8")   # no part 3, a verdict-only rerun: no insert (pre-review F1)
+    assert "no `## 3.` part, so no insert" in "".join(e.record("design", 1, "astra")["warnings"])
     e.brief.write_bytes(b"# Brief\n\n## 2. Task\n\nread it\n\n## 3. Rules\n\n- r\n")
-    prep = lambda kind, lane: run(e, "round", "prepare", "--feature", "09-22-x", "--kind", kind, "--round", "1", "--lane", lane, "--brief", str(e.brief),
-                                  "--head", e.head, *(["--base", e.base] if kind != "design" else []))
+    rnd(e, 2)
+    sent = (e.feat / "rounds" / "design-r2-astra" / "brief.md").read_bytes()
+    assert sent == b"# Brief\n\n## 2. Task\n\nread it\n\n### " + (REPO / "templates" / "brief-design.md").read_bytes().replace(b"\r\n", b"\n")[2:].rstrip(b"\n") + b"\n\n## 3. Rules\n\n- r\n"
+    assert (e.tmp / "stdin.bin").read_bytes() == sent and e.record("design", 2, "astra")["brief_sha256"] == parsec.sha256(e.feat / "rounds" / "design-r2-astra" / "brief.md")
+    prep = lambda kind, lane, *x: run(e, "round", "prepare", "--feature", "09-22-x", "--kind", kind, "--round", "2" if x else "1", "--lane", lane, "--brief", str(e.brief),
+                                      "--head", e.head, *(["--base", e.base] if kind != "design" else []), *x)
     for kind, lane, want in (("design", "fable", [b"Design", b"Fable-look"]), ("lastlook", "fable", [b"Diff", b"Fable-look"]), ("prereview", "opus", [b"Diff"])):
         assert prep(kind, lane)[0] == 0
         pkg = (e.feat / "rounds" / f"{kind}-r1-{lane}" / ".parsec" / "brief.md").read_bytes()
         assert pkg.startswith(b"# Brief\n\n## 2. Task\n\nread it\n\n### ") and pkg.endswith(b"\n\n## 3. Rules\n\n- r\n") and pkg.count(b" insert\n") == len(want)
         assert all(b"### " + w + b" insert" in pkg for w in want)
+    (e.feat / "rounds" / "design-r1-fable" / "reply.md").write_text("VERDICT: FIX\n", encoding="utf-8")
+    run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable", "--agent-id", "a-1")
+    assert prep("design", "fable", "--resume", "a-1")[0] == 0 and b" insert" not in (e.feat / "rounds" / "design-r2-fable" / "brief.md").read_bytes()   # the confirming question stays narrow
     e.brief.write_bytes(b"## 2. Task\n\n# Diff insert\n\n## 3. Rules\n")
     code, out = prep("diff", "opus")
     assert code == 64 and "already carries an insert" in out and not (e.feat / "rounds" / "diff-r1-opus").exists()
@@ -268,7 +273,7 @@ def test_exit_codes_and_dead_cli(env):
     assert code == 65 and "cli exit: 1" in out and "transcript tail" in out
     r = e.record("design", 1, "astra")
     assert r["verdict"] == "NONE" and r["cli_exit"] == 1 and r["brief_sha256"] == parsec.sha256(e.feat / "rounds" / "design-r1-astra" / "brief.md")
-    assert "design r1 astra: NONE, rounds\\design-r1-astra\\transcript.log, no reply" in e.ledger()   # 2026-09-25 fld-15: it named a reply the rerun wrote
+    assert "design r1 astra: NONE, no reply" in e.ledger() and r["reply"] is None   # 2026-09-25 fld-15: it named the reply its rerun wrote
     e.mp.setenv("FAKE_EXIT", "3")
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n")
     code, out = rnd(e, 1)
@@ -438,10 +443,12 @@ def test_doctor_stale_install(env):
     assert "not installed" in run(e, "doctor")[1]                   # 2026-09-23, Astra: a malformed file crashed the doctor
     plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"gitCommitSha": None}]}}), encoding="utf-8")
     assert "STALE" in run(e, "doctor")[1]                           # and so did a null commit (Astra r2)
-    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head, "installPath": str(e.tmp / "c010")}]}}), encoding="utf-8")
+    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head, "installPath": None}]}}), encoding="utf-8")
     e.mp.setattr(parsec, "PLUGIN", e.repo)
     (e.repo / ".claude-plugin").mkdir()
     (e.repo / ".claude-plugin" / "plugin.json").write_text('{"version": "0.0.9"}', encoding="utf-8")
+    assert "the new tool is ?" in run(e, "doctor")[1]                # pre-review F6: a null path hid the whole warning
+    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head, "installPath": str(e.tmp / "c010")}]}}), encoding="utf-8")
     out = run(e, "doctor")[1]                                       # 2026-09-23: three phases ran 0.1.6 after 0.1.7; 2026-09-25: a re-invoked skill kept 0.1.13
     assert "warning: this tool is parsec 0.0.9, but 0.1.0 is installed: this session's skills and templates stay at 0.0.9 until a new session" in out and str(e.tmp / "c010" / "tools" / "parsec.py") in out
     cmd = json.dumps([sys.executable, str(FAKE)])
@@ -661,7 +668,7 @@ def test_summary_bullets(env):
     out = rnd(e, 2)[1]
     assert "warning: the reply's finding lines do not match its counts line" in out and out.endswith("- **? · Minor:** " + ask + "\n")
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n\nlater draft text\n")
-    assert "the VERDICT line is not the reply's last line" in rnd(e, 3)[1]
+    assert "the reply's last line is not a VERDICT line with one verdict word" in rnd(e, 3)[1]
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
