@@ -186,6 +186,11 @@ def test_brief_bytes_reach_stdin(env):
         assert all(b"### " + w + b" insert" in pkg for w in want)
     (e.feat / "rounds" / "design-r1-fable" / "reply.md").write_text("VERDICT: FIX\n", encoding="utf-8")
     run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable", "--agent-id", "a-1")
+    clean = e.brief.read_bytes()
+    e.brief.write_bytes(clean + b"\n### Fable-look insert\n\nx\n")
+    code, out = prep("design", "fable", "--resume", "a-1")                 # Sol diff r1 F1: a confirming question carrying an insert
+    assert code == 64 and "already carries an insert" in out and not (e.feat / "rounds" / "design-r2-fable").exists()
+    e.brief.write_bytes(clean)
     assert prep("design", "fable", "--resume", "a-1")[0] == 0 and b" insert" not in (e.feat / "rounds" / "design-r2-fable" / "brief.md").read_bytes()   # the confirming question stays narrow
     e.brief.write_bytes(b"## 2. Task\n\n# Diff insert\n\n## 3. Rules\n")
     code, out = prep("diff", "opus")
@@ -447,7 +452,7 @@ def test_doctor_stale_install(env):
     e.mp.setattr(parsec, "PLUGIN", e.repo)
     (e.repo / ".claude-plugin").mkdir()
     (e.repo / ".claude-plugin" / "plugin.json").write_text('{"version": "0.0.9"}', encoding="utf-8")
-    assert "the new tool is ?" in run(e, "doctor")[1]                # pre-review F6: a null path hid the whole warning
+    assert "the new tool is ?\n" in run(e, "doctor")[1]              # pre-review F6: a null path hid the whole warning; Sol diff r1 F3: "?" alone
     plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head, "installPath": str(e.tmp / "c010")}]}}), encoding="utf-8")
     out = run(e, "doctor")[1]                                       # 2026-09-23: three phases ran 0.1.6 after 0.1.7; 2026-09-25: a re-invoked skill kept 0.1.13
     assert "warning: this tool is parsec 0.0.9, but 0.1.0 is installed: this session's skills and templates stay at 0.0.9 until a new session" in out and str(e.tmp / "c010" / "tools" / "parsec.py") in out
@@ -669,6 +674,8 @@ def test_summary_bullets(env):
     assert "warning: the reply's finding lines do not match its counts line" in out and out.endswith("- **? · Minor:** " + ask + "\n")
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n\nlater draft text\n")
     assert "the reply's last line is not a VERDICT line with one verdict word" in rnd(e, 3)[1]
+    e.mp.setenv("FAKE_REPLY", "draft text only\n")                      # Sol diff r1 F2: no counts line and no verdict
+    assert "the reply's last line is not a VERDICT line" in rnd(e, 3)[1]   # a NONE round reruns under its number
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)

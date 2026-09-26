@@ -163,7 +163,7 @@ def behind():
         mine, inst = read_json(PLUGIN / ".claude-plugin" / "plugin.json")["version"], entry.get("version")
         key = lambda v: tuple(int(x) for x in v.split("."))
         return (f"this tool is parsec {mine}, but {inst} is installed: this session's skills and templates stay at {mine} until a new session, "   # 2026-09-25 audit: a re-invoked skill kept its old path (fld-7, fld-13)
-                f"so start one; the new tool is {Path(entry.get('installPath') or '?') / 'tools' / 'parsec.py'}") if inst and key(inst) > key(mine) else None   # pre-review F6: a null path hid it
+                f"so start one; the new tool is {Path(p) / 'tools' / 'parsec.py' if (p := entry.get('installPath')) else '?'}") if inst and key(inst) > key(mine) else None   # pre-review F6: a null path hid it
     except Exception:                            # a warning never stops a command (2026-09-23 pre-review)
         return None
 
@@ -313,7 +313,7 @@ def assemble(brief, kind, lane, resume, warnings):
     A confirming question (--resume) and a brief with no part 3 (a verdict-only rerun) stay narrow (pre-review F1)."""
     text = Path(brief).read_bytes()
     names = () if resume else INSERTS.get(kind, ()) + (("lastlook",) if kind == "design" and lane in AGENT_OF else ())
-    if names and re.search(rb"(?m)^#+ (Design|Diff|Fable-look|Panel) insert", text):
+    if kind in INSERTS and re.search(rb"(?m)^#+ (Design|Diff|Fable-look|Panel) insert", text):   # a confirming question too (Sol diff r1 F1)
         raise Exit(64, f"{brief} already carries an insert: write the shared text only, and the tool adds the {kind} insert")
     if not (at := re.search(rb"(?m)^## 3\.", text)):
         warnings += ["the brief has no `## 3.` part, so no insert was added (a verdict-only rerun needs none)"] if names else []
@@ -648,7 +648,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     text = read_text(reply) if reply.is_file() else ""
     transcript = read_text(folder / "transcript.log") if (folder / "transcript.log").is_file() else ""
     verdict, counts = verdict_of(text), severity_counts(text)
-    if verdict == "NONE" and tag_line(text, "VERDICT") is not None:   # pre-review F3: a last line naming no single verdict word too
+    if verdict == "NONE" and text.strip():       # pre-review F3, Sol diff r1 F2: a draft, a cut reply or a line naming no single verdict word
         warnings.append("the reply's last line is not a VERDICT line with one verdict word: rerun on the session, asking only for the verdict")
     elif verdict in VERDICTS and counts is None:   # 2026-09-25 audit: fld-7's derived briefs lost the counts line unseen
         warnings.append("the reply has no counts line: count the findings by hand")
