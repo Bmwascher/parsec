@@ -2,6 +2,19 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.15 (2026-09-25)
+
+The tool now adds the insert to each brief and prints the full round summary. These changes come from the second field audit.
+
+- `round prepare` and `round run` add the insert for the kind of round at the end of part 2 of the brief. The driver writes only the shared text. A resumed question to the same agent and a brief with no part 3 get no insert. The tool refuses a brief that already has an insert.
+- The tool prints the round summary with one bullet for each problem that the reviewer found. When these lines of the reply do not agree with its counts line, each bullet shows `?`, and the tool gives a warning. The tool also gives a warning when a reply has no counts line.
+- The `VERDICT:` line must be the last line of the reply. Before this change, a reply with text after its verdict line gave a verdict.
+- The warning for an old tool version says that the skills stay old until a new session starts. It gives the path of the new tool.
+- For a round with no reply, the ledger line says `no reply`.
+- The page size for `diff.patch` agrees with the limit of the Read tool.
+- `verify --record-amendment` stops while a round has a package but no record.
+- The brief template asks for one line for each problem and names `.parsec/context.md`.
+
 ## v0.1.14 (2026-09-24)
 
 The Kimi lane works on Kimi CLI 2.1.1. The tool now reads a Kimi verdict that starts a reply block.
