@@ -2,6 +2,20 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.16 (2026-09-26)
+
+The skills, templates and model notes take the rules from the second field audit. The tool sorts the round summary by grade.
+
+- The driver gives each problem to the author with its evidence and names no fix. A code fix by the author covers each place of the same pattern, or names the places that stay open for Brandon.
+- The decisions of Brandon stay with him. No project rule or handoff takes one for him, and a delegator sends each "Needs you" and each spec review to him. A brief lists a residual without his words as open.
+- The decision summary of a spec names each follow-up that the design makes. After approval, the author writes the approved decisions into the summary.
+- The driver sends a plugin agent with no `model` value, so the agent uses the model that its file names.
+- A hand ledger line takes its time from `date` or `Get-Date` in the same command. The ledger template has a shape for a spec approval and a shape for a ride on the triage of a reviewer.
+- Before each new dispatch of a build task, the session puts the writes of the failed try in a stash. A difference of whitespace only does not go to a second dispatch. The session removes it and notes it in the ledger line of the task.
+- The model notes give the numbers from the field. The agy note names `silent auth succeeded` as the login line.
+- The round summary shows the Critical problems first, then Important, then Minor.
+- The prose is 95 words longer, at 10,835 of 11,000.
+
 ## v0.1.15 (2026-09-25)
 
 The tool now adds the insert to each brief and prints the full round summary. These changes come from the second field audit.
