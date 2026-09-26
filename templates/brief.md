@@ -28,6 +28,7 @@ What to read first (`.parsec/context.md`, the rubric sections it names), what th
 
 - **Settled**, S1 to Sn: each point decided, and where.
 - **Accepted residuals (ruled)**, R1 to Rn: each with Brandon's ruling and its date.
+- **Open, not ruled**: a residual without Brandon's words.
 - **Since round N-1**, from round 2 (the first diff round's covers the pre-review): each earlier finding ID, fixed (commit and `file:line`), refuted, open, ride or accepted (R number). Refutation evidence is in the package, from the tree at `--head`, a saved command output, Brandon's words or an earlier reply, never the driver's say-so.
 
 ## 5. Claims
@@ -36,7 +37,7 @@ What the host asserts and asks the reviewer to check, numbered C1 to Cn, one lin
 
 ## 6. Boundaries
 
-What is out of scope for this round. The lane's read and run rules are the first bullet of `context.md`; the brief never states them.
+What is out of scope for this round. The lane's read and run rules are the first bullet of `.parsec/context.md`; the brief never states them.
 
 ## 7. Final check
 
