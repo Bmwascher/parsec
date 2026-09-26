@@ -165,14 +165,26 @@ def test_codex_home_removed(env):
     assert "CODEX_HOME" not in child and child["NO_COLOR"] == "1"
 
 
-# row 4: the brief reaches standard input byte for byte (2026-09-17; 2026-08-11)
+# row 4: the brief reaches standard input byte for byte (2026-09-17; 2026-08-11), the kind's insert added by the tool (2026-09-25 audit: seat briefs derived by shell edit)
 def test_brief_bytes_reach_stdin(env):
     e = env
     e.mp.setenv("FAKE_STDIN_COPY", str(e.tmp / "stdin.bin"))
     rnd(e, 1)
-    assert (e.tmp / "stdin.bin").read_bytes() == TRICKY.encode("utf-8")
-    assert (e.feat / "rounds" / "design-r1-astra" / "brief.md").read_bytes() == TRICKY.encode("utf-8")
-    assert e.record("design", 1, "astra")["brief_sha256"] == parsec.sha256(e.brief)
+    sent = (e.feat / "rounds" / "design-r1-astra" / "brief.md").read_bytes()
+    assert sent.startswith(TRICKY.encode("utf-8")) and sent.endswith(b"\n### Design insert\n\n" + (REPO / "templates" / "brief-design.md").read_bytes()[len(b"# Design insert\n\n"):].replace(b"\r\n", b"\n"))
+    assert (e.tmp / "stdin.bin").read_bytes() == sent and e.record("design", 1, "astra")["brief_sha256"] == parsec.sha256(e.feat / "rounds" / "design-r1-astra" / "brief.md")
+    assert "no `## 3.` part" in "".join(e.record("design", 1, "astra")["warnings"])
+    e.brief.write_bytes(b"# Brief\n\n## 2. Task\n\nread it\n\n## 3. Rules\n\n- r\n")
+    prep = lambda kind, lane: run(e, "round", "prepare", "--feature", "09-22-x", "--kind", kind, "--round", "1", "--lane", lane, "--brief", str(e.brief),
+                                  "--head", e.head, *(["--base", e.base] if kind != "design" else []))
+    for kind, lane, want in (("design", "fable", [b"Design", b"Fable-look"]), ("lastlook", "fable", [b"Diff", b"Fable-look"]), ("prereview", "opus", [b"Diff"])):
+        assert prep(kind, lane)[0] == 0
+        pkg = (e.feat / "rounds" / f"{kind}-r1-{lane}" / ".parsec" / "brief.md").read_bytes()
+        assert pkg.startswith(b"# Brief\n\n## 2. Task\n\nread it\n\n### ") and pkg.endswith(b"\n\n## 3. Rules\n\n- r\n") and pkg.count(b" insert\n") == len(want)
+        assert all(b"### " + w + b" insert" in pkg for w in want)
+    e.brief.write_bytes(b"## 2. Task\n\n# Diff insert\n\n## 3. Rules\n")
+    code, out = prep("diff", "opus")
+    assert code == 64 and "already carries an insert" in out and not (e.feat / "rounds" / "diff-r1-opus").exists()
 
 
 # row 5: resume by the recorded id, never --last; the rerun rule (2026-09-01; the scoping note's seven briefs)
@@ -221,7 +233,8 @@ def test_symbolic_head_resolved_in_primary(env):
 @pytest.mark.parametrize("text,want", [
     ("VERDICT: PASS\n", "PASS"), ("  - **VERDICT: FIX** - a sentence after\n", "FIX"), ("> VERDICT: ESCALATE\n", "ESCALATE"),
     ("VERDICT: BLIND\n", "BLIND"), ("end with VERDICT: PASS, FIX or ESCALATE\n", "NONE"), ("VERDICT: FAIL\n", "NONE"),
-    ("VERDICT: PASS\nmore text and the reply was cut", "PASS"), ("no verdict line\n", "NONE"), ("VERDICT: PA", "NONE"),
+    ("VERDICT: PASS\nmore text and the reply was cut", "NONE"), ("no verdict line\n", "NONE"), ("VERDICT: PA", "NONE"),   # 2026-09-25 audit: fld-10's Sol draft followed its verdict
+    ("VERDICT: FIX\n\n  \n", "FIX"),
     ("• VERDICT: PASS smoke\n", "PASS")])   # 2026-09-24: a kimi 2.1.1 reply block
 def test_verdict_reading(text, want):
     assert parsec.verdict_of(text) == want
@@ -254,8 +267,8 @@ def test_exit_codes_and_dead_cli(env):
     code, out = rnd(e, 1)
     assert code == 65 and "cli exit: 1" in out and "transcript tail" in out
     r = e.record("design", 1, "astra")
-    assert r["verdict"] == "NONE" and r["cli_exit"] == 1 and r["brief_sha256"] == parsec.sha256(e.brief)
-    assert "design r1 astra: NONE" in e.ledger()
+    assert r["verdict"] == "NONE" and r["cli_exit"] == 1 and r["brief_sha256"] == parsec.sha256(e.feat / "rounds" / "design-r1-astra" / "brief.md")
+    assert "design r1 astra: NONE, rounds\\design-r1-astra\\transcript.log, no reply" in e.ledger()   # 2026-09-25 fld-15: it named a reply the rerun wrote
     e.mp.setenv("FAKE_EXIT", "3")
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n")
     code, out = rnd(e, 1)
@@ -369,6 +382,11 @@ def test_verify_states(env):
     assert v()[1].strip() == "MATCH (DEGRADED PASS)"
     (e.feat / "tasks.md").write_bytes((e.feat / "tasks.md").read_bytes() + b"\n## Task 3: fix\n\n- [ ] x\n")
     assert v()[1].strip() == "CHANGED"
+    run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
+    code, out = v("--record-amendment", "fix task for a gate finding")
+    assert code == 64 and "panel-r1-fable is prepared but not collected" in out   # 2026-09-25 fld-14: an amendment landed before the FIX it answered
+    (e.feat / "rounds" / "panel-r1-fable" / "reply.md").write_text("VERDICT: PASS\n", encoding="utf-8")
+    run(e, "round", "collect", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable")
     code, out = v("--record-amendment", "fix task for a gate finding")
     assert code == 0 and "amendment 1 recorded" in out and v()[1].strip() == "MATCH (DEGRADED PASS)"   # the flag carries
     assert (e.feat / "rounds" / "amendment-1.json").is_file()
@@ -420,11 +438,12 @@ def test_doctor_stale_install(env):
     assert "not installed" in run(e, "doctor")[1]                   # 2026-09-23, Astra: a malformed file crashed the doctor
     plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"gitCommitSha": None}]}}), encoding="utf-8")
     assert "STALE" in run(e, "doctor")[1]                           # and so did a null commit (Astra r2)
-    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head}]}}), encoding="utf-8")
+    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head, "installPath": str(e.tmp / "c010")}]}}), encoding="utf-8")
     e.mp.setattr(parsec, "PLUGIN", e.repo)
     (e.repo / ".claude-plugin").mkdir()
     (e.repo / ".claude-plugin" / "plugin.json").write_text('{"version": "0.0.9"}', encoding="utf-8")
-    assert "warning: this tool is parsec 0.0.9, but 0.1.0 is installed" in run(e, "doctor")[1]   # 2026-09-23: three phases ran 0.1.6 after 0.1.7
+    out = run(e, "doctor")[1]                                       # 2026-09-23: three phases ran 0.1.6 after 0.1.7; 2026-09-25: a re-invoked skill kept 0.1.13
+    assert "warning: this tool is parsec 0.0.9, but 0.1.0 is installed: this session's skills and templates stay at 0.0.9 until a new session" in out and str(e.tmp / "c010" / "tools" / "parsec.py") in out
     cmd = json.dumps([sys.executable, str(FAKE)])
     upd = json.dumps([sys.executable, str(FAKE), "update"])
     (e.tmp / "lanes.toml").write_text(f'[astra]\nmodel = "a"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n'
@@ -497,6 +516,8 @@ def test_inputs_and_preflight(env):
     assert code == 0 and "Opus Pre-Review" in out and str(folder) in out and "diff.patch:" in out, out
     assert (folder / ".parsec" / "evidence" / "1-reply-r1.md").read_text() == "earlier reply"
     assert (folder / ".parsec" / "evidence" / "2-brief.md").is_file() and (folder / ".parsec" / "diff.patch").stat().st_size > 0
+    page = int(out.split("Read pages ")[1].split()[0])              # 2026-09-24 fld-11: 2,000 lines of a 96 KB patch passed the Read cap
+    assert page * (folder / ".parsec" / "diff.patch").stat().st_size <= 40000 * len((folder / ".parsec" / "diff.patch").read_text().splitlines()) or page == 100
     tree = e.wt / "_review" / "proj-09-22-x-prereview-opus"        # 2026-09-23: seven phases gave Opus and Fable the primary as the code root
     assert (folder / "pending.json").is_file() and git("rev-parse", "HEAD", cwd=tree) == e.head and f"code root: {tree}" in out
     ctx = (folder / ".parsec" / "context.md").read_text(encoding="utf-8")
@@ -625,8 +646,22 @@ def test_summary_head(env):
     assert rnd(e, 3)[1].endswith("### 🟢 Astra R3 Design Round: PASS (0 min, resumed)\n")
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable", "--brief", str(e.brief), "--head", e.head)
     (e.feat / "rounds" / "design-r1-fable" / "reply.md").write_text("VERDICT: FIX\n", encoding="utf-8")
-    assert run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable")[1].endswith(
-        "### 🔴 Fable R1 Design Round: FIX (0 min, fresh)\n")                        # pre-review F2: an agent round gets its minutes too
+    out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable")[1]
+    assert out.endswith("### 🔴 Fable R1 Design Round: FIX (0 min, fresh)\n") and "warning: the reply has no counts line" in out   # pre-review F2: an agent round gets its minutes too
+
+
+# row 14e: the whole summary block, one bullet per finding (2026-09-25 audit: the heading alone was pasted in about a third of rounds)
+def test_summary_bullets(env):
+    e = env
+    ask = "\n\n  → **<Fix | Refute | Ride | You decide>:** "
+    e.mp.setenv("FAKE_REPLY", "### F1 (Important, new): the hold is lost.\n- **M2 · Minor — wording.**\nC1: holds\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")
+    out = rnd(e, 1)[1]
+    assert out.endswith("Critical 0 · Important 1 · Minor 1\n\n- **F1 · Important:** the hold is lost." + ask + "\n\n- **M2 · Minor:** wording." + ask + "\n"), out
+    e.mp.setenv("FAKE_REPLY", "- **M1.** no grade\n\nCritical 0 · Important 0 · Minor 1\n\nVERDICT: PASS\n")   # four shapes in five replies (Fable poll): no ID guessed
+    out = rnd(e, 2)[1]
+    assert "warning: the reply's finding lines do not match its counts line" in out and out.endswith("- **? · Minor:** " + ask + "\n")
+    e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n\nlater draft text\n")
+    assert "the VERDICT line is not the reply's last line" in rnd(e, 3)[1]
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)

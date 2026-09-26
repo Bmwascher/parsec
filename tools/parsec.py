@@ -161,7 +161,8 @@ def behind():
     try:
         mine, inst = read_json(PLUGIN / ".claude-plugin" / "plugin.json")["version"], installed_entry()[1].get("version")
         key = lambda v: tuple(int(x) for x in v.split("."))
-        return f"this tool is parsec {mine}, but {inst} is installed: invoke the skill again so it names the new path" if inst and key(inst) > key(mine) else None
+        return (f"this tool is parsec {mine}, but {inst} is installed: this session's skills and templates stay at {mine} until a new session, "   # 2026-09-25 audit: a re-invoked skill kept its old path (fld-7, fld-13)
+                f"so start one; the new tool is {Path(installed_entry()[1].get('installPath', '?')) / 'tools' / 'parsec.py'}") if inst and key(inst) > key(mine) else None
     except Exception:                            # a warning never stops a command (2026-09-23 pre-review)
         return None
 
@@ -225,16 +226,32 @@ COUNTS = re.compile(r"Critical:? (\d+)\W+Important:? (\d+)\W+Minor:? (\d+)|(\d+)
 
 def severity_counts(text):                       # the LAST one line naming all three in order (pre-review F1: a search per word mixed lines)
     hits = [m for line in text.splitlines() if (m := COUNTS.search(line))]
-    return "Critical {} · Important {} · Minor {}".format(*[g for g in hits[-1].groups() if g]) if hits else None
+    return tuple(int(g) for g in hits[-1].groups() if g) if hits else None
+
+
+FINDING = re.compile(r"^([A-Z]{1,2}\d{1,3})\W{1,6}(Critical|Important|Minor)\b\W*(.*)")
+GRADES = ("Critical", "Important", "Minor")
+
+
+def summary_bullets(text, counts):
+    """2026-09-25 audit: a pasted heading alone reached about a third of rounds. One bullet per finding, its ID where
+    the reply's finding lines match the counts line, else '?' (four finding shapes in five sampled replies, Fable poll)."""
+    found = {}
+    for line in text.splitlines():
+        if (m := FINDING.match(strip_line(line))) and m[1] not in found:
+            found[m[1]] = (m[2], re.sub(r"^[^:—()]{0,40}\)\W*", "", m[3].replace("**", "")).strip()[:120])   # "F1 (Important, new): x" gives x
+    ok = counts is not None and tuple(sum(g == s for g, _ in found.values()) for s in GRADES) == counts
+    rows = [(i, g, t) for i, (g, t) in found.items()] if ok else [("?", s, "") for s, n in zip(GRADES, counts or ()) for _ in range(n)]
+    return ok, [f"- **{i} · {g}:** {t}\n\n  → **<Fix | Refute | Ride | You decide>:** " for i, g, t in rows]
 
 
 def verdict_of(text):
     """Old item 34: a truncated reply must read NONE, and a reviewer echoing the brief's instruction
-    then cut off must not read as PASS, so a line naming more than one verdict word is ignored."""
-    for line in reversed(text.splitlines()):
-        s = strip_line(line)
-        if not s.upper().startswith("VERDICT:"):
-            continue
+    then cut off must not read as PASS, so a line naming more than one verdict word is ignored.
+    The verdict is the LAST non-blank line (2026-09-25 audit: fld-10's Sol reply read PASS above its draft reasoning)."""
+    lines = [l for l in text.splitlines() if l.strip()]
+    s = strip_line(lines[-1]) if lines else ""
+    if s.upper().startswith("VERDICT:"):
         words = set(re.findall(r"\b(PASS|FIX|ESCALATE|BLIND)\b", s.upper()))
         rest = s[8:].strip(" *").upper()
         for w in VERDICTS:
@@ -284,6 +301,23 @@ def context_lines(cfg, primary, reference):
                 warnings.append(f'rubric section not found: "{s}" in {path}')
         lines.append(f"- read first: {path}" + (f", sections: {'; '.join(secs)}" if secs else ""))
     return lines, warnings, found, wanted
+
+
+INSERTS = {"design": ("design",), "prereview": ("diff",), "diff": ("diff",), "lastlook": ("diff", "lastlook")}   # a panel's brief is the host's own
+
+
+def assemble(brief, kind, lane, warnings):
+    """The shared text plus the kind's insert at the end of part 2 (2026-09-25 audit: every field phase derived seat
+    briefs by shell edit, and fld-10's last look lost its insert); a Claude seat's design round is the Fable look."""
+    text = Path(brief).read_bytes()
+    names = INSERTS.get(kind, ()) + (("lastlook",) if kind == "design" and lane in AGENT_OF else ())
+    if names and re.search(rb"(?m)^#+ (Design|Diff|Fable-look|Panel) insert", text):
+        raise Exit(64, f"{brief} already carries an insert: write the shared text only, and the tool adds the {kind} insert")
+    add = b"".join(b"\n##" + (PLUGIN / "templates" / f"brief-{n}.md").read_bytes().replace(b"\r\n", b"\n").rstrip(b"\n") + b"\n" for n in names)
+    at = re.search(rb"(?m)^## 3\.", text)
+    if names and not at:
+        warnings.append("the brief has no `## 3.` part: the insert went at the end")
+    return text[:at.start()] + add.lstrip(b"\n") + b"\n" + text[at.start():] if at and names else text + add
 
 
 def write_package(root, args, cfg, primary, fdir, kind):
@@ -505,6 +539,7 @@ def prepare(args, launch):
     if cli:
         program(row := lane_row(args.lane))      # before anything is written (2026-09-23 last look: a new panel's folder was)
     warnings = []
+    sent = assemble(args.brief, args.kind, args.lane, warnings)   # before any write: a refused brief leaves nothing behind
     if args.round > 5:
         warnings.append(f"{args.lane}'s {args.kind} round {args.round}: past five rounds of one lane and kind the skill asks Brandon (old item 24)")
     if folder.exists() and not (folder / "record.json").is_file() and (folder / "pending.json").is_file():   # before the number check: an uncollected old-style round named round 1 (Kimi r2)
@@ -528,7 +563,8 @@ def prepare(args, launch):
         fdir.mkdir(parents=True)
         (fdir / "ledger.md").write_text(f"# Panel {fdir.name}\n\nMade by parsec on {stamp()}.\n", encoding="utf-8", newline="\n")
     folder.mkdir(parents=True)
-    shutil.copyfile(args.brief, folder / "brief.md")
+    (folder / "brief.md").write_bytes(sent)
+    args.brief = str(folder / "brief.md")        # the package, stdin and the hash all take the assembled text (Astra, Fable, 2026-09-25)
     tree = worktree_path(cfg, primary, frel, args.kind, args.lane)   # every lane reads the code at --head (2026-09-23: seven phases gave Opus and Fable the primary)
     ensure_worktree(primary, tree, args.head)
     if cli:
@@ -552,7 +588,8 @@ def prepare(args, launch):
         print(f"code root: {tree} at {args.head}, a review worktree that round close removes")
         patch = folder / ".parsec" / "diff.patch"
         if patch.is_file():
-            print(f"diff.patch: {len(read_text(patch).splitlines())} lines (Read pages 2,000 at a time)")
+            n = len(read_text(patch).splitlines())   # 2026-09-24 fld-11: 2,000 lines of a 96 KB patch passed the Read tool's token cap
+            print(f"diff.patch: {n} lines (Read pages {max(100, min(2000, n * 40000 // max(1, patch.stat().st_size) // 100 * 100))} lines at a time)")
         print(f"report path: {folder / 'reply.md'}")
         for wl in warnings:
             print(f"warning: {wl}")
@@ -608,7 +645,11 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     reply = folder / "reply.md"
     text = read_text(reply) if reply.is_file() else ""
     transcript = read_text(folder / "transcript.log") if (folder / "transcript.log").is_file() else ""
-    verdict = verdict_of(text)
+    verdict, counts = verdict_of(text), severity_counts(text)
+    if verdict == "NONE" and tag_line(text, "VERDICT") is not None:
+        warnings.append("the VERDICT line is not the reply's last line: rerun on the session, asking only for the verdict")
+    elif verdict in VERDICTS and counts is None:   # 2026-09-25 audit: fld-7's derived briefs lost the counts line unseen
+        warnings.append("the reply has no counts line: count the findings by hand")
     continuity = tag_line(text, "CONTINUITY") if pend.get("resumed") else None
     session = pend.get("session") or agent_id or session_of(lane, transcript) or "unknown"   # an agent round's id comes from --agent-id (spec review, Q3)
     cli_version = (re.search(r"OpenAI Codex v(\S+)", transcript) or [None, "unknown"])[1] if lane != "kimi" else "unknown"
@@ -645,8 +686,9 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     write_json(rec_path, rec)
     pend_path.unlink()                           # before the ledger line: the record is the truth, a replay would overwrite it (r2, Sol)
     cont = "" if continuity is None and not pend.get("resumed") else (", continuity answered" if continuity else ", continuity: not answered")
+    said = "reply.md" if text.strip() else "transcript.log, no reply" if transcript else "no reply"   # 2026-09-25 fld-15: a dead round named a reply the rerun wrote
     ledger_line(fdir, f"{kind} r{n} {lane}: {verdict}{cont}" + (", tier: fast" if tier == "fast" else "")
-                + (f", degraded ({degraded})" if degraded else "") + f", rounds\\{folder.name}\\reply.md", warnings)
+                + (f", degraded ({degraded})" if degraded else "") + f", rounds\\{folder.name}\\{said}", warnings)
     sub = "  ".join(f"{k} {v[:6]}" for k, v in pend.get("subject", {}).items())
     print(f"{pretty_name(lane, kind, n)}\nverdict: {verdict}    " + ("in-session agent" if lane in AGENT_OF else f"cli exit: {run['cli_exit']}    {run['seconds']} s    "
           f"{'resumed' if pend.get('resumed') else 'fresh'} session {session}    tier {tier}") + (f"\ndegraded: {degraded}" if degraded else ""))
@@ -656,9 +698,12 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     code = 67 if run["timeout"] else 66 if verdict == "WROTE-FILES" else 65 if verdict == "NONE" else (run["cli_exit"] or 0)
     if code and transcript:
         print("transcript tail:\n" + "\n".join(transcript.splitlines()[-5:]))
-    took, counts = round((end - dt.datetime.fromisoformat(pend.get("start") or stamp(end))).total_seconds() / 60), severity_counts(text)   # 2026-09-23 phase 6: a prose summary
+    took = round((end - dt.datetime.fromisoformat(pend.get("start") or stamp(end))).total_seconds() / 60)   # 2026-09-23 phase 6: a prose summary
+    ok, bullets = summary_bullets(text, counts)
+    if bullets and not ok:
+        print("warning: the reply's finding lines do not match its counts line: fill each ? from the reply")
     print(f"\n### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min, {'resumed' if pend.get('resumed') else 'fresh'})"
-          + (f"\n\n{counts}" if counts else ""))
+          + ("\n\nCritical {} · Important {} · Minor {}".format(*counts) if counts else "") + "".join(f"\n\n{b}" for b in bullets))
     return code
 
 
@@ -693,6 +738,8 @@ def verify(args):
         return r is not None and ("reason" in r or r.get("verdict") == "PASS" or
                                   (r.get("verdict") == "FIX" and r.get("closed_on_minor")))
     if args.record_amendment:
+        if (open_ := sorted(p for p in (fdir / "rounds").glob("*/pending.json") if ".dead" not in p.parent.name)):   # 2026-09-25 fld-14: amendment 1 landed before the Fable FIX it answered
+            raise Exit(64, f"amendment refused: {open_[0].parent.name} is prepared but not collected; collect it first")
         if not stands(newest):                    # Screenshot 1: a task list edited after its PASS
             raise Exit(64, "amendment refused: the newest design record is not a PASS, a FIX closed on Minor, or an amendment")
         k = 1 + len([r for r in design if "reason" in r])
