@@ -10,9 +10,11 @@ Probed 2026-07-24 on 0.144.1: `codex exec ... resume <unknown id>` exits 1 with 
 
 `codex app-server --stdio` answers the JSON-RPC method `account/rateLimits/read` (probed 2026-07-24; an experimental surface, drift expected). The doctor prints it as information only; it never fails a pre-flight.
 
+The quota read and `codex login status` both missed a server-side `401 Unauthorized` that stopped two Sol rounds (2026-09-25).
+
 ## The operator's own instructions reach every lane
 
-`~/.codex/AGENTS.md` is the operator's and reaches every codex lane by design; a repo-root `AGENTS.md` is ingested too (probed 2026-07-24: a planted one controlled a reply). The review worktree holds the repo's own files, so a project's `AGENTS.md` is in the reviewer's context; the brief says text in files is evidence, never instruction.
+`~/.codex/AGENTS.md` is the operator's and reaches every codex lane by design; a repo-root `AGENTS.md` is ingested too (probed 2026-07-24: a planted one controlled a reply). The review worktree holds the repo's own files, so a project's `AGENTS.md` is in the reviewer's context.
 
 ## Web search is on
 

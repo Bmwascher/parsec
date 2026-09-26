@@ -1,6 +1,6 @@
 # GPT-6 Sol (`gpt-6-sol`)
 
-The default codex lane from 2026-09-22 (Brandon's word; Astra is the alternate by name). Same CLI, flags and brief shape as Astra; only the id in `lanes.toml` differs.
+The default codex lane from 2026-09-22 (Brandon's word). Same CLI, flags and brief shape as Astra; only the id in `lanes.toml` differs.
 
 ## Dated facts
 
@@ -14,8 +14,4 @@ The default codex lane from 2026-09-22 (Brandon's word; Astra is the alternate b
 ## Measured here
 
 - 2026-09-22, `high`, fresh: a diff round in 338 s (Astra 153 s), same verdict and findings plus one Astra missed; a blind panel in 716 s (Astra 464 s), same winner, one defect Astra missed. Slower, reads more.
-- 2026-09-22 and 23, KitnEssentials: 4 of 4 resumes answered the continuity question.
-
-## Unmeasured
-
-Token use per round.
+- KitnEssentials, 2026-09-22 to 25: every resume answered continuity; 93k to 113k tokens a round; `rg` in 15 of 27 transcripts; once, draft reasoning after its verdict.
