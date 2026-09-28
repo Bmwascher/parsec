@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.18 (2026-09-28)
+
+The prompt for the Gemini lane tells Gemini to find text with its own search tool.
+
+- The last sentence of each agy prompt now names the `grep_search` tool of agy as the way to find text, and not a command. In the field, 4 of 232 build runs stopped because Gemini tried a `Select-String` search as a command, which print mode does not permit. The backup implementer then built each of these tasks.
+- In three probe runs with the new prompt, Gemini made each edit and tried no command. It read the file with `ViewFile` and did not use `grep_search`. No field run has measured the effect of the prompt yet.
+- The prose is 21 words longer, at 10,989 of 11,000.
+
 ## v0.1.17 (2026-09-28)
 
 The Gemini lane can read and edit the files of a feature in the primary checkout when it builds in a worktree.
