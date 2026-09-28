@@ -577,7 +577,7 @@ def prepare(args, launch):
         session = last
         if not session:
             warnings.append("newest record of this lane has no session id: fresh round")
-    if session and b"line starting `CONTINUITY:`" not in sent:   # pre-review F2: a brief may quote the tag
+    if session:                                  # no guard: a quote of the tag or of its phrase suppressed it (pre-review F2, Sol diff r1 F3)
         sent = sent.rstrip(b"\n") + b"\n" + CONTINUITY.encode("utf-8")
     if not fdir.is_dir():                        # a new panel, round 1 (feature_dir): the one feature folder the tool makes
         fdir.mkdir(parents=True)
@@ -600,8 +600,8 @@ def prepare(args, launch):
     warnings += w
     root = tree if cli else folder               # 2026-09-28 audit: gk-9's Sol R1 searched all of KitnDev for a canvas file (617 s)
     warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
-                 for n in sorted(named - {Path(f).name for f in args.file or []} - {"reply.md", "record.json", "summaries.md", "pending.json"})   # pre-review F1
-                 if not any((b / n).exists() for b in (root, root / ".parsec", tree))]
+                 for n in sorted(named) if Path(n.replace("\\", "/")).name not in {Path(f).name for f in args.file or []} | {"reply.md", "record.json", "summaries.md", "pending.json"}   # pre-review F1, Sol diff r1 F2
+                 and not any((b / n).exists() for b in (root, root / ".parsec", tree))]
     if args.kind in ("prereview", "diff", "lastlook") and all(Path(f).name == "reply.md" for f in args.file or []):   # 2026-09-28 audit: gate logs in 4 of 16 phases
         warnings.append("no --file evidence but replies: pass the gate log, or the reviewer marks every test claim unverified")
     pending = {"kind": args.kind, "round": args.round, "lane": args.lane, "head": args.head, "base": args.base,
@@ -845,7 +845,8 @@ def build_run(args):
     dirt = lambda: [l for l in git_out(["status", "--porcelain", "--untracked-files=all"], checkout).splitlines() if l.strip() and not (rel and re.match(rf'"?{re.escape(rel)}/', l[3:]))]
     if dirt():                                   # 2026-09-22 review (Sol): a leftover made the status test vacuous
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
-    toks = [re.sub(r":\d+(-\d+)?$", "", t) for t in re.findall(r"`([^`\s]+)`", read_text(brief))]   # 2026-09-28 audit: a task editing only the smoke file read "failed" (gk-14)
+    files = "\n".join(l for l in read_text(brief).splitlines() if "**Files**" in l)   # Sol diff r1 F1: the task's Files line, never the constraints or checks
+    toks = [re.sub(r":\d+(-\d+)?$", "", t) for t in re.findall(r"`([^`\s]+)`", files)]   # 2026-09-28 audit: a task editing only the smoke file read "failed" (gk-14)
     named = {q for t in toks if re.fullmatch(r"(?:[A-Za-z]:[\\/])?[\w./\\-]+\.\w+", t) for q in (resolve_under(checkout, t), resolve_under(primary, t)) if q.is_relative_to(docs)}
     docs_state = lambda: {q: sha256(q) if q.is_file() else None for q in named}   # the task's own files, never the whole docs root, where the report and log land
     docs_before = docs_state()

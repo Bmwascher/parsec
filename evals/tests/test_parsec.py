@@ -262,7 +262,7 @@ def test_continuity_and_wrote_files(env):
     r = e.record("design", 2, "astra")
     assert r["continuity"] == "FIX, the ledger point" and "continuity answered" in e.ledger().splitlines()[-1]
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n")
-    e.brief.write_bytes(TRICKY.encode() + b"a quoted `CONTINUITY:` tag\n")   # pre-review F2: a quote of the tag is not the question
+    e.brief.write_bytes(TRICKY.encode() + b"a quoted `CONTINUITY:` tag, and its line starting `CONTINUITY:`\n")   # pre-review F2, Sol diff r1 F3: a quote is not the question
     rnd(e, 3)
     assert e.record("design", 3, "astra")["continuity"] is None and "continuity: not answered" in e.ledger().splitlines()[-1]
     sent = lambda n: (e.feat / "rounds" / f"design-r{n}-astra" / "brief.md").read_bytes()
@@ -700,7 +700,7 @@ def test_named_evidence(env):
     out = rnd(e, 1)[1]
     ctx = (e.wt / "_review" / "proj-09-22-x-design-astra" / ".parsec" / "context.md").read_text(encoding="utf-8")
     assert "- notes: .parsec/notes.md, the brainstorm record" in ctx and out.count("the brief names") == 1 and "names pages/canvas.json" in out, out
-    e.brief.write_text("Read `notes.md`, the earlier `reply.md` and `canvas.json`.\n", encoding="utf-8")   # pre-review F1: a passed file is found by its name
+    e.brief.write_text("Read `notes.md`, the earlier `reply.md` and `pages/canvas.json`.\n", encoding="utf-8")   # pre-review F1, Sol diff r1 F2: a passed file is found by its name
     (e.tmp / "canvas.json").write_text("{}", encoding="utf-8")
     assert "the brief names" not in rnd(e, 2, "astra", "design", "--file", str(e.tmp / "canvas.json"))[1]
     assert "no --file evidence but replies" in rnd(e, 1, "sol", "diff")[1]
@@ -758,7 +758,9 @@ def test_build_run_success_test(env):
     e.mp.delenv("FAKE_WRITE")
     code, out = b("--again")
     assert code == 65 and "FAILED: git status non-empty" in out     # an empty diff is never done
-    (e.feat / "build" / "task-01-brief.md").write_text("edit `docs/09-22-x/smoke.md:3` only\n", encoding="utf-8")
+    (e.feat / "build" / "task-01-brief.md").write_text("- keep `docs/09-22-x/other.md`\n\n- **Files**: `docs/09-22-x/smoke.md:3` only\n", encoding="utf-8")
+    e.mp.setenv("FAKE_WRITE", str(e.feat / "other.md"))
+    assert "FAILED: git status non-empty" in b("--again")[1]      # Sol diff r1 F1: a docs file outside the Files line is no success
     e.mp.setenv("FAKE_WRITE", str(e.feat / "smoke.md"))
     code, out = b("--again")
     assert code == 0 and "ok: git status non-empty, or a docs-root file the task names changed" in out, out   # 2026-09-28 audit: gk-14's smoke-only task read "failed"
@@ -817,7 +819,7 @@ def test_build_run_success_test(env):
     assert code == 0 and "result: ok" in out, out                  # the feature's own ledger and spec are not dirt either
     assert e.calls()[-1].count("--add-dir") == 1                   # a docs root inside the checkout is not added again
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead12" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead13" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)
