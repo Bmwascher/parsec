@@ -2,6 +2,13 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.20 (2026-09-28)
+
+The prose is 79 words shorter, at 10,904 of 11,000. This gives room for the next batch of rules.
+
+- Twelve cuts remove text that another file already holds, old history and extra words. Each cut keeps its rule, condition and dated measurement.
+- A Fable poll checked each cut before the edit. It kept one reason that makes a rule clear, and it corrected one note.
+
 ## v0.1.19 (2026-09-28)
 
 The tool takes the fixes from the third field audit, of the 16 phases of the Groundhog Key programme.
