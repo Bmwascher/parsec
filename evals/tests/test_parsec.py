@@ -705,7 +705,7 @@ def test_build_run_success_test(env):
     digest = parsec.sha256(e.feat / "build" / "task-01-brief.md")
     assert prompt.startswith(f"Read the file AGY-TASK-BRIEF-{digest[:12]}.md in the workspace") and prompt.endswith(parsec.CLOSING)
     assert a[a.index("--model") + 1] == "gemini-3.8-flash-high" and a[a.index("--mode") + 1] == "accept-edits"
-    assert a[a.index("--add-dir") + 1] == str(co.resolve()) and a[a.index("--log-file") + 1] == str((e.feat / "build" / "task-01-agy.log").resolve())
+    assert a[a.index("--log-file") + 1] == str((e.feat / "build" / "task-01-agy.log").resolve())
     assert [a[i + 1] for i, x in enumerate(a) if x == "--add-dir"] == [str(co.resolve()), str(e.feat.parent.resolve())]   # 2026-09-27 gk-12: a read in the primary's docs root was denied
     child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
     assert child["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and not list(co.glob("AGY-TASK-BRIEF-*"))
