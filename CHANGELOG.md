@@ -2,6 +2,19 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.19 (2026-09-28)
+
+The tool takes the fixes from the third field audit, of the 16 phases of the Groundhog Key programme.
+
+- The tool also adds each round summary to `summaries.md` in the feature folder. The finish report includes this file, so Brandon can read every round in a phase that a delegator runs. In the field, 68 of 153 summaries went to the chat, and no delegator got one.
+- The summary bullets keep the backticks in a title. A long title stops at a word and closes an open code span. When a Fable look counts findings from other lanes, the tool keeps the bullets that it can read. A `?` bullet shows each of the others. The answer slot has no angle brackets, because Monitor changed them to `&lt;` and `&gt;`.
+- The package holds `notes.md`. `round prepare` and `round run` give a warning when the brief names a file that the package and the code do not hold. They also give a warning when a gate round gets no evidence file other than replies. In the field, reviewers could not find `notes.md` in three phases, and gate logs went in as evidence in 4 of 16 phases.
+- The tool adds the CONTINUITY question to each resumed round. Before, a brief made from an earlier brief lost the question in one phase.
+- The lane line says that `rg` is not on the path of the sandbox. Sol read the old words as a fact about the project four times.
+- Each record keeps a hash of the reply. `round collect` gives a warning when an earlier reply changed after its collect. In one phase, the author wrote over the reply of Sol.
+- The success test of `build run` accepts a change to a docs-root file that the Files field of the task names. In the field, a task that changed only the smoke file failed the test.
+- The prose is 6 words shorter, at 10,983 of 11,000.
+
 ## v0.1.18 (2026-09-28)
 
 The prompt for the Gemini lane tells Gemini to find text with its own search tool.
