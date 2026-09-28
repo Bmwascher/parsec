@@ -39,7 +39,8 @@ CODEX_FLAGS = ["exec", "--sandbox", "read-only",                     # 2026-07-2
                "--disable", "memories",                               # 2026-08-12: observed on without it; free
                "-c", "mcp_servers.node_repl.enabled=false"]           # 2026-08-11: the JavaScript tool was left on by two flags
 CLOSING = ("Do not run commands or attempt verification: the test steps, the commit step and "
-           "everything after the file edits are not yours; your only job is the file edits.")
+           "everything after the file edits are not yours; your only job is the file edits. "
+           "To find text in a file, use your grep_search tool, never a command.")   # 2026-09-28 poll: four field denials, all Select-String
 ROUTE_LINES = ("Print mode: starting", "Propagating selected model override", "applying agent mode accept-edits")
 SOFT_DENY = "soft-denying tool confirmation"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)

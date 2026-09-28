@@ -13,4 +13,4 @@ Runs Gemini 3.8 Flash (`gemini-3.8-flash-high`) in print mode for `build run`. V
 - **Gemini's tokens are recorded nowhere** the tool can read; a task's cost on this lane is time only (63 s on Task 2 of the 2026-09-22 comparison).
 - **`--mode accept-edits`**: without it the edit was soft-denied (1.2.0, 2026-09-12).
 - **Auth is a silent refresh** (2026-09-22) seen only in the log's `silent auth succeeded` line; the `not logged into Antigravity` lines are in every log (2026-09-24); the first run's log is the login check.
-- **In the field** (2026-09-23 to 25): print mode stops at 5 minutes; it tried `RunCommand` twice, on the widest tasks (and gk-12 task 12, 2026-09-27: `Select-String` as a search); it miscopied a value yet reported success; it adds stray blank lines.
+- **In the field** (2026-09-23 to 27): print mode stops at 5 minutes; in 232 runs it tried `RunCommand` four times, each a `Select-String` search, the first two on the widest tasks (since 0.1.18 the prompt names `grep_search`; effect unmeasured); it miscopied a value yet reported success; it adds stray blank lines.

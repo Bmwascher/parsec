@@ -704,6 +704,7 @@ def test_build_run_success_test(env):
     prompt = a[a.index("-p") + 1]
     digest = parsec.sha256(e.feat / "build" / "task-01-brief.md")
     assert prompt.startswith(f"Read the file AGY-TASK-BRIEF-{digest[:12]}.md in the workspace") and prompt.endswith(parsec.CLOSING)
+    assert "grep_search" in prompt                               # 2026-09-28 poll: all four field RunCommand denials were Select-String searches
     assert a[a.index("--model") + 1] == "gemini-3.8-flash-high" and a[a.index("--mode") + 1] == "accept-edits"
     assert a[a.index("--log-file") + 1] == str((e.feat / "build" / "task-01-agy.log").resolve())
     assert [a[i + 1] for i, x in enumerate(a) if x == "--add-dir"] == [str(co.resolve()), str(e.feat.parent.resolve())]   # 2026-09-27 gk-12: a read in the primary's docs root was denied
