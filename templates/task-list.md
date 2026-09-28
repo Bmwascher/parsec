@@ -35,7 +35,7 @@ Each task is a `## Task N: <name>` section holding:
   2. Run it and see the expected failure (red).
   3. Write the implementation, the FULL code in the same edit format, never a placeholder.
   4. Run the tests and see them pass (green); the whole suite, output clean.
-  5. Commit, as the LAST step, after a branch check, because phase chats share a checkout. Every task ends with its own commit. The commit message is given in full.
+  5. Commit, as the LAST step, after a branch check, because phase chats share a checkout. The commit message is given in full.
 
 The commit step belongs to the session. The test steps belong to the session on the Gemini lane and to the `backup-implementer` on its lane; they are written here so the record is complete.
 

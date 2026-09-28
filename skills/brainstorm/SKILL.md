@@ -28,7 +28,7 @@ YAGNI; design for isolation; follow the patterns already in the code; no unrelat
 
 ## The feature folder
 
-Made when the request is classified as architectural and named, one folder per feature; its name and layout are `setup`'s "Feature folder" and "Inside it" rows.
+Made when the request is classified as architectural and named; its name and layout are `setup`'s "Feature folder" and "Inside it" rows.
 
 ## Who writes
 

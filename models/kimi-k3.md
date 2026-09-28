@@ -1,6 +1,6 @@
 # Kimi K3 (`kimi-code/k3`, 1M context)
 
-The backup review lane, on the Kimi CLI, read-only through `lanes/kimi-reviewer.md` (the agent file is the lane's only read-only control; its own name still says `parallax`, a stale wording accepted so the frozen copy keeps its hash).
+The backup review lane, on the Kimi CLI, read-only through `lanes/kimi-reviewer.md` (the agent file is the lane's only read-only control; its own name still says `parallax` and the file is frozen).
 
 ## Effort
 

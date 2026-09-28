@@ -20,7 +20,7 @@ The config holds ONLY what the tool or the `debate` skill reads as data. Gates, 
 | Feature folder | `<docs-root>\<MM-DD>-<topic>\`, no year; the year and the readable title sit at the top of the notes and the ledger's head. One folder per feature: every file it writes, and any path a handoff gives for it, resolves inside it (field audit, 2026-09-23). The folder, the branch and the worktree share one `<topic>` when the plugin names them; names a handoff gives are recorded as given. `<project>`, wherever a worktree name uses it, is the primary checkout's folder name. |
 | Inside it | Loose: `notes.md`, `spec.md`, `tasks.md`, `ledger.md`, the tool's `summaries.md`, and nothing else. Every other file goes in a subfolder named for what it holds, made when its first file is written: `rounds\`, `build\` (`task-NN-brief.md`, `task-NN-report.md`, `task-NN-agy.log`), `pages\`, `briefs\` (each brief as written), `evidence\` (saved output and other files a brief cites). |
 | Panels about no feature | `<docs-root>\panels\<MM-DD>-<topic>\`, the one feature folder the tool makes itself. |
-| Machine paths | Absolute paths are allowed (the worktrees folder; a rubric above the repo); relative paths resolve against the primary. After a PC reset or a folder move, run setup again. |
+| Machine paths | Absolute paths are allowed (the worktrees folder; a rubric above the repo); relative paths resolve against the primary. |
 | Old superpowers documents | Left where they are; nothing is migrated. |
 | Levels | No user-level defaults file. Each project answers once. |
 
