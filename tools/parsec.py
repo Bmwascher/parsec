@@ -845,7 +845,7 @@ def build_run(args):
     dirt = lambda: [l for l in git_out(["status", "--porcelain", "--untracked-files=all"], checkout).splitlines() if l.strip() and not (rel and re.match(rf'"?{re.escape(rel)}/', l[3:]))]
     if dirt():                                   # 2026-09-22 review (Sol): a leftover made the status test vacuous
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
-    files = "\n".join(l for l in read_text(brief).splitlines() if "**Files**" in l)   # Sol diff r1 F1: the task's Files line, never the constraints or checks
+    files = "\n".join(re.findall(r"(?m)^[ \t]*[-*][ \t]*\*\*Files\*\*:.*$", re.split(r"(?m)^## Task \d+", read_text(brief))[-1]))   # Sol diff r1-r2 F1: the task's own Files field
     toks = [re.sub(r":\d+(-\d+)?$", "", t) for t in re.findall(r"`([^`\s]+)`", files)]   # 2026-09-28 audit: a task editing only the smoke file read "failed" (gk-14)
     named = {q for t in toks if re.fullmatch(r"(?:[A-Za-z]:[\\/])?[\w./\\-]+\.\w+", t) for q in (resolve_under(checkout, t), resolve_under(primary, t)) if q.is_relative_to(docs)}
     docs_state = lambda: {q: sha256(q) if q.is_file() else None for q in named}   # the task's own files, never the whole docs root, where the report and log land

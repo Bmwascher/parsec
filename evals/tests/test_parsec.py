@@ -758,9 +758,9 @@ def test_build_run_success_test(env):
     e.mp.delenv("FAKE_WRITE")
     code, out = b("--again")
     assert code == 65 and "FAILED: git status non-empty" in out     # an empty diff is never done
-    (e.feat / "build" / "task-01-brief.md").write_text("- keep `docs/09-22-x/other.md`\n\n- **Files**: `docs/09-22-x/smoke.md:3` only\n", encoding="utf-8")
+    (e.feat / "build" / "task-01-brief.md").write_text("## Global constraints\n\n- **Files**: keep `docs/09-22-x/other.md`\n\n## Task 1: t\n\n- keep `docs/09-22-x/other.md` too\n- **Files**: `docs/09-22-x/smoke.md:3` only\n", encoding="utf-8")
     e.mp.setenv("FAKE_WRITE", str(e.feat / "other.md"))
-    assert "FAILED: git status non-empty" in b("--again")[1]      # Sol diff r1 F1: a docs file outside the Files line is no success
+    assert "FAILED: git status non-empty" in b("--again")[1]      # Sol diff r1-r2 F1: a docs file outside the task's Files field is no success
     e.mp.setenv("FAKE_WRITE", str(e.feat / "smoke.md"))
     code, out = b("--again")
     assert code == 0 and "ok: git status non-empty, or a docs-root file the task names changed" in out, out   # 2026-09-28 audit: gk-14's smoke-only task read "failed"
