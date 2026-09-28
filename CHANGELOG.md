@@ -2,6 +2,15 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.17 (2026-09-28)
+
+The Gemini lane can read and edit the files of a feature in the primary checkout when it builds in a worktree.
+
+- `build run` gives agy the docs root as a second workspace folder when the docs root is not in the checkout. Before this change, agy did not let Gemini read a spec or a local smoke file by its path in the primary checkout. The task then stopped with no edits, and the backup implementer built it (KitnEssentials, 2026-09-27).
+- An edit in the docs root, such as a step in the smoke file, is not in a git diff. The build skill tells the session to open the file.
+- The agy note gives the refused reads, the probes on agy 1.2.10 and one more try of `RunCommand`.
+- The prose is 133 words longer, at 10,968 of 11,000.
+
 ## v0.1.16 (2026-09-26)
 
 The skills, templates and model notes take the rules from the second field audit. The tool sorts the round summary by grade.
