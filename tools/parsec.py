@@ -827,7 +827,8 @@ def build_run(args):
             raise Exit(64, "the brief copy does not match the brief")
         prompt = f"Read the file {copy.name} in the workspace and make its file edits exactly. {CLOSING}"
         argv = [prog, *row["command"][1:], "-p", prompt, "--model", row["model"], "--mode", "accept-edits",
-                "--add-dir", str(checkout), "--log-file", str(log.resolve())]   # 2026-09-13: a /c/ path made no log
+                "--add-dir", str(checkout), *([] if docs.is_relative_to(checkout) else ["--add-dir", str(docs)]),   # 2026-09-27 gk-10, gk-12: a read of the spec or smoke file in the primary was denied
+                "--log-file", str(log.resolve())]   # 2026-09-13: a /c/ path made no log
         env = dict(child_env(), AGY_CLI_DISABLE_AUTO_UPDATE="true")    # old item 112: the literal true
         code, secs = run_child(argv, checkout, env, None, report, fdir / "build" / f"task-{args.task:02d}-agy.err", lambda: [log, report])
     finally:

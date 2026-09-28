@@ -706,6 +706,7 @@ def test_build_run_success_test(env):
     assert prompt.startswith(f"Read the file AGY-TASK-BRIEF-{digest[:12]}.md in the workspace") and prompt.endswith(parsec.CLOSING)
     assert a[a.index("--model") + 1] == "gemini-3.8-flash-high" and a[a.index("--mode") + 1] == "accept-edits"
     assert a[a.index("--add-dir") + 1] == str(co.resolve()) and a[a.index("--log-file") + 1] == str((e.feat / "build" / "task-01-agy.log").resolve())
+    assert [a[i + 1] for i, x in enumerate(a) if x == "--add-dir"] == [str(co.resolve()), str(e.feat.parent.resolve())]   # 2026-09-27 gk-12: a read in the primary's docs root was denied
     child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
     assert child["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and not list(co.glob("AGY-TASK-BRIEF-*"))
     report = (e.feat / "build" / "task-01-report.md").read_text(encoding="utf-8")
@@ -783,6 +784,7 @@ def test_build_run_success_test(env):
     e.mp.setenv("FAKE_WRITE", str(e.repo / "new.txt"))
     code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(e.repo), "--head", git("rev-parse", "HEAD", cwd=e.repo), "--again")
     assert code == 0 and "result: ok" in out, out                  # the feature's own ledger and spec are not dirt either
+    assert e.calls()[-1].count("--add-dir") == 1                   # a docs root inside the checkout is not added again
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
     assert code == 0 and ".dead11" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
