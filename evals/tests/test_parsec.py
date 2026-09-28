@@ -130,7 +130,7 @@ def test_codex_flags_before_resume(env):
     assert "gpt-5.6-sol" in e.calls()[-1] and "resume" not in e.calls()[-1]
     assert "round run collects its own round" in run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "sol")[1]   # 0.1.9 last look F2: kept for a CLI round
     ctx = (e.wt / "_review" / "proj-09-22-x-design-sol" / ".parsec" / "context.md").read_text(encoding="utf-8")
-    assert ctx.splitlines()[2].startswith("- your lane, Sol: you may run read-only commands") and "(git show, git log, git grep; rg is not installed)" in ctx   # 2026-09-23 audit: a driver's command ban cost a Sol round
+    assert ctx.splitlines()[2].startswith("- your lane, Sol: you may run read-only commands") and "(git show, git log, git grep; rg is not on this sandbox's PATH)" in ctx   # 2026-09-23 audit: a driver's command ban cost a Sol round; 2026-09-28: "not installed" read as a project fact
 
 
 # row 2: the Kimi argument list and child environment (old item 17; the dead normal-home login, 2026-09-21)
@@ -175,7 +175,7 @@ def test_brief_bytes_reach_stdin(env):
     e.brief.write_bytes(b"# Brief\n\n## 2. Task\n\nread it\n\n## 3. Rules\n\n- r\n")
     rnd(e, 2)
     sent = (e.feat / "rounds" / "design-r2-astra" / "brief.md").read_bytes()
-    assert sent == b"# Brief\n\n## 2. Task\n\nread it\n\n### " + (REPO / "templates" / "brief-design.md").read_bytes().replace(b"\r\n", b"\n")[2:].rstrip(b"\n") + b"\n\n## 3. Rules\n\n- r\n"
+    assert sent == b"# Brief\n\n## 2. Task\n\nread it\n\n### " + (REPO / "templates" / "brief-design.md").read_bytes().replace(b"\r\n", b"\n")[2:].rstrip(b"\n") + b"\n\n## 3. Rules\n\n- r\n" + parsec.CONTINUITY.encode()   # resumed: the tool adds the line (2026-09-28 audit, gk-4)
     assert (e.tmp / "stdin.bin").read_bytes() == sent and e.record("design", 2, "astra")["brief_sha256"] == parsec.sha256(e.feat / "rounds" / "design-r2-astra" / "brief.md")
     prep = lambda kind, lane, *x: run(e, "round", "prepare", "--feature", "09-22-x", "--kind", kind, "--round", "2" if x else "1", "--lane", lane, "--brief", str(e.brief),
                                       "--head", e.head, *(["--base", e.base] if kind != "design" else []), *x)
@@ -264,6 +264,8 @@ def test_continuity_and_wrote_files(env):
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n")
     rnd(e, 3)
     assert e.record("design", 3, "astra")["continuity"] is None and "continuity: not answered" in e.ledger().splitlines()[-1]
+    sent = lambda n: (e.feat / "rounds" / f"design-r{n}-astra" / "brief.md").read_bytes()
+    assert sent(2).endswith(parsec.CONTINUITY.encode()) and b"CONTINUITY" not in sent(1)   # 2026-09-28 audit: gk-4's derived briefs lost the line
     e.mp.setenv("FAKE_WRITE", str(e.wt / "_review" / f"proj-09-22-x-design-astra" / "ignored.txt"))
     code, out = rnd(e, 4)
     assert code == 66 and e.record("design", 4, "astra")["verdict"] == "WROTE-FILES"
@@ -665,7 +667,7 @@ def test_summary_head(env):
 # row 14e: the whole summary block, one bullet per finding (2026-09-25 audit: the heading alone was pasted in about a third of rounds)
 def test_summary_bullets(env):
     e = env
-    ask = "\n\n  → **<Fix | Refute | Ride | You decide>:** "
+    ask = "\n\n  → **Fix / Refute / Ride / You decide:** "
     e.mp.setenv("FAKE_REPLY", "### F1 (Important, new): the hold is lost.\n- **M2 · Minor — wording.**\nC1: holds\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")
     out = rnd(e, 1)[1]
     assert out.endswith("Critical 0 · Important 1 · Minor 1\n\n- **F1 · Important:** the hold is lost." + ask + "\n\n- **M2 · Minor:** wording." + ask + "\n"), out
@@ -679,6 +681,26 @@ def test_summary_bullets(env):
     e.mp.setenv("FAKE_REPLY", "- M1 · Minor: wording.\n- I1 · Important: the hold is lost.\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")   # 0.1.15 last look F1: a Minor first in the reply
     out = rnd(e, 3)[1]
     assert out.index("- **I1 · Important:**") < out.index("- **M1 · Minor:**"), out
+    span = "see `" + "long " * 30 + "code` end"                        # 2026-09-28 audit: gk-4, gk-5, gk-7 bullets broke their Markdown
+    e.mp.setenv("FAKE_REPLY", f"F1 · Minor: `KE:Hide` is gone\nF2 · Minor: {span}\nOpus F1 (the fake): `ride`\n\nCritical 0 · Important 0 · Minor 3\n\nVERDICT: PASS\n")
+    out = rnd(e, 4)[1]
+    assert "- **F1 · Minor:** `KE:Hide` is gone" in out and "long …`" + ask in out and out.endswith("- **? · Minor:** " + ask + "\n"), out   # a carried Minor: parsed rows stay
+    assert (e.feat / "summaries.md").read_text(encoding="utf-8").endswith(out[out.index("### 🟢 Astra R4"):].rstrip() + "\n\n")   # decision 1a: the finish report's file
+    (e.feat / "rounds" / "design-r1-astra" / "reply.md").write_text("the author's answer\n", encoding="utf-8")   # 2026-09-26 gk-1
+    out = rnd(e, 5)[1]
+    assert "design-r1-astra" in out and "changed after its round was collected" in out and "design-r3-astra.dead" not in out   # a dead round's reply is its own
+
+
+# row 14f: what the brief names reaches the package (2026-09-28 audit: notes.md and a canvas file no package held; gate logs in 4 of 16 phases)
+def test_named_evidence(env):
+    e = env
+    (e.feat / "notes.md").write_text("# Notes\n", encoding="utf-8")
+    e.brief.write_text("Read `notes.md` beside the spec, `AGENTS.md:3` and `pages/canvas.json`.\n", encoding="utf-8")
+    out = rnd(e, 1)[1]
+    ctx = (e.wt / "_review" / "proj-09-22-x-design-astra" / ".parsec" / "context.md").read_text(encoding="utf-8")
+    assert "- notes: .parsec/notes.md, the brainstorm record" in ctx and out.count("the brief names") == 1 and "names pages/canvas.json" in out, out
+    assert "no --file evidence but replies" in rnd(e, 1, "sol", "diff")[1]
+    assert "no --file evidence" not in rnd(e, 2, "sol", "diff", "--file", str(e.feat / "notes.md"))[1]
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
@@ -732,6 +754,10 @@ def test_build_run_success_test(env):
     e.mp.delenv("FAKE_WRITE")
     code, out = b("--again")
     assert code == 65 and "FAILED: git status non-empty" in out     # an empty diff is never done
+    (e.feat / "build" / "task-01-brief.md").write_text("edit `docs/09-22-x/smoke.md:3` only\n", encoding="utf-8")
+    e.mp.setenv("FAKE_WRITE", str(e.feat / "smoke.md"))
+    code, out = b("--again")
+    assert code == 0 and "ok: git status non-empty, or a docs-root file the task names changed" in out, out   # 2026-09-28 audit: gk-14's smoke-only task read "failed"
     e.mp.setenv("FAKE_AGY_LOG", "Print mode: starting\n")
     e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
     code, out = b("--again")
@@ -787,7 +813,7 @@ def test_build_run_success_test(env):
     assert code == 0 and "result: ok" in out, out                  # the feature's own ledger and spec are not dirt either
     assert e.calls()[-1].count("--add-dir") == 1                   # a docs root inside the checkout is not added again
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead11" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead12" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)

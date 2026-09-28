@@ -2,7 +2,7 @@
 
 Every brief has seven parts, in this order, and every path in it is relative to the package's parent folder (the reviewer's working folder). ALL reviewing rules but the lane's are here, once, so a CLI lane and an in-session lane review under the same text.
 
-The driver writes a brief WITH A FILE TOOL, never through a shell (2026-09-17: a heredoc lost every apostrophe), and only after the last pending fix is committed. The driver writes the shared text only: `round prepare` and `round run` add the kind's insert at the end of part 2 (none to a confirming question or a brief with no part 3) and refuse a brief that already carries one (2026-09-25: every field phase derived seat briefs by shell edit).
+The driver writes a brief WITH A FILE TOOL, never through a shell (2026-09-17: a heredoc lost every apostrophe), and only after the last pending fix is committed. The driver writes the shared text only: `round prepare` and `round run` add the kind's insert at the end of part 2 (none to a confirming question or a brief with no part 3), and the CONTINUITY line to every resumed round, and refuse a brief that already carries an insert (2026-09-25: every field phase derived seat briefs by shell edit).
 
 ## 1. Role
 
@@ -44,5 +44,4 @@ What is out of scope for this round. The lane's read and run rules are the first
 - List what could not be verified.
 - One line `Critical N · Important N · Minor N`, counting open findings.
 - One line per claim: holds, fails (with the finding ID), or UNVERIFIED.
-- On a resumed round, one line starting `CONTINUITY:` naming the verdict word of your most recent earlier round in this debate and one finding you raised there, or "no findings" if you raised none.
 - The LAST line is exactly one line starting `VERDICT:` and PASS, FIX or ESCALATE (BLIND in a blind panel lane), and that word appears on no other line of that shape. PASS when no Critical or Important finding is open; Minor findings ride with a PASS.

@@ -32,7 +32,7 @@ CLI_LANES = ("astra", "sol", "kimi")
 AGENT_OF = {"opus": "reviewer-opus", "fable": "reviewer-fable"}
 MARKERS = {"FIX": "🔴", "PASS": "🟢", "ESCALATE": "🟡", "BLIND": "🟡"}   # the debate skill's summary shape; NONE and WROTE-FILES are white
 VERDICTS = ("PASS", "FIX", "ESCALATE", "BLIND")
-SHELL_READS = "you may run read-only commands that read the tree or its history (git show, git log, git grep; rg is not installed); never a build, a test, a write or a fetch"   # 2026-09-23 audit: a driver's command ban cost a Sol round
+SHELL_READS = "you may run read-only commands that read the tree or its history (git show, git log, git grep; rg is not on this sandbox's PATH); never a build, a test, a write or a fetch"   # 2026-09-23 audit: a driver's command ban cost a Sol round; 2026-09-28 audit: "not installed" was raised as a finding four times
 FILE_READS = "read with your file tools only; you have no shell; never a write or a fetch, except a seat's report path"   # Fable was told it had a shell; lanes/kimi-reviewer.md disallows Bash
 CODEX_FLAGS = ["exec", "--sandbox", "read-only",                     # 2026-07-24: a resumed round lost its sandbox and wrote
                "--disable", "plugins", "--disable", "apps",           # 2026-07-28: sources on the reviewer's machine steered a review
@@ -41,6 +41,8 @@ CODEX_FLAGS = ["exec", "--sandbox", "read-only",                     # 2026-07-2
 CLOSING = ("Do not run commands or attempt verification: the test steps, the commit step and "
            "everything after the file edits are not yours; your only job is the file edits. "
            "To find text in a file, use your grep_search tool, never a command.")   # 2026-09-28 poll: four field denials, all Select-String
+CONTINUITY = ("\n- This is a resumed round: above the VERDICT line, one line starting `CONTINUITY:` naming the verdict word of your most recent "
+              "earlier round in this debate and one finding you raised there, or \"no findings\" if you raised none.\n")   # 2026-09-28 audit: gk-4's derived briefs lost it
 ROUTE_LINES = ("Print mode: starting", "Propagating selected model override", "applying agent mode accept-edits")
 SOFT_DENY = "soft-denying tool confirmation"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -231,20 +233,30 @@ def severity_counts(text):                       # the LAST one line naming all 
     return tuple(int(g) for g in hits[-1].groups() if g) if hits else None
 
 
-FINDING = re.compile(r"^([A-Z]{1,2}\d{1,3})\W{1,6}(Critical|Important|Minor)\b\W*(.*)")
+FINDING = re.compile(r"^([A-Z]{1,2}\d{1,3})\W{1,6}(Critical|Important|Minor)\b[^\w`]*(.*)")   # 2026-09-28 audit: \W* ate a title's opening backtick
 GRADES = ("Critical", "Important", "Minor")
+
+
+def bullet_title(t):
+    """"F1 (Important, new): x" gives x; a cut falls on a word and closes a code span (2026-09-28 audit: gk-4, gk-5, gk-7 broke mid-span)."""
+    t = re.sub(r"^[^:—()]{0,40}\)[^\w`]*", "", t.replace("**", "")).strip()
+    t = t if len(t) <= 120 else t[:120].rsplit(" ", 1)[0] + " …"
+    return t + "`" * (t.count("`") % 2)
 
 
 def summary_bullets(text, counts):
     """2026-09-25 audit: a pasted heading alone reached about a third of rounds. One bullet per finding, by grade, its ID where
-    the reply's finding lines match the counts line, else '?' (four finding shapes in five sampled replies, Fable poll)."""
+    the reply's finding lines parse, and '?' for each the counts line has beyond them (2026-09-28 audit: a Fable look's carried
+    Minors, in four shapes, blanked every bullet); all '?' when the parsed lines exceed the counts."""
     found = {}
     for line in text.splitlines():
         if (m := FINDING.match(strip_line(line))) and m[1] not in found:
-            found[m[1]] = (m[2], re.sub(r"^[^:—()]{0,40}\)\W*", "", m[3].replace("**", "")).strip()[:120])   # "F1 (Important, new): x" gives x
-    ok = counts is not None and tuple(sum(g == s for g, _ in found.values()) for s in GRADES) == counts
-    rows = sorted(((i, g, t) for i, (g, t) in found.items()), key=lambda r: GRADES.index(r[1])) if ok else [("?", s, "") for s, n in zip(GRADES, counts or ()) for _ in range(n)]
-    return ok, [f"- **{i} · {g}:** {t}\n\n  → **<Fix | Refute | Ride | You decide>:** " for i, g, t in rows]
+            found[m[1]] = (m[2], bullet_title(m[3]))
+    have = tuple(sum(g == s for g, _ in found.values()) for s in GRADES)
+    fits = counts is not None and all(h <= c for h, c in zip(have, counts))
+    rows = [(i, g, t) for i, (g, t) in found.items()] if fits else []
+    rows += [("?", s, "") for s, h, c in zip(GRADES, have if fits else (0, 0, 0), counts or ()) for _ in range(c - h)]
+    return have == counts, [f"- **{i} · {g}:** {t}\n\n  → **Fix / Refute / Ride / You decide:** " for i, g, t in sorted(rows, key=lambda r: GRADES.index(r[1]))]   # Monitor escaped "<...>" (gk-6, gk-7)
 
 
 def verdict_of(text):
@@ -342,6 +354,9 @@ def write_package(root, args, cfg, primary, fdir, kind):
     if subject and kind != "design":
         lines.append(f"- design: {' and '.join(f'.parsec/{n}.md' for n in subject)}, the approved design")
         lines += [f"- amendment {k}: {r['reason']}" for k, r in enumerate([r for r in records(fdir) if "reason" in r], 1)] or ["- amendments: none"]
+    if kind != "panel" and (fdir / "notes.md").is_file():   # 2026-09-28 audit: briefs sent reviewers to notes.md, which no package held (gk-8, gk-9, gk-12b)
+        shutil.copyfile(fdir / "notes.md", pkg / "notes.md")
+        lines.append("- notes: .parsec/notes.md, the brainstorm record")
     (pkg / "context.md").write_text("# Context\n\n" + "\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     if kind in ("prereview", "diff", "lastlook"):
         rng = f"{args.base}..{args.head}"
@@ -562,11 +577,14 @@ def prepare(args, launch):
         session = last
         if not session:
             warnings.append("newest record of this lane has no session id: fresh round")
+    if session and b"`CONTINUITY:`" not in sent:
+        sent = sent.rstrip(b"\n") + b"\n" + CONTINUITY.encode("utf-8")
     if not fdir.is_dir():                        # a new panel, round 1 (feature_dir): the one feature folder the tool makes
         fdir.mkdir(parents=True)
         (fdir / "ledger.md").write_text(f"# Panel {fdir.name}\n\nMade by parsec on {stamp()}.\n", encoding="utf-8", newline="\n")
     folder.mkdir(parents=True)
     (folder / "brief.md").write_bytes(sent)
+    named = set(re.findall(r"`([\w./\\-]+\.(?:md|json|txt|log|patch))(?::[\d-]+)?`", read_text(args.brief)))   # the driver's text, not the inserts'
     args.brief = str(folder / "brief.md")        # the package, stdin and the hash all take the assembled text (Astra, Fable, 2026-09-25)
     tree = worktree_path(cfg, primary, frel, args.kind, args.lane)   # every lane reads the code at --head (2026-09-23: seven phases gave Opus and Fable the primary)
     ensure_worktree(primary, tree, args.head)
@@ -580,6 +598,11 @@ def prepare(args, launch):
         model, effort, agent = agent_seat(args.lane)
         subject, w = write_package(folder, args, cfg, primary, fdir, args.kind)
     warnings += w
+    root = tree if cli else folder               # 2026-09-28 audit: gk-9's Sol R1 searched all of KitnDev for a canvas file (617 s)
+    warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
+                 for n in sorted(named) if not any((b / n).exists() for b in (root, root / ".parsec", tree))]
+    if args.kind in ("prereview", "diff", "lastlook") and all(Path(f).name == "reply.md" for f in args.file or []):   # 2026-09-28 audit: gate logs in 4 of 16 phases
+        warnings.append("no --file evidence but replies: pass the gate log, or the reviewer marks every test claim unverified")
     pending = {"kind": args.kind, "round": args.round, "lane": args.lane, "head": args.head, "base": args.base,
                "start": stamp(), "brief_sha256": sha256(args.brief), "tier": "fast" if args.fast else "default",
                "model": model, "effort": effort, "agent": agent, "resumed": bool(session), "session": session,
@@ -645,6 +668,8 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     if agent_id and pend.get("session") not in (None, agent_id):   # a resumed round's agent is the one prepare named (2026-09-23, Q2)
         raise Exit(64, f"--agent-id {agent_id}: this round was prepared to resume {pend['session']}")
     warnings += pend.get("warnings", [])
+    warnings += [f"{p} changed after its round was collected" for r in records(fdir)   # 2026-09-26 gk-1: the author wrote over Sol's reply unseen
+                 if r.get("reply_sha256") and not ((p := Path(r["_path"]).with_name("reply.md")).is_file() and sha256(p) == r["reply_sha256"])]   # beside the record: a dead round's "reply" names its rerun's
     reply = folder / "reply.md"
     text = read_text(reply) if reply.is_file() else ""
     transcript = read_text(folder / "transcript.log") if (folder / "transcript.log").is_file() else ""
@@ -685,7 +710,8 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     rec = {**{k: v for k, v in pend.items() if k not in ("warnings",)}, "cli_version": cli_version, "session": session,
            "continuity": continuity, "end": stamp(end), "seconds": run["seconds"], "cli_exit": run["cli_exit"],
            "verdict": verdict, "clean_tree": clean, "tier": tier, "tier_check": check, "degraded": degraded,
-           "closed_on_minor": None, "reply": str(reply) if text.strip() else None, "warnings": warnings}   # pre-review F2: a dead round's path is its rerun's
+           "closed_on_minor": None, "reply": str(reply) if text.strip() else None, "reply_sha256": sha256(reply) if text.strip() else None,
+           "warnings": warnings}   # pre-review F2: a dead round's path is its rerun's
     write_json(rec_path, rec)
     pend_path.unlink()                           # before the ledger line: the record is the truth, a replay would overwrite it (r2, Sol)
     cont = "" if continuity is None and not pend.get("resumed") else (", continuity answered" if continuity else ", continuity: not answered")
@@ -704,8 +730,14 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     ok, bullets = summary_bullets(text, counts)
     if bullets and not ok:
         print("warning: the reply's finding lines do not match its counts line: fill each ? from the reply")
-    print(f"\n### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min, {'resumed' if pend.get('resumed') else 'fresh'})"
-          + ("\n\nCritical {} · Important {} · Minor {}".format(*counts) if counts else "") + "".join(f"\n\n{b}" for b in bullets))
+    block = (f"### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min, {'resumed' if pend.get('resumed') else 'fresh'})"
+             + ("\n\nCritical {} · Important {} · Minor {}".format(*counts) if counts else "") + "".join(f"\n\n{b}" for b in bullets))
+    try:                                         # 2026-09-28 audit: 68 of 153 blocks posted and none reached a delegator; the finish report carries this file
+        with open(fdir / "summaries.md", "a", encoding="utf-8", newline="\n") as f:
+            f.write(block.rstrip() + "\n\n")
+    except OSError as e:
+        print(f"warning: summaries.md append failed: {e}")
+    print("\n" + block)
     return code
 
 
@@ -812,6 +844,10 @@ def build_run(args):
     dirt = lambda: [l for l in git_out(["status", "--porcelain", "--untracked-files=all"], checkout).splitlines() if l.strip() and not (rel and re.match(rf'"?{re.escape(rel)}/', l[3:]))]
     if dirt():                                   # 2026-09-22 review (Sol): a leftover made the status test vacuous
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
+    toks = [re.sub(r":\d+(-\d+)?$", "", t) for t in re.findall(r"`([^`\s]+)`", read_text(brief))]   # 2026-09-28 audit: a task editing only the smoke file read "failed" (gk-14)
+    named = {q for t in toks if re.fullmatch(r"(?:[A-Za-z]:[\\/])?[\w./\\-]+\.\w+", t) for q in (resolve_under(checkout, t), resolve_under(primary, t)) if q.is_relative_to(docs)}
+    docs_state = lambda: {q: sha256(q) if q.is_file() else None for q in named}   # the task's own files, never the whole docs root, where the report and log land
+    docs_before = docs_state()
     eol_before = eol_map(checkout)
     if report.is_file():
         if not args.again:
@@ -843,7 +879,7 @@ def build_run(args):
     status = "\n".join(dirt())
     checks = [(f"route line present: {r}", r in log_text) for r in ROUTE_LINES]
     checks += [("no soft-denied step", SOFT_DENY not in log_text), ("final message non-empty", bool(message)),
-               ("git status non-empty (an empty diff is never done)", bool(status)),
+               ("git status non-empty, or a docs-root file the task names changed (an empty diff is never done)", bool(status) or docs_state() != docs_before),
                ("line endings kept on every modified file", all(eol_before.get(p, w) in (w, "w/none", "w/") or w in ("w/none", "w/") for p, w in eol_map(checkout).items() if not (rel and p.startswith(rel + "/")))),   # r2 (Sol): no ending yet, or a file gone, is nothing to flip; r4: nor the docs root
                ("finished within the cap", code is not None)]   # 2026-09-22 review: a capped run failed with no named reason
     ok = all(c for _, c in checks)
