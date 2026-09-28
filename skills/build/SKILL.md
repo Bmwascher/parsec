@@ -53,7 +53,7 @@ A `task-NN-brief.md` with no `task-NN-report.md` beside it means a build may sti
 
 Then the diff gate (`debate`, `--kind diff`, with the pre-review first and the last look after), then the finish. The gate runs first, the project's human check (a smoke, on Brandon's yes) last, on the final head.
 
-The finish is STOP AND REPORT unless Brandon, a handoff or the project's finishing rule says merge or pull request. The report takes the shape and destination the handoff or project gives, and lists every open Minor finding, every refutation the driver made and every round it closed on Minor findings, each with its reply path, so nothing decided on Brandon's behalf is silently dropped. A degraded gate blocks a clean report. Only the commit the final PASS names is merged.
+The finish is STOP AND REPORT unless Brandon, a handoff or the project's finishing rule says merge or pull request. The report takes the shape and destination the handoff or project gives, and lists every open Minor finding, every refutation the driver made and every round it closed on Minor findings, each with its reply path, so nothing decided on Brandon's behalf is silently dropped, and carries `summaries.md` whole (2026-09-28). A degraded gate blocks a clean report. Only the commit the final PASS names is merged.
 
 ## Ledger lines this skill writes
 

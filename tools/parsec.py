@@ -577,7 +577,7 @@ def prepare(args, launch):
         session = last
         if not session:
             warnings.append("newest record of this lane has no session id: fresh round")
-    if session and b"`CONTINUITY:`" not in sent:
+    if session and b"line starting `CONTINUITY:`" not in sent:   # pre-review F2: a brief may quote the tag
         sent = sent.rstrip(b"\n") + b"\n" + CONTINUITY.encode("utf-8")
     if not fdir.is_dir():                        # a new panel, round 1 (feature_dir): the one feature folder the tool makes
         fdir.mkdir(parents=True)
@@ -600,7 +600,8 @@ def prepare(args, launch):
     warnings += w
     root = tree if cli else folder               # 2026-09-28 audit: gk-9's Sol R1 searched all of KitnDev for a canvas file (617 s)
     warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
-                 for n in sorted(named) if not any((b / n).exists() for b in (root, root / ".parsec", tree))]
+                 for n in sorted(named - {Path(f).name for f in args.file or []} - {"reply.md", "record.json", "summaries.md", "pending.json"})   # pre-review F1
+                 if not any((b / n).exists() for b in (root, root / ".parsec", tree))]
     if args.kind in ("prereview", "diff", "lastlook") and all(Path(f).name == "reply.md" for f in args.file or []):   # 2026-09-28 audit: gate logs in 4 of 16 phases
         warnings.append("no --file evidence but replies: pass the gate log, or the reviewer marks every test claim unverified")
     pending = {"kind": args.kind, "round": args.round, "lane": args.lane, "head": args.head, "base": args.base,

@@ -262,10 +262,11 @@ def test_continuity_and_wrote_files(env):
     r = e.record("design", 2, "astra")
     assert r["continuity"] == "FIX, the ledger point" and "continuity answered" in e.ledger().splitlines()[-1]
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n")
+    e.brief.write_bytes(TRICKY.encode() + b"a quoted `CONTINUITY:` tag\n")   # pre-review F2: a quote of the tag is not the question
     rnd(e, 3)
     assert e.record("design", 3, "astra")["continuity"] is None and "continuity: not answered" in e.ledger().splitlines()[-1]
     sent = lambda n: (e.feat / "rounds" / f"design-r{n}-astra" / "brief.md").read_bytes()
-    assert sent(2).endswith(parsec.CONTINUITY.encode()) and b"CONTINUITY" not in sent(1)   # 2026-09-28 audit: gk-4's derived briefs lost the line
+    assert sent(2).endswith(parsec.CONTINUITY.encode()) and b"CONTINUITY" not in sent(1) and sent(3).endswith(parsec.CONTINUITY.encode())   # 2026-09-28 audit: gk-4's derived briefs lost the line
     e.mp.setenv("FAKE_WRITE", str(e.wt / "_review" / f"proj-09-22-x-design-astra" / "ignored.txt"))
     code, out = rnd(e, 4)
     assert code == 66 and e.record("design", 4, "astra")["verdict"] == "WROTE-FILES"
@@ -699,6 +700,9 @@ def test_named_evidence(env):
     out = rnd(e, 1)[1]
     ctx = (e.wt / "_review" / "proj-09-22-x-design-astra" / ".parsec" / "context.md").read_text(encoding="utf-8")
     assert "- notes: .parsec/notes.md, the brainstorm record" in ctx and out.count("the brief names") == 1 and "names pages/canvas.json" in out, out
+    e.brief.write_text("Read `notes.md`, the earlier `reply.md` and `canvas.json`.\n", encoding="utf-8")   # pre-review F1: a passed file is found by its name
+    (e.tmp / "canvas.json").write_text("{}", encoding="utf-8")
+    assert "the brief names" not in rnd(e, 2, "astra", "design", "--file", str(e.tmp / "canvas.json"))[1]
     assert "no --file evidence but replies" in rnd(e, 1, "sol", "diff")[1]
     assert "no --file evidence" not in rnd(e, 2, "sol", "diff", "--file", str(e.feat / "notes.md"))[1]
 

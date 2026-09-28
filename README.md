@@ -381,7 +381,7 @@ A blocking finding anywhere in the gate becomes a fix task, written by the autho
 
 ## What it writes to disk
 
-Each feature gets one folder under the project's docs root, named `<MM-DD>-<topic>`, and every file it writes stays inside it. Four files sit loose in it; every other file goes in a named subfolder, shown in the full tree below:
+Each feature gets one folder under the project's docs root, named `<MM-DD>-<topic>`, and every file it writes stays inside it. Five files sit loose in it; every other file goes in a named subfolder, shown in the full tree below:
 
 | File | What it holds |
 |---|---|
@@ -389,6 +389,7 @@ Each feature gets one folder under the project's docs root, named `<MM-DD>-<topi
 | `spec.md` | The plan: what the feature does and why |
 | `tasks.md` | The task list, with full code in every task |
 | `ledger.md` | The running record: base, go, rounds, tasks, finish |
+| `summaries.md` | Every round's summary block, as the tool printed it |
 
 The **ledger** is the feature's memory. Its head records the base commit once. The tool appends one line per round, amendment and build, and never parses a line it didn't write. Hand-written lines, such as the go, a task result or your ruling on a finding, follow the shapes in [`templates/ledger.md`](templates/ledger.md). A failed attempt is never overwritten: it's renamed `.dead1`, `.dead2` and so on, so the evidence survives.
 
@@ -402,6 +403,7 @@ dev/docs/parsec/
 │   ├── spec.md
 │   ├── tasks.md
 │   ├── ledger.md
+│   ├── summaries.md
 │   ├── rounds/
 │   │   ├── design-r1-sol/     brief.md, reply.md, record.json
 │   │   ├── prereview-r1-opus/
