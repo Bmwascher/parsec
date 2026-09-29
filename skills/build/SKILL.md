@@ -9,13 +9,13 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 
 ## Start
 
-- Refuse to start without a recorded go (`brainstorm`), or without a design look after the last cross-vendor design round: a `design r<n> fable` ledger line, or, on Brandon's `waiver` ledger line, an Opus stand-in's `design r<n> opus` line or none (`debate`, "The Fable looks").
+- Refuse to start without a recorded go (`brainstorm`), or without a design look after the last cross-vendor design round: a `design r<n> fable` ledger line, or, on Brandon's `waiver` ledger line for the stand-in, an Opus stand-in's `design r<n> opus` line (`debate`, "The Fable looks").
 - Run `verify --feature <folder>`: MATCH and MATCH (CLOSED ON MINOR) continue; MATCH (DEGRADED PASS) and CHANGED stop and ask Brandon; NO-PASS-YET refuses.
 - Read the base from the ledger head (written once, by `brainstorm`). A fresh worktree lacks the project's gitignored hook inputs (KitnEssentials: `dev\githooks\upstream-names.local.sh`); copy them before the first commit (2026-09-22). Work in the checkout the session was handed, or make one at `<worktrees>\<Project>-<branch>` and record in the ledger that `build` made it. Only a worktree `build` made is ever removed by it, and never under stop and report.
 
 ## Bounded work
 
-Skips all of the above: no `verify`, Brandon's yes is the go, the session builds and commits it, then runs the diff gate (`debate`, `--kind diff`). A BLOCKING code finding there is fixed by the session directly (no task list, no `author`, no `verify`), and the next round runs on the new head.
+Skips all of the above: no `verify`, Brandon's yes is the go, the session builds and commits it, then runs the diff gate (`debate`, `--kind diff`). A BLOCKING code finding there is fixed by the session directly (no task list, no `author`, no `verify`), and the next round runs on the new head. A session fix covers every site or input order of its class, or names those left open (2026-09-28).
 
 ## Each task, in order
 
@@ -53,7 +53,7 @@ A `task-NN-brief.md` with no `task-NN-report.md` beside it means a build may sti
 
 Then the diff gate (`debate`, `--kind diff`), then the finish. The gate runs first, the project's human check (a smoke, on Brandon's yes) last, on the final head.
 
-The finish is STOP AND REPORT unless Brandon, a handoff or the project's finishing rule says merge or pull request. The report takes the shape and destination the handoff or project gives, and lists every open Minor finding, every refutation the driver made and every round it closed on Minor findings, each with its reply path, so nothing decided on Brandon's behalf is silently dropped, and carries `summaries.md` whole (2026-09-28). A degraded gate blocks a clean report. Only the commit the final PASS names is merged.
+The finish is STOP AND REPORT unless Brandon, a handoff or the project's finishing rule says merge or pull request. The report takes the shape and destination the handoff or project gives, and lists every open Minor finding, every refutation the driver made and every round it closed on Minor findings, each with its reply path, then every "Open, not ruled" item, every site left open for Brandon and every delegated decision, for him to confirm or reverse, so nothing decided on Brandon's behalf is silently dropped, and carries `summaries.md` whole and, when his spec reading was waived, the decision summary, which a delegator's relay keeps (2026-09-28). A degraded gate blocks a clean report. Only the commit the final PASS names is merged.
 
 ## Ledger lines this skill writes
 

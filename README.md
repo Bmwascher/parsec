@@ -98,7 +98,7 @@ flowchart TD
 > [!IMPORTANT]
 > **The one hard stop is the go.** Nothing is built until you say it, and approving the spec is not the same as a go. A pre-approved handoff counts as one.
 
-**The finish is "stop and report"** unless you, the handoff or the project's own rules say to merge or open a pull request. The report lists every open minor finding, every point the driver refuted and every round closed early, so nothing decided on your behalf is silently dropped.
+**The finish is "stop and report"** unless you, the handoff or the project's own rules say to merge or open a pull request. The report lists every open minor finding, every point the driver refuted, every round closed early, every open item you have not ruled, every site left open for you and every decision a delegator took for you, and carries every round summary and, when you waived your reading of the spec, its decision summary, so nothing decided on your behalf is silently dropped.
 
 ---
 
