@@ -1,6 +1,6 @@
 # agy (the Antigravity CLI): the implementer lane's CLI
 
-Runs Gemini 3.8 Flash (`gemini-3.8-flash-high`) in print mode for `build run`. Version in use when written: 1.2.5 (2026-09-22). The guards themselves (the route lines, the success test, the updater variable) live in the tool; this file holds the dated facts behind them.
+Runs Gemini 3.8 Flash (`gemini-3.8-flash-high`) in print mode for `build run`. Version in use: 1.2.10 (checked 2026-09-28); first written on 1.2.5 (2026-09-22). The guards themselves (the route lines, the success test, the updater variable) live in the tool; this file holds the dated facts behind them.
 
 - **The trust list is not an authorization control** (old item 105, 2026-09-17): nothing mechanical refuses an `--add-dir` outside it. The checkout is the child's working folder and its first `--add-dir`.
 - **The updater** (old item 112, measured 2026-09-17 on 1.2.4): the throttled auto-updater opened a console that took the foreground; `AGY_CLI_DISABLE_AUTO_UPDATE=true`, the literal `true`, disables it (at `1` it still ran). A deliberate update is `agy update` ("Update CLI", checked 2026-09-22), run by `doctor --update`.
