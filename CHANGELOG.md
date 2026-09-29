@@ -2,6 +2,21 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.21 (2026-09-28)
+
+The rules now protect the words and decisions of Brandon when another session acts for him. The rules come from the audit of the Groundhog Key programme.
+
+- A delegator quotes the words of Brandon as he typed them and marks its own words. It decides only what his words give it, and only for the phase that he names. The ledger and the finish report show each such decision as the decision of the delegator.
+- Brandon can let a delegator approve a spec. His go-ahead words can also skip his own read of the spec. Neither choice skips the design debate or the Fable design look. If Brandon did not approve the spec himself, the finish report includes its decision summary.
+- A fix in the diff gate that changes what the feature does waits for the answer of Brandon.
+- Each review result that goes to the author asks for a fix at every site of its class. A fix by the session in bounded work does the same.
+- The finish report lists each open item that Brandon did not decide, each site that stays open and each delegated decision.
+- The ledger has shapes for relayed words, delegated decisions, a Minor fix by the session and a skipped read of the spec. The head is the one place for the base.
+- After a compaction, the session reads the rules, the skill and the ledger again.
+- The model notes use the numbers from the audit.
+- `round prepare` gives no warning for a bare file name when the code has a file of that name in a subfolder.
+- The prose limit is now 12,000 words, on the word of Brandon. The prose is 11,205 words.
+
 ## v0.1.20 (2026-09-28)
 
 The prose is 79 words shorter, at 10,904 of 11,000. This gives room for the next batch of rules.
