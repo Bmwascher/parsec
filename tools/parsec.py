@@ -599,9 +599,10 @@ def prepare(args, launch):
         subject, w = write_package(folder, args, cfg, primary, fdir, args.kind)
     warnings += w
     root = tree if cli else folder               # 2026-09-28 audit: gk-9's Sol R1 searched all of KitnDev for a canvas file (617 s)
+    held = {Path(p).name for p in git_out(["ls-files", "-z"], tree).split("\0")} if named else set()   # 0.1.20 last look: a bare plugin.json, at .claude-plugin/plugin.json, warned
     warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
                  for n in sorted(named) if Path(n.replace("\\", "/")).name not in {Path(f).name for f in args.file or []} | {"reply.md", "record.json", "summaries.md", "pending.json"}   # pre-review F1, Sol diff r1 F2
-                 and not any((b / n).exists() for b in (root, root / ".parsec", tree))]
+                 and not any((b / n).exists() for b in (root, root / ".parsec", tree)) and n not in held]
     if args.kind in ("prereview", "diff", "lastlook") and all(Path(f).name == "reply.md" for f in args.file or []):   # 2026-09-28 audit: gate logs in 4 of 16 phases
         warnings.append("no --file evidence but replies: pass the gate log, or the reviewer marks every test claim unverified")
     pending = {"kind": args.kind, "round": args.round, "lane": args.lane, "head": args.head, "base": args.base,

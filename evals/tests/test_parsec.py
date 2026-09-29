@@ -696,10 +696,15 @@ def test_summary_bullets(env):
 def test_named_evidence(env):
     e = env
     (e.feat / "notes.md").write_text("# Notes\n", encoding="utf-8")
-    e.brief.write_text("Read `notes.md` beside the spec, `AGENTS.md:3` and `pages/canvas.json`.\n", encoding="utf-8")
+    (e.repo / ".claude-plugin").mkdir()                              # 0.1.20 last look: a bare name that lives in a subfolder warned
+    (e.repo / ".claude-plugin" / "plugin.json").write_text("{}\n", encoding="utf-8")
+    git("add", ".claude-plugin", cwd=e.repo)
+    git("commit", "-qm", "plugin", cwd=e.repo)
+    e.head = git("rev-parse", "HEAD", cwd=e.repo)
+    e.brief.write_text("Read `notes.md` beside the spec, `AGENTS.md:3`, `plugin.json`, `ghost.json` and `pages/canvas.json`.\n", encoding="utf-8")
     out = rnd(e, 1)[1]
     ctx = (e.wt / "_review" / "proj-09-22-x-design-astra" / ".parsec" / "context.md").read_text(encoding="utf-8")
-    assert "- notes: .parsec/notes.md, the brainstorm record" in ctx and out.count("the brief names") == 1 and "names pages/canvas.json" in out, out
+    assert "- notes: .parsec/notes.md, the brainstorm record" in ctx and out.count("the brief names") == 2 and "names pages/canvas.json" in out and "names ghost.json" in out, out
     e.brief.write_text("Read `notes.md`, the earlier `reply.md` and `pages/canvas.json`.\n", encoding="utf-8")   # pre-review F1, Sol diff r1 F2: a passed file is found by its name
     (e.tmp / "canvas.json").write_text("{}", encoding="utf-8")
     assert "the brief names" not in rnd(e, 2, "astra", "design", "--file", str(e.tmp / "canvas.json"))[1]
