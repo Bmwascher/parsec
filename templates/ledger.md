@@ -16,7 +16,7 @@ checkout: <path> (made by build | handed)
 
 A hand-written line never starts with a shape the tool writes: `<kind> r<n> <lane>:`, `amendment <k>:` or `build task <NN>` (field audit, 2026-09-23).
 
-`"<his words>"` is Brandon's own text as typed; relayed, the line reads `Brandon via <delegator>`; delegated, `delegator for Brandon, <how>, "<his delegating words>"` (2026-09-28).
+`"<his words>"` is Brandon's own text as typed; relayed, `Brandon` becomes `Brandon via delegator`, the quote kept; delegated, `delegator for Brandon, <how>, "<his delegating words>"` replaces `Brandon, "<his words>"` (2026-09-28).
 
 The hand-written shapes:
 

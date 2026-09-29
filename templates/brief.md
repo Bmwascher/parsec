@@ -26,9 +26,9 @@ What to read first (`.parsec/context.md`, the rubric sections it names), what th
 
 ## 4. Record
 
-- **Settled**, S1 to Sn: each point decided, and where.
+- **Settled**, S1 to Sn: each point decided, and where, a delegated one excepted.
 - **Accepted residuals (ruled)**, R1 to Rn: each with Brandon's ruling and its date.
-- **Open, not ruled**: a residual without Brandon's ruling, a delegated decision included.
+- **Open, not ruled**: a residual without Brandon's ruling, and every delegated decision.
 - **Since round N-1**, from round 2 (the first diff round's covers the pre-review): each earlier finding ID, fixed (commit and `file:line`), refuted, open, ride or accepted (R number). Refutation evidence is in the package, from the tree at `--head`, a saved command output, Brandon's words or an earlier reply, never the driver's say-so.
 
 ## 5. Claims
