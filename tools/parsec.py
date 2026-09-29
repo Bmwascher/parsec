@@ -352,7 +352,7 @@ def write_package(root, args, cfg, primary, fdir, kind):
             shutil.copyfile(fdir / name, pkg / name)
             subject[name[:-3]] = sha256(fdir / name)
     if subject and kind != "design":
-        lines.append(f"- design: {' and '.join(f'.parsec/{n}.md' for n in subject)}, the approved design")
+        lines.append(f"- design: {' and '.join(f'.parsec/{n}.md' for n in subject)}, the reviewed design")
         lines += [f"- amendment {k}: {r['reason']}" for k, r in enumerate([r for r in records(fdir) if "reason" in r], 1)] or ["- amendments: none"]
     if kind != "panel" and (fdir / "notes.md").is_file():   # 2026-09-28 audit: briefs sent reviewers to notes.md, which no package held (gk-8, gk-9, gk-12b)
         shutil.copyfile(fdir / "notes.md", pkg / "notes.md")

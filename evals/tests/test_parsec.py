@@ -538,7 +538,7 @@ def test_inputs_and_preflight(env):
     ctx = (folder / ".parsec" / "context.md").read_text(encoding="utf-8")
     assert f"brief: {folder / '.parsec' / 'brief.md'}" in out and "evidence/1-reply-r1.md is a copy of reply-r1.md" in ctx and str(extra) not in ctx
     assert ctx.splitlines()[2].startswith("- your lane, Opus: read with your file tools only") and (folder / ".parsec" / "tasks.md").is_file()   # 2026-09-23 audit: Fable was told it had a shell
-    assert "- design: .parsec/spec.md and .parsec/tasks.md, the approved design\n- amendments: none" in ctx   # Brandon, 2026-09-23 (A+)
+    assert "- design: .parsec/spec.md and .parsec/tasks.md, the reviewed design\n- amendments: none" in ctx   # Brandon, 2026-09-23 (A+); reviewed, since a waived spec reading is no approval (batch F)
     bounded = e.repo / "docs" / "09-22-b"                           # bounded work has no design to pack
     bounded.mkdir()
     (bounded / "ledger.md").write_text("# Ledger\n", encoding="utf-8")
