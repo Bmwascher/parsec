@@ -16,14 +16,16 @@ checkout: <path> (made by build | handed)
 
 A hand-written line never starts with a shape the tool writes: `<kind> r<n> <lane>:`, `amendment <k>:` or `build task <NN>` (field audit, 2026-09-23).
 
+`"<his words>"` is Brandon's own text as typed; relayed, the line reads `Brandon via <delegator>`; delegated, `delegator for Brandon, <how>, "<his delegating words>"` (2026-09-28).
+
 The hand-written shapes:
 
 - The handoff facts: `- <time> handoff: <branch, base, finish rule, report destination>`.
 - The go: `- <time> go: Brandon, "<his words>"` (or `pre-approved handoff`).
 - The spec's approval: `- <time> spec approved: Brandon, "<his words>"`.
 - A task result: `- <time> task 03: <commit>, <lane>, <tests: green | red: reason>[, whitespace trimmed]`.
-- A decision on a finding: `- <time> decision <ID> (<kind> r<n> <lane>): <fix | ride | accepted as R<k> | change the approach>, Brandon, "<his words>"`; a ride on the reviewer's triage ends `<lane> triage` instead.
-- A waiver: `- <time> waiver: <the look skipped, or the stand-in>, Brandon, "<his words>"`.
+- A decision on a finding: `- <time> decision <ID> (<kind> r<n> <lane>): <fix | ride | accepted as R<k> | change the approach>, Brandon, "<his words>"`; a ride on the reviewer's triage ends `<lane> triage` instead, and a Minor the session chose to fix ends `session`.
+- A waiver: `- <time> waiver: <the stand-in, or his reading of the spec>, Brandon, "<his words>"`.
 - An owed look: `- <time> owed: <the look or check>, <why>, <what clears it>`.
 - A gate result: `- <time> gate <name>: <commit>, <green | red: reason>`.
 - A smoke: `- <time> smoke: <commit>, <pass | fail: reason>, Brandon, "<his words>"`.
