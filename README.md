@@ -74,7 +74,7 @@ flowchart TD
     C -->|Architectural| I[Interview<br/>notes.md]:::brainstorm
 
     I --> S[Author writes the spec]:::brainstorm
-    S --> A{You approve<br/>the spec}:::you
+    S --> A{You approve the spec<br/>or waive your reading}:::you
     A --> T[Author writes the task list<br/>with full code per task]:::brainstorm
     T --> G{Go?}:::you
     G --> DD[Design debate<br/>cross-vendor lane vs. author]:::review

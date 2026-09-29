@@ -1,8 +1,8 @@
 # Spec template
 
-The spec is the design document of one feature: what it does and why, which Brandon reviews before the task list is written. No code in it; the code lives in the task list.
+The spec is the design document of one feature: what it does and why, which Brandon reviews before the task list is written, or waives (`brainstorm`). No code in it; the code lives in the task list.
 
-The spec opens with an unnumbered `## Decision summary`, before section 1: at most 150 plain words on what the feature changes and what Brandon is asked to approve. The driver posts it in chat (`brainstorm`). It names each follow-up the design creates as an open question, and after approval states the decisions (2026-09-24).
+The spec opens with an unnumbered `## Decision summary`, before section 1: at most 150 plain words on what the feature changes and what Brandon is asked to approve. The driver posts it in chat (`brainstorm`). It names each follow-up the design creates as an open question, and after approval or its waiver states the decisions (2026-09-24).
 
 ## Sections, in this order
 

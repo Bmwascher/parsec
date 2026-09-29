@@ -1,6 +1,6 @@
 ---
 name: brainstorm
-description: Use when Brandon says "brainstorm", "design" or "plan" a feature, or hands over a phase or handoff to build. The conversation and the orchestration from a request to an approved spec, an approved task list, a recorded go and one pre-build debate. Not for a bug fix that needs no design (that is bounded work, see the classification).
+description: Use when Brandon says "brainstorm", "design" or "plan" a feature, or hands over a phase or handoff to build. The conversation and the orchestration from a request to an approved or waived spec, an approved task list, a recorded go and one pre-build debate. Not for a bug fix that needs no design (that is bounded work, see the classification).
 ---
 
 # brainstorm
@@ -36,7 +36,7 @@ Keep `notes.md` as a running record: each question, Brandon's exact answer, the 
 
 The session never writes the two files itself: the author's fresh context proves the notes complete and keeps the session small.
 
-Brandon reviews the written spec before the task list, from its decision summary posted in chat, even under a pre-approved handoff: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Approving the spec is not a go. After approval, the same `author` agent, resumed, writes the task list (`Author: task list`).
+Brandon reviews the written spec before the task list, from its decision summary posted in chat, unless his go-ahead words ("go all the way") waive that reading, never the design debate or the Fable look (2026-09-28); a pre-approved handoff never waives it: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). A waived reading's decision summary goes in the finish report. Approving the spec is not a go. After approval or its waiver, the same `author` agent, resumed, writes the task list (`Author: task list`).
 
 ## The go (its one home)
 
@@ -51,7 +51,7 @@ One debate over both files, `--kind design`, run by `debate` on the cross-vendor
 
 ## Ledger lines this skill writes
 
-Shapes in `templates/ledger.md`: the head (the base is written here, once, and nowhere else), the handoff facts, the spec's approval, the go.
+Shapes in `templates/ledger.md`: the head (the one place the base is written), the handoff facts, the spec's approval or its waiver, the go.
 
 ## Known clashes, not fixed
 
