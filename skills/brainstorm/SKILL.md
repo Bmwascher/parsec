@@ -36,7 +36,7 @@ Keep `notes.md` as a running record: each question, Brandon's exact answer, the 
 
 The session never writes the two files itself: the author's fresh context proves the notes complete and keeps the session small.
 
-Brandon reviews the written spec before the task list, from its decision summary posted in chat, unless his go-ahead words ("go all the way") waive that reading or delegate the approval (driver rule 2), never the design debate or the Fable look (2026-09-28); a pre-approved handoff never waives it: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Unless he approved it himself, its decision summary goes in the finish report (2026-09-28). Approving the spec is not a go. After approval or its waiver, the same `author` agent, resumed, writes the task list (`Author: task list`).
+Brandon reviews the written spec before the task list, from its decision summary posted in chat, unless his go-ahead words ("go all the way") waive that reading or his own words delegate the approval (driver rule 2); neither waives the design debate or the Fable look (2026-09-28); a pre-approved handoff never waives it: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Unless he approved it himself, its decision summary goes in the finish report (2026-09-28). Approving the spec is not a go. After approval or its waiver, the same `author` agent, resumed, writes the task list (`Author: task list`).
 
 ## The go (its one home)
 
