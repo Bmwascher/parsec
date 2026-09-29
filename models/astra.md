@@ -14,7 +14,7 @@ Vendor guide: OpenAI's Astra guide, fetched 2026-09-05 for the old notes; its UR
 - Effort `high`, pinned per call in `lanes.toml` (2026-09-22).
 - Fast tier: the catalog names one tier, `priority`, "2x speed" on Astra, "increased usage"; reasoning effort unchanged (read 2026-09-22). Pinned off by the tool; on only with `--fast` (`debate`).
 - Tandem review of the rethink's five design files, 2026-09-22, fast tier: 10 fresh rounds and 16 resumes on five sessions, 60 to 150 s per resumed round, 67k to 78k tokens each; every continuity answer matched the record; findings cited `file:line` throughout.
-- Three post-gate passes over whole phases (2026-09-24) each found a real Important the gate had passed; 147k to 191k tokens each.
+- Field, 2026-09-24 to 28: after other lanes passed a head, it found a real Important 4 times in 4 (147k to 191k tokens a whole-phase pass); in design, Importants Sol missed in 4 phases.
 
 ## Unmeasured
 

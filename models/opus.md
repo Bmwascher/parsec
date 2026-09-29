@@ -16,6 +16,7 @@ Claude Code below 2.1.280 rejects the id with a 400 that names the version (seen
 ## Measured here, on Opus 5.5
 
 - **Author, 2026-09-22, effort `high`, headless**: spec 402 s (about $3.0 list); task list resumed, 634 s (about $6.6 list). A blind Astra plus Sol 6 panel ranked the pair first on four axes of five against the Fable pair and the real superpowers pair; its first three tasks built green on the Gemini lane.
+- **Driver** (2026-09-27): typed fake `<task-notification>` blocks, one a FIX that never ran; trust `record.json`.
 
 ## Unmeasured
 
