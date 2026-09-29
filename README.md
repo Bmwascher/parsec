@@ -509,7 +509,7 @@ The plugin stays lean because its size limits fail the build. An addition that w
 | `tools/parsec.py` | 1,250 lines |
 | All tests | 1,500 lines |
 | The frozen checkers | 522 lines |
-| All skill, template, agent and model prose | 11,000 words |
+| All skill, template, agent and model prose | 12,000 words |
 | Any one skill | 1,600 words |
 
 ### House rules
