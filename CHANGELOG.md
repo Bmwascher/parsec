@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.22 (2026-09-30)
+
+The Sol lane now uses GPT-6.1 Sol. This is the default reviewer from other companies.
+
+- The Sol lane runs `gpt-6.1-sol` at high effort. Before, it ran `gpt-6-sol`. The id works on codex-cli 0.159.2.
+- OpenAI has no guide for prompts to GPT-6.1 Sol yet. The model note records this. It also records the results of the first test and the default effort values.
+- The measurements of GPT-6 Sol stay in the note, marked as not yet measured on GPT-6.1.
+
 ## v0.1.21 (2026-09-28)
 
 The rules now protect the words and decisions of Brandon when another session acts for him. The rules come from the audit of the Groundhog Key programme.
