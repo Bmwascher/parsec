@@ -10,7 +10,7 @@ command = ["codex"]
 update = ["npm", "install", "-g", "@openai/codex@latest"]
 
 [sol]                                   # the default codex lane (Brandon, 2026-09-22); the config's codex_lane can name astra
-model = "gpt-6-sol"                     # 2026-09-22: Sol 6 (was gpt-5.6-sol); measurements pending
+model = "gpt-6.1-sol"                   # 2026-09-30: Sol 6.1 (was gpt-6-sol, before that gpt-5.6-sol); measurements pending
 effort = "high"
 command = ["codex"]
 update = ["npm", "install", "-g", "@openai/codex@latest"]
