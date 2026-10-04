@@ -426,6 +426,24 @@ def test_task_brief_slice(env):
     assert run(e, "task-brief", "--feature", "09-22-x", "--task", "9")[0] == 64
 
 
+# row 12b: a `#` line in a fenced code block is no heading (2026-10-02, KitnEssentials 10-02 task 1: a fenced .toc file cut the brief at "## Title:")
+def test_fenced_hash_line_is_no_heading(env):
+    e = env
+    head, task2 = b"# Plan\n\n## Global constraints\n\n- keep it\n\n", b"## Task 2: second\n\n- [ ] other\n"
+    task1 = (b"## Task 1: the toc\n\n- **Files**: `a.toc`\n\n```toc title\n## Title: Kit\n## Interface: 120100\n```\n\n"
+             b"  ~~~~markdown\n## Task 9: quoted\n~~~\n## Step 1\n  ~~~~~\n\n```a` b\n")   # a shorter close is text; a backtick info string opens nothing
+    (e.feat / "tasks.md").write_bytes(head + task1 + task2)
+    path = run(e, "task-brief", "--feature", "09-22-x", "--task", "1")[1].split()[0]
+    brief = Path(path).read_bytes()
+    assert brief == head + task1 and [h for h, _ in parsec.sections(brief)[0]] == ["## Global constraints", "## Task 1: the toc"]   # build run reads the Files field here
+    assert run(e, "task-brief", "--feature", "09-22-x", "--task", "2")[0] == 0 and run(e, "task-brief", "--feature", "09-22-x", "--task", "9")[0] == 64
+    (e.tmp / "rub.md").write_text("# Rules\n\n```md\n# Fake\n```\n\n## Git\n", encoding="utf-8")
+    assert parsec.heading_index(e.tmp / "rub.md") == ["Rules", "Git"]
+    e.brief.write_bytes(b"## 2. Task\n\n```\n## 3. quoted\n# Diff insert\n```\n\n## 3. Rules\n")
+    out = parsec.assemble(e.brief, "diff", "sol", None, [])
+    assert out.startswith(b"## 2. Task\n\n```\n## 3. quoted\n# Diff insert\n```\n\n### ") and out.endswith(b"\n\n## 3. Rules\n")
+
+
 # row 13: the doctor reads a stale install (old item 65)
 def test_doctor_stale_install(env):
     e = env

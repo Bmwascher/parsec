@@ -284,9 +284,28 @@ def ledger_line(fdir, text, warnings):
 
 # ---------------------------------------------------------------- the package
 
+FENCE = re.compile(rb" {0,3}(`{3,}|~{3,})(.*)")
+
+
+def unfenced(text):
+    """(offset, line) for each line of the bytes outside a fenced code block, so a `#` line in a fence is no heading
+    (2026-10-04, KitnEssentials 10-02 task 1: a fenced .toc file cut the brief). CommonMark: three or more backticks
+    or tildes after up to three spaces; no backtick in a backtick fence's info string; the same mark, as long, closes it."""
+    fence, at = None, 0
+    for line in text.split(b"\n"):
+        m = FENCE.match(line)
+        if fence:
+            fence = None if m and m[1][:1] == fence[:1] and len(m[1]) >= len(fence) and not m[2].strip() else fence
+        elif m and not (m[1][:1] == b"`" and b"`" in m[2]):
+            fence = m[1]
+        else:
+            yield at, line
+        at += len(line) + 1
+
+
 def heading_index(path):
-    return [re.sub(r"\s+#*$", "", m.group(1)).strip() for m in
-            re.finditer(r"^#+\s+(.+?)\s*$", read_text(path), re.M)]
+    return [re.sub(r"\s+#*$", "", m.group(1)).strip() for _, line in unfenced(read_text(path).encode())
+            if (m := re.match(r"#+\s+(.+?)\s*$", line.decode()))]
 
 
 def context_lines(cfg, primary, reference):
@@ -326,13 +345,14 @@ def assemble(brief, kind, lane, resume, warnings):
     A confirming question (--resume) and a brief with no part 3 (a verdict-only rerun) stay narrow (pre-review F1)."""
     text = Path(brief).read_bytes()
     names = () if resume else INSERTS.get(kind, ()) + (("lastlook",) if kind == "design" and lane in AGENT_OF else ())
-    if kind in INSERTS and re.search(rb"(?m)^#+ (Design|Diff|Fable-look|Panel) insert", text):   # a confirming question too (Sol diff r1 F1)
+    heads = [(a, line) for a, line in unfenced(text) if line.startswith(b"#")]
+    if kind in INSERTS and any(re.match(rb"#+ (Design|Diff|Fable-look|Panel) insert", line) for _, line in heads):   # a confirming question too (Sol diff r1 F1)
         raise Exit(64, f"{brief} already carries an insert: write the shared text only, and the tool adds the {kind} insert")
-    if not (at := re.search(rb"(?m)^## 3\.", text)):
+    if (at := next((a for a, line in heads if line.startswith(b"## 3.")), None)) is None:
         warnings += ["the brief has no `## 3.` part, so no insert was added (a verdict-only rerun needs none)"] if names else []
         return text
     add = b"".join(b"### " + (PLUGIN / "templates" / f"brief-{n}.md").read_bytes().replace(b"\r\n", b"\n").lstrip(b"# ").rstrip(b"\n") + b"\n\n" for n in names)
-    return text[:at.start()] + add + text[at.start():]
+    return text[:at] + add + text[at:]
 
 
 def write_package(root, args, cfg, primary, fdir, kind):
@@ -798,8 +818,9 @@ def verify(args):
 
 def sections(text):
     """(heading, bytes-span) for each `## ` section; the header is what comes before the first."""
-    marks = [m.start() for m in re.finditer(rb"(?m)^## ", text)] + [len(text)]
-    return [(text[a:text.find(b"\n", a)].decode("utf-8", "replace").strip(), text[a:b]) for a, b in zip(marks, marks[1:])], text[:marks[0]]
+    marks = [(a, line.decode("utf-8", "replace").strip()) for a, line in unfenced(text) if line.startswith(b"## ")]
+    ends = [a for a, _ in marks[1:]] + [len(text)]
+    return [(h, text[a:b]) for (a, h), b in zip(marks, ends)], text[:marks[0][0] if marks else len(text)]
 
 
 def task_brief(args):
@@ -846,7 +867,7 @@ def build_run(args):
     dirt = lambda: [l for l in git_out(["status", "--porcelain", "--untracked-files=all"], checkout).splitlines() if l.strip() and not (rel and re.match(rf'"?{re.escape(rel)}/', l[3:]))]
     if dirt():                                   # 2026-09-22 review (Sol): a leftover made the status test vacuous
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
-    files = "\n".join(re.findall(r"(?m)^[ \t]*[-*][ \t]*\*\*Files\*\*:.*$", re.split(r"(?m)^## Task \d+", read_text(brief))[-1]))   # Sol diff r1-r2 F1: the task's own Files field
+    files = "\n".join(re.findall(r"(?m)^[ \t]*[-*][ \t]*\*\*Files\*\*:.*$", ([b for h, b in sections(read_text(brief).encode())[0] if re.match(r"## Task \d+", h)] or [read_text(brief).encode()])[-1].decode()))   # Sol diff r1-r2 F1: the task's own Files field
     toks = [re.sub(r":\d+(-\d+)?$", "", t) for t in re.findall(r"`([^`\s]+)`", files)]   # 2026-09-28 audit: a task editing only the smoke file read "failed" (gk-14)
     named = {q for t in toks if re.fullmatch(r"(?:[A-Za-z]:[\\/])?[\w./\\-]+\.\w+", t) for q in (resolve_under(checkout, t), resolve_under(primary, t)) if q.is_relative_to(docs)}
     docs_state = lambda: {q: sha256(q) if q.is_file() else None for q in named}   # the task's own files, never the whole docs root, where the report and log land
