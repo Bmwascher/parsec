@@ -389,7 +389,7 @@ Each feature gets one folder under the project's docs root, named `<MM-DD>-<topi
 | `spec.md` | The plan: what the feature does and why |
 | `tasks.md` | The task list, with full code in every task |
 | `ledger.md` | The running record: base, go, rounds, tasks, finish |
-| `summaries.md` | Every round's summary block, as the tool printed it |
+| `summaries.md` | Every round's summary block, as the tool printed it but without its pending answer lines |
 
 The **ledger** is the feature's memory. Its head records the base commit once. The tool appends one line per round, amendment and build, and never parses a line it didn't write. Hand-written lines, such as the go, a task result or your ruling on a finding, follow the shapes in [`templates/ledger.md`](templates/ledger.md). A failed attempt is never overwritten: it's renamed `.dead1`, `.dead2` and so on, so the evidence survives.
 
