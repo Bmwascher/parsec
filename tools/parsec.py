@@ -349,7 +349,7 @@ def assemble(brief, kind, lane, resume, warnings):
     if kind in INSERTS and any(re.match(rb"#+ (Design|Diff|Fable-look|Panel) insert", line) for _, line in heads):   # a confirming question too (Sol diff r1 F1)
         raise Exit(64, f"{brief} already carries an insert: write the shared text only, and the tool adds the {kind} insert")
     if (at := next((a for a, line in heads if line.startswith(b"## 3.")), None)) is None:
-        warnings += ["the brief has no `## 3.` part, so no insert was added (a verdict-only rerun needs none)"] if names else []
+        warnings += ["the brief has no `## 3.` part outside a fence, so no insert was added (a verdict-only rerun needs none)"] if names else []
         return text
     add = b"".join(b"### " + (PLUGIN / "templates" / f"brief-{n}.md").read_bytes().replace(b"\r\n", b"\n").lstrip(b"# ").rstrip(b"\n") + b"\n\n" for n in names)
     return text[:at] + add + text[at:]
@@ -867,7 +867,9 @@ def build_run(args):
     dirt = lambda: [l for l in git_out(["status", "--porcelain", "--untracked-files=all"], checkout).splitlines() if l.strip() and not (rel and re.match(rf'"?{re.escape(rel)}/', l[3:]))]
     if dirt():                                   # 2026-09-22 review (Sol): a leftover made the status test vacuous
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
-    files = "\n".join(re.findall(r"(?m)^[ \t]*[-*][ \t]*\*\*Files\*\*:.*$", ([b for h, b in sections(read_text(brief).encode())[0] if re.match(r"## Task \d+", h)] or [read_text(brief).encode()])[-1].decode()))   # Sol diff r1-r2 F1: the task's own Files field
+    text = read_text(brief).encode()
+    task = ([b for h, b in sections(text)[0] if re.match(r"## Task \d+", h)] or [text])[-1]
+    files = "\n".join(l.decode() for _, l in unfenced(task) if re.match(rb"[ \t]*[-*][ \t]*\*\*Files\*\*:", l))   # Sol diff r1-r2 F1: the task's own Files field, never a quoted one
     toks = [re.sub(r":\d+(-\d+)?$", "", t) for t in re.findall(r"`([^`\s]+)`", files)]   # 2026-09-28 audit: a task editing only the smoke file read "failed" (gk-14)
     named = {q for t in toks if re.fullmatch(r"(?:[A-Za-z]:[\\/])?[\w./\\-]+\.\w+", t) for q in (resolve_under(checkout, t), resolve_under(primary, t)) if q.is_relative_to(docs)}
     docs_state = lambda: {q: sha256(q) if q.is_file() else None for q in named}   # the task's own files, never the whole docs root, where the report and log land

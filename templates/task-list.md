@@ -49,7 +49,7 @@ The project's test policy outranks the plugin's.
 
 ## No placeholders
 
-Never: `TODO`, `...`, "add the rest", "similar to task 2", a fence of changed lines without its anchor, a description of code in place of code, a step that says "verify it works". A fence holds whole lines, complete where its anchor puts them; a bare backticks-only line inside a fenced block is indented so it does not close the fence.
+Never: `TODO`, `...`, "add the rest", "similar to task 2", a fence of changed lines without its anchor, a description of code in place of code, a step that says "verify it works". A fence holds whole lines, complete where its anchor puts them; a block that holds a fence takes a longer outer fence (four backticks around three), because an indent of up to three spaces does not stop a close.
 
 ## Self-review, three points, before the file is handed over
 

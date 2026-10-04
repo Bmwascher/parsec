@@ -171,7 +171,7 @@ def test_brief_bytes_reach_stdin(env):
     e.mp.setenv("FAKE_STDIN_COPY", str(e.tmp / "stdin.bin"))
     rnd(e, 1)
     assert (e.tmp / "stdin.bin").read_bytes() == TRICKY.encode("utf-8")   # no part 3, a verdict-only rerun: no insert (pre-review F1)
-    assert "no `## 3.` part, so no insert" in "".join(e.record("design", 1, "astra")["warnings"])
+    assert "no `## 3.` part outside a fence, so no insert" in "".join(e.record("design", 1, "astra")["warnings"])
     e.brief.write_bytes(b"# Brief\n\n## 2. Task\n\nread it\n\n## 3. Rules\n\n- r\n")
     rnd(e, 2)
     sent = (e.feat / "rounds" / "design-r2-astra" / "brief.md").read_bytes()
@@ -430,8 +430,8 @@ def test_task_brief_slice(env):
 def test_fenced_hash_line_is_no_heading(env):
     e = env
     head, task2 = b"# Plan\n\n## Global constraints\n\n- keep it\n\n", b"## Task 2: second\n\n- [ ] other\n"
-    task1 = (b"## Task 1: the toc\n\n- **Files**: `a.toc`\n\n```toc title\n## Title: Kit\n## Interface: 120100\n```\n\n"
-             b"  ~~~~markdown\n## Task 9: quoted\n~~~\n## Step 1\n  ~~~~~\n\n```a` b\n")   # a shorter close is text; a backtick info string opens nothing
+    task1 = (b"## Task 1: the toc\n\n- **Files**: `a.toc`\n\n```toc title\n## Title: Kit\n~~~\n## Interface: 120100\n``` x\n## Notes: kit\n```\n\n"
+             b"  ~~~~markdown\n## Task 9: quoted\n~~~\n## Step 1\n  ~~~~~\n\n```a` b\n")   # another mark, a run with text after it and a shorter run close nothing; a backtick info string opens nothing
     (e.feat / "tasks.md").write_bytes(head + task1 + task2)
     path = run(e, "task-brief", "--feature", "09-22-x", "--task", "1")[1].split()[0]
     brief = Path(path).read_bytes()
@@ -781,7 +781,7 @@ def test_build_run_success_test(env):
     e.mp.delenv("FAKE_WRITE")
     code, out = b("--again")
     assert code == 65 and "FAILED: git status non-empty" in out     # an empty diff is never done
-    (e.feat / "build" / "task-01-brief.md").write_text("## Global constraints\n\n- **Files**: keep `docs/09-22-x/other.md`\n\n## Task 1: t\n\n- keep `docs/09-22-x/other.md` too\n- **Files**: `docs/09-22-x/smoke.md:3` only\n", encoding="utf-8")
+    (e.feat / "build" / "task-01-brief.md").write_text("## Global constraints\n\n- **Files**: keep `docs/09-22-x/other.md`\n\n## Task 1: t\n\n- keep `docs/09-22-x/other.md` too\n- **Files**: `docs/09-22-x/smoke.md:3` only\n\n```md\n- **Files**: `docs/09-22-x/other.md`\n## Task 2: quoted\n```\n", encoding="utf-8")
     e.mp.setenv("FAKE_WRITE", str(e.feat / "other.md"))
     assert "FAILED: git status non-empty" in b("--again")[1]      # Sol diff r1-r2 F1: a docs file outside the task's Files field is no success
     e.mp.setenv("FAKE_WRITE", str(e.feat / "smoke.md"))
