@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.23 (2026-10-04)
+
+A task now gets its full brief when it shows a Markdown title line in a code block.
+
+- `task-brief` stopped a task at a line that starts with `## ` in a fenced code block. Examples are a line of a `.toc` file and a line of a smoke file. The implementer then got only a part of the task. This occurred in eight briefs of KitnEssentials. Now the tool ignores the lines in a fenced code block when it finds the sections.
+- The same rule applies to three more parts of the tool. They are the Files field of `build run`, the rubric sections of the pre-flight and the insert point of a review brief.
+- The task list template tells the author to put a longer fence around a fence. An indent of three spaces or less does not keep a fence open.
+
 ## v0.1.22 (2026-09-30)
 
 The Sol lane now uses GPT-6.1 Sol. This is the default reviewer from other companies.
