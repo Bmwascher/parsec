@@ -671,10 +671,13 @@ def test_reason_cap(env):
 def test_summary_head(env):
     e = env
     e.mp.setenv("FAKE_REPLY", "- F2 · Important: 3 of 20 lack it.\n\nCritical 0, Important 1, Minor 2\n\nVERDICT: FIX\n")   # pre-review F1: printed Important 3
+    assert run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")[0] == 0   # 2026-10-04 Afterparty: 2 of 5 pre-flights and 4 of 18 summaries posted
     out = rnd(e, 1)[1]
-    assert "\n### 🔴 Astra R1 Design Round: FIX (0 min, fresh)\n\nCritical 0 · Important 1 · Minor 2\n" in out, out
+    assert "before any other step\n\n### 🔴 Astra R1 Design Round: FIX (0 min, fresh)\n\nCritical 0 · Important 1 · Minor 2\n\n🟢 Pre-flight (" in out, out
+    assert "· Model gpt" in out and not (e.feat / "preflight-astra.txt").exists()   # the green pre-flight rides once, in the lane's next summary
     e.mp.setenv("FAKE_REPLY", "**0 Critical, 0 Important, 3 Minor.**\n\nVERDICT: PASS\n")
-    assert "\n### 🟢 Astra R2 Design Round: PASS (0 min, resumed)\n\nCritical 0 · Important 0 · Minor 3\n" in rnd(e, 2)[1]
+    out = rnd(e, 2)[1]
+    assert "\n### 🟢 Astra R2 Design Round: PASS (0 min, resumed)\n\nCritical 0 · Important 0 · Minor 3\n" in out and "Pre-flight" not in out
     e.mp.setenv("FAKE_REPLY", "Critical: 0\nImportant: 1\nMinor: 2\n\nVERDICT: PASS\n")   # pre-review F1: printed 0, 0, 1; no one line holds all three
     assert rnd(e, 3)[1].endswith("### 🟢 Astra R3 Design Round: PASS (0 min, resumed)\n")
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable", "--brief", str(e.brief), "--head", e.head)
@@ -686,7 +689,7 @@ def test_summary_head(env):
 # row 14e: the whole summary block, one bullet per finding (2026-09-25 audit: the heading alone was pasted in about a third of rounds)
 def test_summary_bullets(env):
     e = env
-    ask = "\n\n  → **Fix / Refute / Ride / You decide:** "
+    ask = "\n\n  → **Answer:** pending"
     e.mp.setenv("FAKE_REPLY", "### F1 (Important, new): the hold is lost.\n- **M2 · Minor — wording.**\nC1: holds\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")
     out = rnd(e, 1)[1]
     assert out.endswith("Critical 0 · Important 1 · Minor 1\n\n- **F1 · Important:** the hold is lost." + ask + "\n\n- **M2 · Minor:** wording." + ask + "\n"), out

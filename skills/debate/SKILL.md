@@ -9,16 +9,16 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 
 ## Running a round
 
-- Run the pre-flight before round 1 and after a lane switch: `doctor --lane <lane> --kind <kind> --feature <folder>` (`--fast` too when the round will use it), in the background, and post its Markdown as is, outside a code block.
+- Run the pre-flight before round 1 and after a lane switch: `doctor --lane <lane> --kind <kind> --feature <folder>` (`--fast` too when the round will use it), in the background. Post a FAILED one as is and stop; a green one rides in the lane's next summary (2026-10-04: 2 of 5 posted).
 - Write the shared brief as `templates/brief.md` says.
 - Start the round with Monitor, `timeout_ms` 1800000 (Monitor kills the script at expiry; the tool's own cap is 28 minutes), named before launch from the driver rules' list: `round run` for a CLI lane (`--lane` omitted: the config's `codex_lane`); `round prepare`, then the reviewer agent, then `round collect --agent-id <its id>` for opus or fable. `round prepare` prints the brief path, the code root, the report path and the task name for the dispatch.
 - Pass `--fast` only on Brandon's explicit word for THAT debate ("use fast"), never from a config or an earlier debate.
 - Pass `--reference <subfolder>` when the spec declares a port or touches a module that has a reference; a reference outside the reference-code folder, a dry-apply's output or a gate log goes in as `--file` evidence (field phase 6, 2026-09-23; 12, 2026-09-24).
 - Pass earlier briefs and replies with `--file` to a lane that joins mid-debate; its own rounds start at 1. The brief names each reply's lane and round.
-- Post the summary after every round (every kind, a PASS included), without waiting for Brandon, as rendered Markdown, never inside a code block (a fenced table wraps into unreadable pipes on his phone, 2026-09-23). The tool prints it: the heading, the counts line and one bullet per finding. Paste it as is and fill it in (2026-09-25: the heading alone reached about a third of rounds):
+- Post the summary after every round, before any other step (an `author` dispatch too), as rendered Markdown, never inside a code block (a fenced table wraps into unreadable pipes on his phone, 2026-09-23). The tool prints it last, ready to paste (2026-10-04: Afterparty phases 2 to 4 posted 4 of 18). Paste it as is and add:
   - a **Needs you:** line under the heading, only when something waits on Brandon;
   - after the counts, one line on the earlier round's findings (`Round 1: F1 closed · F2 reopened narrower · F4 still open`), and a reopened or still-open finding says so in its bullet;
-  - each answer: **Fix** (what changes), **Refute** (the evidence in a few words), **Ride** (a Minor left for later) or **You decide**; a `?` takes the reply's own ID, or F1, F2 and on in its order when it gives none, kept in every later round;
+  - a known answer in place of `pending`: **Fix** (what changes), **Refute** (the evidence in a few words), **Ride** (a Minor left for later) or **You decide**; one that waits on the `author` stays `pending` for the next round line; a `?` takes the reply's own ID, or F1, F2 and on in its order when it gives none, kept in every later round;
   - **Next:** and what follows.
 
   Keep every blank line: a single line break renders as a space. Only the verdict word is exact; the reviewer's own words stay in `reply.md`. The tool also appends it to the feature's `summaries.md` (`build`, the finish); a delegator forwards either as received.

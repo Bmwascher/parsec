@@ -256,7 +256,7 @@ def summary_bullets(text, counts):
     fits = counts is not None and all(h <= c for h, c in zip(have, counts))
     rows = [(i, g, t) for i, (g, t) in found.items()] if fits else []
     rows += [("?", s, "") for s, h, c in zip(GRADES, have if fits else (0, 0, 0), counts or ()) for _ in range(c - h)]
-    return have == counts, [f"- **{i} · {g}:** {t}\n\n  → **Fix / Refute / Ride / You decide:** " for i, g, t in sorted(rows, key=lambda r: GRADES.index(r[1]))]   # Monitor escaped "<...>" (gk-6, gk-7)
+    return have == counts, [f"- **{i} · {g}:** {t}\n\n  → **Answer:** pending" for i, g, t in sorted(rows, key=lambda r: GRADES.index(r[1]))]   # 2026-10-04 Afterparty: an answer left to fill held the post until the author answered
 
 
 def verdict_of(text):
@@ -752,14 +752,17 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     ok, bullets = summary_bullets(text, counts)
     if bullets and not ok:
         print("warning: the reply's finding lines do not match its counts line: fill each ? from the reply")
+    pf = fdir / f"preflight-{lane}.txt"          # a green pre-flight rides in the lane's next summary (2026-10-04 Afterparty: 2 of 5 were posted)
+    pre = f"\n\n{pf.read_text(encoding='utf-8').strip()}" if pf.is_file() else ""
+    pf.unlink(missing_ok=True)
     block = (f"### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min, {'resumed' if pend.get('resumed') else 'fresh'})"
-             + ("\n\nCritical {} · Important {} · Minor {}".format(*counts) if counts else "") + "".join(f"\n\n{b}" for b in bullets))
+             + ("\n\nCritical {} · Important {} · Minor {}".format(*counts) if counts else "") + pre + "".join(f"\n\n{b}" for b in bullets))
     try:                                         # 2026-09-28 audit: 68 of 153 blocks posted and none reached a delegator; the finish report carries this file
         with open(fdir / "summaries.md", "a", encoding="utf-8", newline="\n") as f:
             f.write(block.rstrip() + "\n\n")
     except OSError as e:
         print(f"warning: summaries.md append failed: {e}")
-    print("\n" + block)
+    print("\nnext: post the block below in chat now, as is, outside a code block, before any other step\n\n" + block)   # 2026-10-04 Afterparty phases 2 to 4: 4 of 18 posted
     return code
 
 
@@ -1013,9 +1016,10 @@ def preflight(args):
         lines.append(f"- **Agent:** {agent}, model {model}, effort {effort} (agent file)")
     else:
         raise Exit(64, f"lane {args.lane} is not a lane or a seat")   # 2026-09-22 review: a typo raised KeyError
+    fdir = None
     if args.feature:
         try:
-            feature_dir(cfg, primary, args.feature, 1 if args.kind == "panel" else None)   # 2026-09-23: doctor accepted a --feature that round run then refused; a new panel only for a panel round (Sol)
+            fdir, _ = feature_dir(cfg, primary, args.feature, 1 if args.kind == "panel" else None)   # 2026-09-23: doctor accepted a --feature that round run then refused; a new panel only for a panel round (Sol)
         except Exit as e:
             fail.append(str(e))
     if args.kind != "build":
@@ -1030,6 +1034,8 @@ def preflight(args):
     title = f"Pre-flight: {args.lane.capitalize()} · {args.kind}" + (" debate" if args.kind != "build" else "")   # Markdown, posted as is (Brandon, 2026-09-23)
     print(f"### 🔴 {title} · FAILED\n\n**{'; '.join(fail)}**" if fail else f"### 🟢 {title}")
     print((f"\n**{args.feature}**\n" if args.feature else "") + "\n" + "\n".join(lines))
+    if not fail and fdir and fdir.is_dir() and args.kind != "build":
+        (fdir / f"preflight-{args.lane}.txt").write_text(f"🟢 Pre-flight ({now():%H:%M}): " + " · ".join(re.sub(r"^- \*\*(.+?):\*\* ", r"\1 ", l) for l in lines) + "\n", encoding="utf-8")
     return 64 if fail else 0
 
 
