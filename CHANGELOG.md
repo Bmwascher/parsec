@@ -2,6 +2,15 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.25 (2026-10-04)
+
+The tool now gives each round summary ready to post, and tells the session to post it at once.
+
+- Each result in a summary shows `→ **Answer:** pending`. Before, the line was empty for the session to fill in. On a FIX round the session must not answer a result that goes to the author, so it often did not post the summary. In the phases 2 to 4 of the KitnEssentials Afterparty programme, the sessions posted 4 of 18 summaries.
+- Above each summary, the tool prints a line that tells the session to post the summary now, before any other step.
+- The session does not post a green pre-flight alone now. The tool keeps it and shows it in the next summary of that lane. The tool tells the session to post each other pre-flight, for example a failed pre-flight.
+- `summaries.md` keeps each summary without the answer lines.
+
 ## v0.1.24 (2026-10-04)
 
 A task that changes only files in the docs root no longer shows as failed when its Files line has no list mark.
