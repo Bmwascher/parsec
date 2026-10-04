@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.24 (2026-10-04)
+
+A task that changes only files in the docs root no longer shows as failed when its Files line has no list mark.
+
+- `build run` found the files of a task only on a line that starts with `- **Files**:`. Authors also write `**Files**:`, `- **Files:**` and `**Files:**`. With such a line the task named no file. Then a task that changed only a file in the docs root failed the success test, although the edit was correct.
+- This occurred in task 2 of the KitnEssentials phase ap-2. The junction of `dev/docs` in the worktree was not the cause.
+- Now `build run` reads all four forms. The tool can only find more files than before, so a task that passed still passes.
+
 ## v0.1.23 (2026-10-04)
 
 A task now gets its full brief when it shows a Markdown title line in a code block.
