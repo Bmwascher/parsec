@@ -244,6 +244,9 @@ def bullet_title(t):
     return t + "`" * (t.count("`") % 2)
 
 
+PENDING = "\n\n  → **Answer:** pending"
+
+
 def summary_bullets(text, counts):
     """2026-09-25 audit: a pasted heading alone reached about a third of rounds. One bullet per finding, by grade, its ID where
     the reply's finding lines parse, and '?' for each the counts line has beyond them (2026-09-28 audit: a Fable look's carried
@@ -256,7 +259,7 @@ def summary_bullets(text, counts):
     fits = counts is not None and all(h <= c for h, c in zip(have, counts))
     rows = [(i, g, t) for i, (g, t) in found.items()] if fits else []
     rows += [("?", s, "") for s, h, c in zip(GRADES, have if fits else (0, 0, 0), counts or ()) for _ in range(c - h)]
-    return have == counts, [f"- **{i} · {g}:** {t}\n\n  → **Answer:** pending" for i, g, t in sorted(rows, key=lambda r: GRADES.index(r[1]))]   # 2026-10-04 Afterparty: an answer left to fill held the post until the author answered
+    return have == counts, [f"- **{i} · {g}:** {t}{PENDING}" for i, g, t in sorted(rows, key=lambda r: GRADES.index(r[1]))]   # 2026-10-04 Afterparty: an answer left to fill held the post until the author answered
 
 
 def verdict_of(text):
@@ -752,14 +755,17 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     ok, bullets = summary_bullets(text, counts)
     if bullets and not ok:
         print("warning: the reply's finding lines do not match its counts line: fill each ? from the reply")
-    pf = fdir / f"preflight-{lane}.txt"          # a green pre-flight rides in the lane's next summary (2026-10-04 Afterparty: 2 of 5 were posted)
-    pre = f"\n\n{pf.read_text(encoding='utf-8').strip()}" if pf.is_file() else ""
-    pf.unlink(missing_ok=True)
+    pf, pre = fdir / "rounds" / f"preflight-{lane}.txt", ""   # a green pre-flight rides in the lane's next summary (2026-10-04 Afterparty: 2 of 5 were posted)
+    try:
+        pre = f"\n\n{pf.read_text(encoding='utf-8').strip()}" if pf.is_file() else ""
+        pf.unlink(missing_ok=True)
+    except OSError as e:                         # pre-review F3: past the record, a read error must not cost the block
+        print(f"warning: the pre-flight line was not read: {e}")
     block = (f"### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min, {'resumed' if pend.get('resumed') else 'fresh'})"
              + ("\n\nCritical {} · Important {} · Minor {}".format(*counts) if counts else "") + pre + "".join(f"\n\n{b}" for b in bullets))
     try:                                         # 2026-09-28 audit: 68 of 153 blocks posted and none reached a delegator; the finish report carries this file
         with open(fdir / "summaries.md", "a", encoding="utf-8", newline="\n") as f:
-            f.write(block.rstrip() + "\n\n")
+            f.write(block.replace(PENDING, "").rstrip() + "\n\n")   # pre-review F4: the answers are in chat, never a stale "pending"
     except OSError as e:
         print(f"warning: summaries.md append failed: {e}")
     print("\nnext: post the block below in chat now, as is, outside a code block, before any other step\n\n" + block)   # 2026-10-04 Afterparty phases 2 to 4: 4 of 18 posted
@@ -1034,8 +1040,17 @@ def preflight(args):
     title = f"Pre-flight: {args.lane.capitalize()} · {args.kind}" + (" debate" if args.kind != "build" else "")   # Markdown, posted as is (Brandon, 2026-09-23)
     print(f"### 🔴 {title} · FAILED\n\n**{'; '.join(fail)}**" if fail else f"### 🟢 {title}")
     print((f"\n**{args.feature}**\n" if args.feature else "") + "\n" + "\n".join(lines))
-    if not fail and fdir and fdir.is_dir() and args.kind != "build":
-        (fdir / f"preflight-{args.lane}.txt").write_text(f"🟢 Pre-flight ({now():%H:%M}): " + " · ".join(re.sub(r"^- \*\*(.+?):\*\* ", r"\1 ", l) for l in lines) + "\n", encoding="utf-8")
+    pf, saved = fdir / "rounds" / f"preflight-{args.lane}.txt" if fdir and args.kind != "build" else None, False
+    try:
+        if pf and fail:
+            pf.unlink(missing_ok=True)           # pre-review F2: an older green line never rides after a FAILED one
+        elif pf and fdir.is_dir():               # pre-review F1: a new panel has no folder yet, so its pre-flight is posted
+            pf.parent.mkdir(exist_ok=True)
+            pf.write_text(f"🟢 Pre-flight ({now():%Y-%m-%d %H:%M}): " + " · ".join(re.sub(r"^- \*\*(.+?):\*\* ", r"\1 ", l) for l in lines) + "\n", encoding="utf-8")
+            saved = True
+    except OSError as e:
+        print(f"warning: the pre-flight line was not saved: {e}")
+    print(f"\nnext: post nothing now; this rides in the next {args.lane.capitalize()} summary" if saved else "\nnext: post the block above in chat now, as is, outside a code block")
     return 64 if fail else 0
 
 

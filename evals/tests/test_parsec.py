@@ -507,15 +507,18 @@ def test_inputs_and_preflight(env):
     (e.repo / "A.md").rename(e.repo / "AGENTS.md")
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
     assert code == 0 and "2 of 2 sections found" in out and "fast off" in out and out.startswith("### 🟢 Pre-flight: Astra"), out
+    assert out.endswith("rides in the next Astra summary\n") and (e.feat / "rounds" / "preflight-astra.txt").is_file()   # 2026-10-04 Afterparty: 2 of 5 posted
     assert "(lanes.toml), fast\n" in run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x", "--fast")[1]
     assert run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "docs/09-22-x")[0] == 0   # 2026-09-23: the docs-root prefix was refused by round run only
-    assert run(e, "doctor", "--lane", "opus", "--kind", "panel", "--feature", "panels/09-23-new")[0] == 0   # a new panel's pre-flight passes, for a panel round only (2026-09-23, Sol)
+    code, out = run(e, "doctor", "--lane", "opus", "--kind", "panel", "--feature", "panels/09-23-new")
+    assert code == 0 and out.endswith("post the block above in chat now, as is, outside a code block\n")   # a new panel's pre-flight passes, for a panel round only (2026-09-23, Sol); no folder carries it (pre-review F1)
     assert run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "panels/09-23-new")[0] == 64
     code, out = run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "09-22-nope")
     assert code == 64 and out.startswith("### 🔴 Pre-flight: Opus · design debate · FAILED")   # and doctor never checked --feature at all
     (e.repo / "AGENTS.md").write_text("# Rules\n\n## Lua style (renamed)\n\n## Git\n", encoding="utf-8")
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
-    assert code == 64 and 'section not found: "Lua style"' in out and not (e.feat / "rounds").exists()
+    assert code == 64 and 'section not found: "Lua style"' in out and not [p for p in (e.feat / "rounds").iterdir() if p.is_dir()]
+    assert not (e.feat / "rounds" / "preflight-astra.txt").exists()   # pre-review F2: no older green line rides after a FAILED one
     (e.repo / "AGENTS.md").write_text("# Rules\n\n## Lua style\n\n## Git\n", encoding="utf-8")
     e.mp.setenv("FAKE_LOGIN", "Not logged in")
     assert run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")[0] == 64
@@ -674,7 +677,7 @@ def test_summary_head(env):
     assert run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")[0] == 0   # 2026-10-04 Afterparty: 2 of 5 pre-flights and 4 of 18 summaries posted
     out = rnd(e, 1)[1]
     assert "before any other step\n\n### 🔴 Astra R1 Design Round: FIX (0 min, fresh)\n\nCritical 0 · Important 1 · Minor 2\n\n🟢 Pre-flight (" in out, out
-    assert "· Model gpt" in out and not (e.feat / "preflight-astra.txt").exists()   # the green pre-flight rides once, in the lane's next summary
+    assert "· Model gpt" in out and not (e.feat / "rounds" / "preflight-astra.txt").exists()   # the green pre-flight rides once, in the lane's next summary
     e.mp.setenv("FAKE_REPLY", "**0 Critical, 0 Important, 3 Minor.**\n\nVERDICT: PASS\n")
     out = rnd(e, 2)[1]
     assert "\n### 🟢 Astra R2 Design Round: PASS (0 min, resumed)\n\nCritical 0 · Important 0 · Minor 3\n" in out and "Pre-flight" not in out
@@ -707,7 +710,7 @@ def test_summary_bullets(env):
     e.mp.setenv("FAKE_REPLY", f"F1 · Minor: `KE:Hide` is gone\nF2 · Minor: {span}\nOpus F1 (the fake): `ride`\n\nCritical 0 · Important 0 · Minor 3\n\nVERDICT: PASS\n")
     out = rnd(e, 4)[1]
     assert "- **F1 · Minor:** `KE:Hide` is gone" in out and "long …`" + ask in out and out.endswith("- **? · Minor:** " + ask + "\n"), out   # a carried Minor: parsed rows stay
-    assert (e.feat / "summaries.md").read_text(encoding="utf-8").endswith(out[out.index("### 🟢 Astra R4"):].rstrip() + "\n\n")   # decision 1a: the finish report's file
+    assert (e.feat / "summaries.md").read_text(encoding="utf-8").endswith(out[out.index("### 🟢 Astra R4"):].replace(parsec.PENDING, "").rstrip() + "\n\n")   # decision 1a: the finish report's file; pre-review F4: no "pending"
     (e.feat / "rounds" / "design-r1-astra" / "reply.md").write_text("the author's answer\n", encoding="utf-8")   # 2026-09-26 gk-1
     out = rnd(e, 5)[1]
     assert "design-r1-astra" in out and "changed after its round was collected" in out and "design-r3-astra.dead" not in out   # a dead round's reply is its own
