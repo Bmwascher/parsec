@@ -869,7 +869,7 @@ def build_run(args):
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
     text = read_text(brief).encode()
     task = ([b for h, b in sections(text)[0] if re.match(r"## Task \d+", h)] or [text])[-1]
-    files = "\n".join(l.decode() for _, l in unfenced(task) if re.match(rb"[ \t]*[-*][ \t]*\*\*Files\*\*:", l))   # Sol diff r1-r2 F1: the task's own Files field, never a quoted one
+    files = "\n".join(l.decode() for _, l in unfenced(task) if re.match(rb"[ \t]*(?:[-*][ \t]*)?\*\*Files(?:\*\*:|:\*\*)", l))   # Sol diff r1-r2 F1: the task's own Files field, never a quoted one; 2026-10-04 ap-2 task 2: bare or "Files:**" too
     toks = [re.sub(r":\d+(-\d+)?$", "", t) for t in re.findall(r"`([^`\s]+)`", files)]   # 2026-09-28 audit: a task editing only the smoke file read "failed" (gk-14)
     named = {q for t in toks if re.fullmatch(r"(?:[A-Za-z]:[\\/])?[\w./\\-]+\.\w+", t) for q in (resolve_under(checkout, t), resolve_under(primary, t)) if q.is_relative_to(docs)}
     docs_state = lambda: {q: sha256(q) if q.is_file() else None for q in named}   # the task's own files, never the whole docs root, where the report and log land

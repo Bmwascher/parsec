@@ -787,6 +787,10 @@ def test_build_run_success_test(env):
     e.mp.setenv("FAKE_WRITE", str(e.feat / "smoke.md"))
     code, out = b("--again")
     assert code == 0 and "ok: git status non-empty, or a docs-root file the task names changed" in out, out   # 2026-09-28 audit: gk-14's smoke-only task read "failed"
+    for k, field in enumerate(("**Files**:", "**Files:**", "* **Files:**")):   # 2026-10-04 Afterparty ap-2 task 2: a bare Files line named nothing, so a docs-only task read "failed"
+        (e.feat / "build" / "task-01-brief.md").write_text(f"## Task 1: t\n\n{field} `docs/09-22-x/s{k}.md`\n", encoding="utf-8")
+        e.mp.setenv("FAKE_WRITE", str(e.feat / f"s{k}.md"))
+        assert "ok: git status non-empty, or a docs-root file the task names changed" in b("--again")[1], field
     e.mp.setenv("FAKE_AGY_LOG", "Print mode: starting\n")
     e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
     code, out = b("--again")
@@ -842,7 +846,7 @@ def test_build_run_success_test(env):
     assert code == 0 and "result: ok" in out, out                  # the feature's own ledger and spec are not dirt either
     assert e.calls()[-1].count("--add-dir") == 1                   # a docs root inside the checkout is not added again
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead13" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead16" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)
