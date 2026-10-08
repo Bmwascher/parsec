@@ -2,6 +2,17 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.26 (2026-10-08)
+
+A round summary now shows the name of more review results. The task brief and the success test of a build now read more of the task list.
+
+- A summary showed `? · Minor:` with no text when a reviewer wrote a result from an earlier round in a different shape, for example `Opus F1 (...)`. The tool now reads a result name with its source, for example `Opus F2 · Minor:` or `api-validator 2 · Minor:`. The brief tells the reviewer to give each result that it counts a line of this shape. A result that the tool cannot read now names its reply file. With the old tool, 51 replies of KitnEssentials had a `?` result.
+- `build run` now reads the paths on the indented lines below the Files line of a task. Before, a task that changed only the smoke file failed the success test, for example task 5 of the KitnEssentials phase ap-8. The junction of `dev/docs` was not the cause.
+- `task-brief` now adds an appendix to the brief when a step of the task names it, for example `Appendix A`. A `#` title now ends a task.
+- A task that copies or writes a binary file, for example an image, goes to the backup implementer. Gemini runs no command.
+- The prompt to Gemini now names the checkout. In two builds in a worktree, Gemini tried to read a code file in the primary checkout, and agy refused it.
+- `round prepare` now adds to the package each file in the feature folder that the brief names, for example `gate-zero.md`. A path to a file in a different folder still gives a warning. Before, the tool gave only a warning, and 26 rounds of KitnEssentials did not get the file.
+
 ## v0.1.25 (2026-10-04)
 
 The tool now gives each round summary ready to post, and tells the session to post it at once.
