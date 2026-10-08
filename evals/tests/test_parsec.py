@@ -424,6 +424,10 @@ def test_task_brief_slice(env):
     assert data.startswith(b"# Plan\n\nheader line\n\n") and b"## Global constraints\n\n- keep it\n\n" in data
     assert data.endswith(b"## Task 1: first\n\n- [ ] step\n\n```lua\nlocal x = 1\n```\n\n") and b"Task 2" not in data and b"File map" not in data
     assert run(e, "task-brief", "--feature", "09-22-x", "--task", "9")[0] == 64
+    head, app = b"# Plan\n\n## Global constraints\n\n- keep it\n\n", b"# Appendix A: smoke\n\n## Phase 1\n\n- step\n\n"   # 2026-10-05 Afterparty ap-15 task 6: the brief ended at the appendix heading
+    (e.feat / "tasks.md").write_bytes(head + b"## Task 1: smoke\n\nAppend Appendix A.\n\n## Task 2: last\n\n- [ ] other\n\n" + app + b"# Appendix B: b\n\nb\n")
+    assert Path(run(e, "task-brief", "--feature", "09-22-x", "--task", "1")[1].split()[0]).read_bytes() == head + b"## Task 1: smoke\n\nAppend Appendix A.\n\n" + app
+    assert Path(run(e, "task-brief", "--feature", "09-22-x", "--task", "2")[1].split()[0]).read_bytes() == head + b"## Task 2: last\n\n- [ ] other\n\n"
 
 
 # row 12b: a `#` line in a fenced code block is no heading (2026-10-02, KitnEssentials 10-02 task 1: a fenced .toc file cut the brief at "## Title:")
@@ -698,7 +702,7 @@ def test_summary_bullets(env):
     assert out.endswith("Critical 0 · Important 1 · Minor 1\n\n- **F1 · Important:** the hold is lost." + ask + "\n\n- **M2 · Minor:** wording." + ask + "\n"), out
     e.mp.setenv("FAKE_REPLY", "- **M1.** no grade\n\nCritical 0 · Important 0 · Minor 1\n\nVERDICT: PASS\n")   # four shapes in five replies (Fable poll): no ID guessed
     out = rnd(e, 2)[1]
-    assert "warning: the reply's finding lines do not match its counts line" in out and out.endswith("- **? · Minor:** " + ask + "\n")
+    assert "warning: the reply's finding lines do not match its counts line" in out and out.endswith("- **? · Minor:** not parsed, see rounds\\design-r2-astra\\reply.md" + ask + "\n")
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n\nlater draft text\n")
     assert "the reply's last line is not a VERDICT line with one verdict word" in rnd(e, 3)[1]
     e.mp.setenv("FAKE_REPLY", "draft text only\n")                      # Sol diff r1 F2: no counts line and no verdict
@@ -709,11 +713,15 @@ def test_summary_bullets(env):
     span = "see `" + "long " * 30 + "code` end"                        # 2026-09-28 audit: gk-4, gk-5, gk-7 bullets broke their Markdown
     e.mp.setenv("FAKE_REPLY", f"F1 · Minor: `KE:Hide` is gone\nF2 · Minor: {span}\nOpus F1 (the fake): `ride`\n\nCritical 0 · Important 0 · Minor 3\n\nVERDICT: PASS\n")
     out = rnd(e, 4)[1]
-    assert "- **F1 · Minor:** `KE:Hide` is gone" in out and "long …`" + ask in out and out.endswith("- **? · Minor:** " + ask + "\n"), out   # a carried Minor: parsed rows stay
+    assert "- **F1 · Minor:** `KE:Hide` is gone" in out and "long …`" + ask in out and out.endswith("- **? · Minor:** not parsed, see rounds\\design-r4-astra\\reply.md" + ask + "\n"), out   # a carried Minor: parsed rows stay; 2026-10-04 Afterparty: summaries.md kept blank ? bullets
     assert (e.feat / "summaries.md").read_text(encoding="utf-8").endswith(out[out.index("### 🟢 Astra R4"):].replace(parsec.PENDING, "").rstrip() + "\n\n")   # decision 1a: the finish report's file; pre-review F4: no "pending"
     (e.feat / "rounds" / "design-r1-astra" / "reply.md").write_text("the author's answer\n", encoding="utf-8")   # 2026-09-26 gk-1
     out = rnd(e, 5)[1]
     assert "design-r1-astra" in out and "changed after its round was collected" in out and "design-r3-astra.dead" not in out   # a dead round's reply is its own
+    e.mp.setenv("FAKE_REPLY", "- Opus F2 · Minor: carried: ride, wording\n- Opus F3 / Sol F1 · Minor: twice\n- api-validator 2 · Minor: no ID\n"
+                "### FabF1 · Minor · own\n\nCritical 0 · Important 0 · Minor 4\n\nVERDICT: PASS\n")   # 2026-10-04 to 10-06 Afterparty: carried Minors in these shapes were ? bullets
+    out = rnd(e, 6)[1]
+    assert "do not match" not in out and all(f"- **{i} · Minor:** {t}" in out for i, t in (("Opus F2", "carried: ride, wording"), ("Opus F3 / Sol F1", "twice"), ("api-validator 2", "no ID"), ("FabF1", "own"))), out
 
 
 # row 14f: what the brief names reaches the package (2026-09-28 audit: notes.md and a canvas file no package held; gate logs in 4 of 16 phases)
@@ -725,10 +733,12 @@ def test_named_evidence(env):
     git("add", ".claude-plugin", cwd=e.repo)
     git("commit", "-qm", "plugin", cwd=e.repo)
     e.head = git("rev-parse", "HEAD", cwd=e.repo)
-    e.brief.write_text("Read `notes.md` beside the spec, `AGENTS.md:3`, `plugin.json`, `ghost.json` and `pages/canvas.json`.\n", encoding="utf-8")
+    (e.feat / "gate-zero.md").write_text("# Gate zero\n", encoding="utf-8")   # 2026-10-04 Afterparty ap-13: 27 rounds named a feature-folder file no package held
+    e.brief.write_text("Read `notes.md` beside the spec, `AGENTS.md:3`, `plugin.json`, `ghost.json`, `gate-zero.md` and `pages/canvas.json`.\n", encoding="utf-8")
     out = rnd(e, 1)[1]
     ctx = (e.wt / "_review" / "proj-09-22-x-design-astra" / ".parsec" / "context.md").read_text(encoding="utf-8")
     assert "- notes: .parsec/notes.md, the brainstorm record" in ctx and out.count("the brief names") == 2 and "names pages/canvas.json" in out and "names ghost.json" in out, out
+    assert "- evidence: .parsec/evidence/1-gate-zero.md is a copy of gate-zero.md" in ctx and "packed gate-zero.md from the feature folder" in out
     e.brief.write_text("Read `notes.md`, the earlier `reply.md` and `pages/canvas.json`.\n", encoding="utf-8")   # pre-review F1, Sol diff r1 F2: a passed file is found by its name
     (e.tmp / "canvas.json").write_text("{}", encoding="utf-8")
     assert "the brief names" not in rnd(e, 2, "astra", "design", "--file", str(e.tmp / "canvas.json"))[1]
@@ -758,7 +768,8 @@ def test_build_run_success_test(env):
     a = e.calls()[-1]
     prompt = a[a.index("-p") + 1]
     digest = parsec.sha256(e.feat / "build" / "task-01-brief.md")
-    assert prompt.startswith(f"Read the file AGY-TASK-BRIEF-{digest[:12]}.md in the workspace") and prompt.endswith(parsec.CLOSING)
+    assert prompt.startswith(f"Read the file AGY-TASK-BRIEF-{digest[:12]}.md in {co.resolve()} ") and prompt.endswith(parsec.CLOSING)
+    assert "never in another checkout" in prompt                # 2026-10-05 Afterparty ap-17, ap-18: a read of the primary's copy was denied
     assert "grep_search" in prompt                               # 2026-09-28 poll: all four field RunCommand denials were Select-String searches
     assert a[a.index("--model") + 1] == "gemini-3.8-flash-high" and a[a.index("--mode") + 1] == "accept-edits"
     assert a[a.index("--log-file") + 1] == str((e.feat / "build" / "task-01-agy.log").resolve())
@@ -795,6 +806,10 @@ def test_build_run_success_test(env):
     assert code == 0 and "ok: git status non-empty, or a docs-root file the task names changed" in out, out   # 2026-09-28 audit: gk-14's smoke-only task read "failed"
     for k, field in enumerate(("**Files**:", "**Files:**", "* **Files:**")):   # 2026-10-04 Afterparty ap-2 task 2: a bare Files line named nothing, so a docs-only task read "failed"
         (e.feat / "build" / "task-01-brief.md").write_text(f"## Task 1: t\n\n{field} `docs/09-22-x/s{k}.md`\n", encoding="utf-8")
+        e.mp.setenv("FAKE_WRITE", str(e.feat / f"s{k}.md"))
+        assert "ok: git status non-empty, or a docs-root file the task names changed" in b("--again")[1], field
+    for k, field in ((3, "- **Files**:\n  - `docs/09-22-x/s3.md`\n"), (4, "- **Files**: `code.txt` (new),\n  `docs/09-22-x/s4.md`\n")):   # 2026-10-04 ap-8 task 5: paths under the Files line
+        (e.feat / "build" / "task-01-brief.md").write_text(f"## Task 1: t\n\n{field}- **Checks**: `docs/09-22-x/other.md`\n", encoding="utf-8")
         e.mp.setenv("FAKE_WRITE", str(e.feat / f"s{k}.md"))
         assert "ok: git status non-empty, or a docs-root file the task names changed" in b("--again")[1], field
     e.mp.setenv("FAKE_AGY_LOG", "Print mode: starting\n")
@@ -852,7 +867,7 @@ def test_build_run_success_test(env):
     assert code == 0 and "result: ok" in out, out                  # the feature's own ledger and spec are not dirt either
     assert e.calls()[-1].count("--add-dir") == 1                   # a docs root inside the checkout is not added again
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead16" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead18" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)

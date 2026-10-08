@@ -27,7 +27,7 @@ Small edits of one shape are one task (rename a field in five files: one task). 
 
 Each task is a `## Task N: <name>` section holding:
 
-- **Files**: the paths it creates or changes.
+- **Files**: the paths it creates or changes, on that line or on indented lines under it.
 - **Consumes / produces**: what it needs from earlier tasks and what later tasks take from it.
 - **Checks**: each command that checks the task and the result it expects (a test run, a grep, the budget test). A check never names a discarding git command (2026-09-24).
 - **Steps**, as checkbox items, in this order:
@@ -36,6 +36,8 @@ Each task is a `## Task N: <name>` section holding:
   3. Write the implementation, the FULL code in the same edit format, never a placeholder.
   4. Run the tests and see them pass (green); the whole suite, output clean.
   5. Commit, as the LAST step, after a branch check, because phase chats share a checkout. The commit message is given in full.
+
+Long text that a task appends, such as a smoke section, can go in a `# Appendix A: <name>` part after the last task; `task-brief` adds to a task's brief each appendix the task names (2026-10-05: ap-15 task 6 lost one).
 
 The commit step belongs to the session. The test steps belong to the session on the Gemini lane and to the `backup-implementer` on its lane; they are written here so the record is complete.
 

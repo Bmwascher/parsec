@@ -233,7 +233,8 @@ def severity_counts(text):                       # the LAST one line naming all 
     return tuple(int(g) for g in hits[-1].groups() if g) if hits else None
 
 
-FINDING = re.compile(r"^([A-Z]{1,2}\d{1,3})\W{1,6}(Critical|Important|Minor)\b[^\w`]*(.*)")   # 2026-09-28 audit: \W* ate a title's opening backtick
+ID = r"(?:(?:[A-Za-z][\w-]* )?[A-Z][A-Za-z]{0,3}\d{1,3}|[A-Za-z][\w-]* \d{1,3})"   # F1, FabF1, Opus F2, api-validator 2 (2026-10-04 to 10-06 Afterparty: carried Minors blanked)
+FINDING = re.compile(rf"^(?!(?:Critical|Important|Minor)\b)({ID}(?: ?/ ?{ID})*)\W{{1,6}}(Critical|Important|Minor)\b[^\w`]*(.*)")   # 2026-09-28 audit: \W* ate a title's opening backtick
 GRADES = ("Critical", "Important", "Minor")
 
 
@@ -247,10 +248,10 @@ def bullet_title(t):
 PENDING = "\n\n  → **Answer:** pending"
 
 
-def summary_bullets(text, counts):
+def summary_bullets(text, counts, reply="the reply"):
     """2026-09-25 audit: a pasted heading alone reached about a third of rounds. One bullet per finding, by grade, its ID where
-    the reply's finding lines parse, and '?' for each the counts line has beyond them (2026-09-28 audit: a Fable look's carried
-    Minors, in four shapes, blanked every bullet); all '?' when the parsed lines exceed the counts."""
+    the reply's finding lines parse, and '?' naming the reply for each the counts line has beyond them (2026-09-28 audit: a Fable
+    look's carried Minors, in four shapes, blanked every bullet); all '?' when the parsed lines exceed the counts."""
     found = {}
     for line in text.splitlines():
         if (m := FINDING.match(strip_line(line))) and m[1] not in found:
@@ -258,7 +259,7 @@ def summary_bullets(text, counts):
     have = tuple(sum(g == s for g, _ in found.values()) for s in GRADES)
     fits = counts is not None and all(h <= c for h, c in zip(have, counts))
     rows = [(i, g, t) for i, (g, t) in found.items()] if fits else []
-    rows += [("?", s, "") for s, h, c in zip(GRADES, have if fits else (0, 0, 0), counts or ()) for _ in range(c - h)]
+    rows += [("?", s, f"not parsed, see {reply}") for s, h, c in zip(GRADES, have if fits else (0, 0, 0), counts or ()) for _ in range(c - h)]
     return have == counts, [f"- **{i} · {g}:** {t}{PENDING}" for i, g, t in sorted(rows, key=lambda r: GRADES.index(r[1]))]   # 2026-10-04 Afterparty: an answer left to fill held the post until the author answered
 
 
@@ -611,6 +612,11 @@ def prepare(args, launch):
     args.brief = str(folder / "brief.md")        # the package, stdin and the hash all take the assembled text (Astra, Fable, 2026-09-25)
     tree = worktree_path(cfg, primary, frel, args.kind, args.lane)   # every lane reads the code at --head (2026-09-23: seven phases gave Opus and Fable the primary)
     ensure_worktree(primary, tree, args.head)
+    held = {Path(p).name for p in git_out(["ls-files", "-z"], tree).split("\0")} if named else set()   # 0.1.20 last look: a bare plugin.json, at .claude-plugin/plugin.json, warned
+    given, skip = args.file or [], held | {"reply.md", "record.json", "summaries.md", "pending.json", "spec.md", "tasks.md", "notes.md"}
+    loose = sorted({p for n in named if (p := fdir / Path(n.replace("\\", "/")).name).is_file() and p.name not in skip | {Path(f).name for f in given}})
+    args.file = given + [str(p) for p in loose]   # 2026-10-04 Afterparty ap-13: 27 rounds warned of a named feature-folder file and went without it
+    warnings += [f"packed {p.name} from the feature folder as evidence (the brief named it)" for p in loose]
     if cli:
         model, effort, agent = row["model"], row.get("effort", "lane home"), None
         subject, w = write_package(tree, args, cfg, primary, fdir, args.kind)
@@ -622,11 +628,10 @@ def prepare(args, launch):
         subject, w = write_package(folder, args, cfg, primary, fdir, args.kind)
     warnings += w
     root = tree if cli else folder               # 2026-09-28 audit: gk-9's Sol R1 searched all of KitnDev for a canvas file (617 s)
-    held = {Path(p).name for p in git_out(["ls-files", "-z"], tree).split("\0")} if named else set()   # 0.1.20 last look: a bare plugin.json, at .claude-plugin/plugin.json, warned
     warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
-                 for n in sorted(named) if Path(n.replace("\\", "/")).name not in {Path(f).name for f in args.file or []} | {"reply.md", "record.json", "summaries.md", "pending.json"}   # pre-review F1, Sol diff r1 F2
+                 for n in sorted(named) if Path(n.replace("\\", "/")).name not in {Path(f).name for f in args.file} | {"reply.md", "record.json", "summaries.md", "pending.json"}   # pre-review F1, Sol diff r1 F2
                  and not any((b / n).exists() for b in (root, root / ".parsec", tree)) and n not in held]
-    if args.kind in ("prereview", "diff", "lastlook") and all(Path(f).name == "reply.md" for f in args.file or []):   # 2026-09-28 audit: gate logs in 4 of 16 phases
+    if args.kind in ("prereview", "diff", "lastlook") and all(Path(f).name == "reply.md" for f in given):   # 2026-09-28 audit: gate logs in 4 of 16 phases
         warnings.append("no --file evidence but replies: pass the gate log, or the reviewer marks every test claim unverified")
     pending = {"kind": args.kind, "round": args.round, "lane": args.lane, "head": args.head, "base": args.base,
                "start": stamp(), "brief_sha256": sha256(args.brief), "tier": "fast" if args.fast else "default",
@@ -752,7 +757,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     if code and transcript:
         print("transcript tail:\n" + "\n".join(transcript.splitlines()[-5:]))
     took = round((end - dt.datetime.fromisoformat(pend.get("start") or stamp(end))).total_seconds() / 60)   # 2026-09-23 phase 6: a prose summary
-    ok, bullets = summary_bullets(text, counts)
+    ok, bullets = summary_bullets(text, counts, f"rounds\\{folder.name}\\reply.md")
     if bullets and not ok:
         print("warning: the reply's finding lines do not match its counts line: fill each ? from the reply")
     pf, pre = fdir / "rounds" / f"preflight-{lane}.txt", ""   # a green pre-flight rides in the lane's next summary (2026-10-04 Afterparty: 2 of 5 were posted)
@@ -826,10 +831,12 @@ def verify(args):
 
 
 def sections(text):
-    """(heading, bytes-span) for each `## ` section; the header is what comes before the first."""
-    marks = [(a, line.decode("utf-8", "replace").strip()) for a, line in unfenced(text) if line.startswith(b"## ")]
+    """(heading, bytes-span) for each `## ` section, which a `#` heading ends too (2026-10-05 ap-15: a task ran into an
+    appendix's heading); the header is what comes before the first."""
+    marks = [(a, line.decode("utf-8", "replace").strip()) for a, line in unfenced(text) if re.match(rb"##? ", line)]
     ends = [a for a, _ in marks[1:]] + [len(text)]
-    return [(h, text[a:b]) for (a, h), b in zip(marks, ends)], text[:marks[0][0] if marks else len(text)]
+    secs = [(h, text[a:b]) for (a, h), b in zip(marks, ends)]
+    return [s for s in secs if s[0].startswith("## ")], text[:next((a for a, h in marks if h.startswith("## ")), len(text))]
 
 
 def task_brief(args):
@@ -842,9 +849,11 @@ def task_brief(args):
     task = [b for h, b in secs if re.match(rf"## Task {args.task}\b", h)]
     if not task:
         raise Exit(64, f"tasks.md has no `## Task {args.task}` section")
+    parts = [a for a, line in unfenced(text) if line.startswith(b"# ")] + [len(text)]
+    apps = [text[a:b] for a, b in zip(parts, parts[1:]) if (m := re.match(rb"# (Appendix \w+)", text[a:b])) and re.search(rb"\b%s\b" % m[1], task[0])]   # an appendix the task names
     (fdir / "build").mkdir(exist_ok=True)
     out = fdir / "build" / f"task-{args.task:02d}-brief.md"
-    out.write_bytes(header + b"".join(consts) + task[0])                 # old item 113: the slice IS the bytes
+    out.write_bytes(header + b"".join(consts) + task[0] + b"".join(apps))   # old item 113: the slice IS the bytes
     print(f"{out}\n{sha256(out)}")
     return 0
 
@@ -878,7 +887,11 @@ def build_run(args):
         raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
     text = read_text(brief).encode()
     task = ([b for h, b in sections(text)[0] if re.match(r"## Task \d+", h)] or [text])[-1]
-    files = "\n".join(l.decode() for _, l in unfenced(task) if re.match(rb"[ \t]*(?:[-*][ \t]*)?\*\*Files(?:\*\*:|:\*\*)", l))   # Sol diff r1-r2 F1: the task's own Files field, never a quoted one; 2026-10-04 ap-2 task 2: bare or "Files:**" too
+    files, on = [], False
+    for _, l in unfenced(task):                  # Sol diff r1-r2 F1: the task's own Files field, never a quoted one; 2026-10-04 ap-2 task 2: bare or "Files:**" too
+        on = bool(re.match(rb"[ \t]*(?:[-*][ \t]*)?\*\*Files(?:\*\*:|:\*\*)", l)) or (on and l[:1] in (b" ", b"\t") and bool(l.strip()))   # ap-8 task 5: its indented lines
+        files += [l.decode()] if on else []
+    files = "\n".join(files)
     toks = [re.sub(r":\d+(-\d+)?$", "", t) for t in re.findall(r"`([^`\s]+)`", files)]   # 2026-09-28 audit: a task editing only the smoke file read "failed" (gk-14)
     named = {q for t in toks if re.fullmatch(r"(?:[A-Za-z]:[\\/])?[\w./\\-]+\.\w+", t) for q in (resolve_under(checkout, t), resolve_under(primary, t)) if q.is_relative_to(docs)}
     docs_state = lambda: {q: sha256(q) if q.is_file() else None for q in named}   # the task's own files, never the whole docs root, where the report and log land
@@ -897,7 +910,8 @@ def build_run(args):
         shutil.copyfile(brief, copy)
         if sha256(copy) != digest:
             raise Exit(64, "the brief copy does not match the brief")
-        prompt = f"Read the file {copy.name} in the workspace and make its file edits exactly. {CLOSING}"
+        prompt = (f"Read the file {copy.name} in {checkout} and make its file edits exactly. A relative path in it is under {checkout}; "
+                  f"a code file is read and edited there only, never in another checkout. {CLOSING}")   # 2026-10-05 ap-17, ap-18: a read of the primary's copy was denied
         argv = [prog, *row["command"][1:], "-p", prompt, "--model", row["model"], "--mode", "accept-edits",
                 "--add-dir", str(checkout), *([] if docs.is_relative_to(checkout) else ["--add-dir", str(docs)]),   # 2026-09-27 gk-10, gk-12: a read of the spec or smoke file in the primary was denied
                 "--log-file", str(log.resolve())]   # 2026-09-13: a /c/ path made no log

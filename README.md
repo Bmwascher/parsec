@@ -141,6 +141,7 @@ Builds every task by typing its code exactly as written. It decides nothing, so 
 Takes the tasks Gemini can't:
 
 - a task that deletes, renames or moves a file, since Gemini's print mode has no delete tool;
+- a task that copies or writes a binary file, such as an image, since print mode runs no command;
 - a task Gemini got wrong once;
 - every task, when `agy` isn't installed.
 
@@ -451,7 +452,7 @@ checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 | `round collect` | Finishes a pending round, or marks it degraded or closed on Minor |
 | `round close` | Removes the feature's review worktrees |
 | `verify` | Checks `spec.md` and `tasks.md` against the newest design record or amendment |
-| `task-brief` | Slices task N into its own brief and prints its SHA-256 |
+| `task-brief` | Slices task N, and each appendix it names, into its own brief and prints its SHA-256 |
 | `build run` | Runs task N through the implementer (Gemini) in the checkout and writes the task report |
 | `build archive` | Renames task N's report and log to `.dead<k>` before a retry |
 | `remove-worktree` | Removes a review worktree, unlinking junctions first so nothing real is deleted |
@@ -477,7 +478,7 @@ Each rail exists because its failure happened at least once. The dates live in t
 | `build run` refuses any other checkout, a checkout with uncommitted changes, and a base that isn't the expected commit | A run once transcribed its edits exactly, onto a checkout one commit too early |
 | A task that flipped a file's line endings fails | A whole-file change that hides the real edit in the diff |
 | The tool reads the task's success test, never Gemini's exit code | Gemini has reported success on runs that failed |
-| Deletes, renames and moves go straight to the backup implementer | Gemini's print mode has no delete tool |
+| Deletes, renames, moves and binary files go straight to the backup implementer | Gemini's print mode has no delete tool and runs no command |
 | A second failed attempt at the same task, for any reason, goes to you | A retry loop that burns quota on a task that's wrong |
 
 ![Worktrees](https://img.shields.io/badge/worktrees-f08c00?style=for-the-badge)

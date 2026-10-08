@@ -42,6 +42,6 @@ What is out of scope for this round. The lane's read and run rules are the first
 ## 7. Final check
 
 - List what could not be verified.
-- One line `Critical N · Important N · Minor N`, counting open findings.
+- One line `Critical N · Important N · Minor N`, counting open findings. Each finding it counts has its own finding line, an earlier one under its source and ID (`Opus F2 · Minor: <title>`), or its source and a number when it has no ID (`api-validator 2 · Minor: <title>`). A closed or refuted finding has no finding line.
 - One line per claim: holds, fails (with the finding ID), or UNVERIFIED.
 - The LAST line is exactly one line starting `VERDICT:` and PASS, FIX or ESCALATE (BLIND in a blind panel lane), and that word appears on no other line of that shape. PASS when no Critical or Important finding is open; Minor findings ride with a PASS.

@@ -30,6 +30,7 @@ Skips all of the above: no `verify`, Brandon's yes is the go, the session builds
 Dispatch `agents/backup-implementer.md` in the background, named `Task N Implement`, with the brief path, the contract path (`templates/implementer-contract.md`), the checkout and a report path, for:
 
 - a task that deletes, renames or moves a file (print mode has no delete tool);
+- a task that copies or writes a binary file, such as an image (print mode runs no command; KitnEssentials ap-15 task 1, 2026-10-05);
 - a task whose Gemini run failed the success test once, or whose diff did not match its code (below);
 - every task when the pre-flight finds no agy.
 
