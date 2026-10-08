@@ -37,7 +37,7 @@ Each task is a `## Task N: <name>` section holding:
   4. Run the tests and see them pass (green); the whole suite, output clean.
   5. Commit, as the LAST step, after a branch check, because phase chats share a checkout. The commit message is given in full.
 
-Long text that a task appends, such as a smoke section, can go in a `# Appendix A: <name>` part after the last task; `task-brief` adds to a task's brief each appendix the task names (2026-10-05: ap-15 task 6 lost one).
+Long text that a task appends, such as a smoke section, can go in a `# Appendix A: <name>` part after the last task; `task-brief` adds to a task's brief each appendix one of its steps names (2026-10-05: ap-15 task 6 lost one).
 
 The commit step belongs to the session. The test steps belong to the session on the Gemini lane and to the `backup-implementer` on its lane; they are written here so the record is complete.
 

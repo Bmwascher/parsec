@@ -614,9 +614,10 @@ def prepare(args, launch):
     ensure_worktree(primary, tree, args.head)
     held = {Path(p).name for p in git_out(["ls-files", "-z"], tree).split("\0")} if named else set()   # 0.1.20 last look: a bare plugin.json, at .claude-plugin/plugin.json, warned
     given, skip = args.file or [], held | {"reply.md", "record.json", "summaries.md", "pending.json", "spec.md", "tasks.md", "notes.md"}
-    loose = sorted({p for n in named if (p := fdir / Path(n.replace("\\", "/")).name).is_file() and p.name not in skip | {Path(f).name for f in given}})
-    args.file = given + [str(p) for p in loose]   # 2026-10-04 Afterparty ap-13: 27 rounds warned of a named feature-folder file and went without it
-    warnings += [f"packed {p.name} from the feature folder as evidence (the brief named it)" for p in loose]
+    loose = {n: p for n in sorted(named) if (p := resolve_under(fdir, n)).is_file() and p.is_relative_to(fdir) and not p.is_relative_to(folder)   # pre-review F1: the path as named, never another folder's
+             and p.name not in skip | {Path(f).name for f in given}}
+    args.file = given + sorted({str(p) for p in loose.values()})   # 2026-10-04 Afterparty ap-13: 27 rounds warned of a named feature-folder file and went without it
+    warnings += [f"packed {n} from the feature folder as evidence (the brief named it)" for n in loose]
     if cli:
         model, effort, agent = row["model"], row.get("effort", "lane home"), None
         subject, w = write_package(tree, args, cfg, primary, fdir, args.kind)
@@ -629,7 +630,7 @@ def prepare(args, launch):
     warnings += w
     root = tree if cli else folder               # 2026-09-28 audit: gk-9's Sol R1 searched all of KitnDev for a canvas file (617 s)
     warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
-                 for n in sorted(named) if Path(n.replace("\\", "/")).name not in {Path(f).name for f in args.file} | {"reply.md", "record.json", "summaries.md", "pending.json"}   # pre-review F1, Sol diff r1 F2
+                 for n in sorted(named) if n not in loose and Path(n.replace("\\", "/")).name not in {Path(f).name for f in given} | {"reply.md", "record.json", "summaries.md", "pending.json"}   # pre-review F1, Sol diff r1 F2
                  and not any((b / n).exists() for b in (root, root / ".parsec", tree)) and n not in held]
     if args.kind in ("prereview", "diff", "lastlook") and all(Path(f).name == "reply.md" for f in given):   # 2026-09-28 audit: gate logs in 4 of 16 phases
         warnings.append("no --file evidence but replies: pass the gate log, or the reviewer marks every test claim unverified")
@@ -850,7 +851,8 @@ def task_brief(args):
     if not task:
         raise Exit(64, f"tasks.md has no `## Task {args.task}` section")
     parts = [a for a, line in unfenced(text) if line.startswith(b"# ")] + [len(text)]
-    apps = [text[a:b] for a, b in zip(parts, parts[1:]) if (m := re.match(rb"# (Appendix \w+)", text[a:b])) and re.search(rb"\b%s\b" % m[1], task[0])]   # an appendix the task names
+    steps = task[0][s.start():] if (s := re.search(rb"(?m)^[ \t]*[-*] \[[ xX]\]", task[0])) else b""   # pre-review F5: a step names it, not a reference
+    apps = [text[a:b] for a, b in zip(parts, parts[1:]) if (m := re.match(rb"# (Appendix \w+)", text[a:b])) and re.search(rb"\b%s\b" % m[1], steps)]
     (fdir / "build").mkdir(exist_ok=True)
     out = fdir / "build" / f"task-{args.task:02d}-brief.md"
     out.write_bytes(header + b"".join(consts) + task[0] + b"".join(apps))   # old item 113: the slice IS the bytes

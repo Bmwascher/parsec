@@ -452,7 +452,7 @@ checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 | `round collect` | Finishes a pending round, or marks it degraded or closed on Minor |
 | `round close` | Removes the feature's review worktrees |
 | `verify` | Checks `spec.md` and `tasks.md` against the newest design record or amendment |
-| `task-brief` | Slices task N, and each appendix it names, into its own brief and prints its SHA-256 |
+| `task-brief` | Slices task N, and each appendix its steps name, into its own brief and prints its SHA-256 |
 | `build run` | Runs task N through the implementer (Gemini) in the checkout and writes the task report |
 | `build archive` | Renames task N's report and log to `.dead<k>` before a retry |
 | `remove-worktree` | Removes a review worktree, unlinking junctions first so nothing real is deleted |

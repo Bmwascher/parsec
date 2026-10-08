@@ -425,9 +425,10 @@ def test_task_brief_slice(env):
     assert data.endswith(b"## Task 1: first\n\n- [ ] step\n\n```lua\nlocal x = 1\n```\n\n") and b"Task 2" not in data and b"File map" not in data
     assert run(e, "task-brief", "--feature", "09-22-x", "--task", "9")[0] == 64
     head, app = b"# Plan\n\n## Global constraints\n\n- keep it\n\n", b"# Appendix A: smoke\n\n## Phase 1\n\n- step\n\n"   # 2026-10-05 Afterparty ap-15 task 6: the brief ended at the appendix heading
-    (e.feat / "tasks.md").write_bytes(head + b"## Task 1: smoke\n\nAppend Appendix A.\n\n## Task 2: last\n\n- [ ] other\n\n" + app + b"# Appendix B: b\n\nb\n")
-    assert Path(run(e, "task-brief", "--feature", "09-22-x", "--task", "1")[1].split()[0]).read_bytes() == head + b"## Task 1: smoke\n\nAppend Appendix A.\n\n" + app
-    assert Path(run(e, "task-brief", "--feature", "09-22-x", "--task", "2")[1].split()[0]).read_bytes() == head + b"## Task 2: last\n\n- [ ] other\n\n"
+    t1, t2 = b"## Task 1: smoke\n\nUses Appendix B.\n\n- [ ] Append Appendix A.\n\n", b"## Task 2: last\n\nAppendix A keys on it.\n\n- [ ] other\n\n"   # pre-review F5: a step names it
+    (e.feat / "tasks.md").write_bytes(head + t1 + t2 + app + b"# Appendix B: b\n\nb\n")
+    assert Path(run(e, "task-brief", "--feature", "09-22-x", "--task", "1")[1].split()[0]).read_bytes() == head + t1 + app
+    assert Path(run(e, "task-brief", "--feature", "09-22-x", "--task", "2")[1].split()[0]).read_bytes() == head + t2
 
 
 # row 12b: a `#` line in a fenced code block is no heading (2026-10-02, KitnEssentials 10-02 task 1: a fenced .toc file cut the brief at "## Title:")
@@ -739,11 +740,16 @@ def test_named_evidence(env):
     ctx = (e.wt / "_review" / "proj-09-22-x-design-astra" / ".parsec" / "context.md").read_text(encoding="utf-8")
     assert "- notes: .parsec/notes.md, the brainstorm record" in ctx and out.count("the brief names") == 2 and "names pages/canvas.json" in out and "names ghost.json" in out, out
     assert "- evidence: .parsec/evidence/1-gate-zero.md is a copy of gate-zero.md" in ctx and "packed gate-zero.md from the feature folder" in out
+    (e.feat / "rounds" / "answers.md").write_text("a\n", encoding="utf-8")   # pre-review F1, F2: the path as named, inside the feature folder only
+    e.brief.write_text("Read `gate-zero.md`, `../other/gate-zero.md` and `rounds/answers.md`.\n", encoding="utf-8")
+    out = rnd(e, 1, "sol", "diff")[1]
+    ctx = (e.wt / "_review" / "proj-09-22-x-diff-sol" / ".parsec" / "context.md").read_text(encoding="utf-8")
+    assert "names ../other/gate-zero.md" in out and "1-gate-zero.md" in ctx and "2-answers.md" in ctx and "no --file evidence but replies" in out, out   # F4: packed files are no gate log
     e.brief.write_text("Read `notes.md`, the earlier `reply.md` and `pages/canvas.json`.\n", encoding="utf-8")   # pre-review F1, Sol diff r1 F2: a passed file is found by its name
     (e.tmp / "canvas.json").write_text("{}", encoding="utf-8")
     assert "the brief names" not in rnd(e, 2, "astra", "design", "--file", str(e.tmp / "canvas.json"))[1]
-    assert "no --file evidence but replies" in rnd(e, 1, "sol", "diff")[1]
-    assert "no --file evidence" not in rnd(e, 2, "sol", "diff", "--file", str(e.feat / "notes.md"))[1]
+    assert "no --file evidence but replies" in rnd(e, 2, "sol", "diff")[1]
+    assert "no --file evidence" not in rnd(e, 3, "sol", "diff", "--file", str(e.feat / "notes.md"))[1]
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
@@ -812,6 +818,9 @@ def test_build_run_success_test(env):
         (e.feat / "build" / "task-01-brief.md").write_text(f"## Task 1: t\n\n{field}- **Checks**: `docs/09-22-x/other.md`\n", encoding="utf-8")
         e.mp.setenv("FAKE_WRITE", str(e.feat / f"s{k}.md"))
         assert "ok: git status non-empty, or a docs-root file the task names changed" in b("--again")[1], field
+    e.mp.setenv("FAKE_WRITE", str(e.feat / "checks.md"))
+    (e.feat / "build" / "task-01-brief.md").write_text("## Task 1: t\n\n- **Files**:\n  - `docs/09-22-x/s3.md`\n- **Checks**: `docs/09-22-x/checks.md`\n", encoding="utf-8")
+    assert "FAILED: git status non-empty" in b("--again")[1]      # pre-review F4: the field stops at the next one
     e.mp.setenv("FAKE_AGY_LOG", "Print mode: starting\n")
     e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
     code, out = b("--again")
@@ -867,7 +876,7 @@ def test_build_run_success_test(env):
     assert code == 0 and "result: ok" in out, out                  # the feature's own ledger and spec are not dirt either
     assert e.calls()[-1].count("--add-dir") == 1                   # a docs root inside the checkout is not added again
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead18" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead19" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)
