@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.27 (2026-10-09)
+
+The author agent now asks for a prompt cache that lasts one hour. Before, its cache lasted five minutes, so a resume after a longer pause wrote the full context again.
+
+- The frontmatter of `agents/author.md` sets `experimental.cacheTtl: 1h`. No other agent changes.
+- In the KitnEssentials sessions, 424 resumes of the author came after a pause of more than 5 minutes. 394 of them came within 60 minutes. Each of them wrote the full context again, with a median peak of 411k tokens. With a cache of one hour, such a resume reads the cache.
+- Claude Code 2.1.248 or later reads the field. Claude Code does not use the hour while the subscription uses usage credits, or when `FORCE_PROMPT_CACHING_5M`, `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` or `subagentPromptCacheTtl` sets a different value.
+
 ## v0.1.26 (2026-10-08)
 
 A round summary now shows the name of more review results. The task brief and the success test of a build now read more of the task list.
