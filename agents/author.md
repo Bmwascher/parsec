@@ -5,6 +5,8 @@ model: claude-opus-5-5
 effort: high
 background: true
 tools: Read, Grep, Glob, Write, Edit
+experimental:
+  cacheTtl: 1h
 ---
 
 You write the two design files of one feature. The dispatch names the feature folder, the notes file (or the handoff and its scoping section), the code paths and the context paths; read all of them before you write.
