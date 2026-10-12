@@ -164,7 +164,8 @@ These are the reviewers from other companies. They run the design debate before 
 |---|---|---|---|
 | **Primary** | `sol` | ![GPT-6.1 Sol](https://img.shields.io/badge/GPT--6.1_Sol-via_codex-10a37f?style=flat-square) | Every debate, unless you name another lane |
 | **Secondary** | `astra` | ![GPT-6 Astra](https://img.shields.io/badge/GPT--6_Astra-via_codex-10a37f?style=flat-square) | When you say "use Astra", or when the project's config makes it the default |
-| **Backup** | `kimi` | ![Kimi K3](https://img.shields.io/badge/Kimi_K3-via_kimi-5f3dc4?style=flat-square) | Only when codex is unavailable and you approve, or the config approves it in advance |
+| **Backup** | `muse` | ![Muse Wonder Full](https://img.shields.io/badge/Muse_Wonder_Full-via_muse-0866ff?style=flat-square) | Only when codex is unavailable and you approve, or the config approves it in advance |
+| **By name** | `kimi` | ![Kimi K3](https://img.shields.io/badge/Kimi_K3-via_kimi-5f3dc4?style=flat-square) | When you name it |
 
 #### Last look
 
@@ -190,7 +191,8 @@ A fresh agent that reads the final head once every other review has passed. Its 
 | PowerShell 7 | Every shell step (never Windows PowerShell 5.1) | ✅ Yes, on Windows |
 | `codex` CLI, logged in | The Sol and Astra lanes | ✅ Yes, for cross-vendor review |
 | `agy` CLI, logged in | The implementer (Gemini lane) | ➖ No. Without it, every task goes to the backup implementer. |
-| `kimi` CLI, logged in | The Kimi backup lane | ➖ No |
+| `muse` CLI (Muse Code), signed in | The Muse backup lane | ➖ No |
+| `kimi` CLI, logged in | The Kimi lane, by name | ➖ No |
 
 ### Add the plugin
 
@@ -227,6 +229,7 @@ The plugin install line compares the installed copy with the head of the reposit
 > - 🟢 **lane astra:** gpt-6-astra, effort high, codex-cli 0.159.2, Logged in using ChatGPT
 > - 🟢 **lane sol:** gpt-6.1-sol, effort high, codex-cli 0.159.2, Logged in using ChatGPT
 > - 🟢 **lane kimi:** kimi-code/k3, effort lane home, 2.1.1, credentials present in the lane home
+> - 🟢 **lane muse:** muse-wonder-full-1.0, effort high, Muse Code 1.4.6 (1.4.6-R6000.1), auth.json present
 > - 🟢 **lane gemini:** gemini-3.8-flash-high, effort the model, 1.2.5, login: the first run's log
 
 </details>
@@ -252,8 +255,8 @@ docs_root = "dev/docs/parsec"                                # where feature fol
 worktrees = "C:/Users/Brandon/Documents/KitnDev/_worktrees"  # where worktrees go
 
 [reviewer]                       # optional; these are the defaults
-codex_lane        = "sol"        # or "astra"
-kimi_substitution = "ask"        # or "approved"
+codex_lane          = "sol"      # or "astra"
+backup_substitution = "ask"      # or "approved": Muse when codex is unavailable
 
 [[context]]                      # the reviewer's rubric, read first
 path     = "AGENTS.md"
@@ -356,7 +359,7 @@ Wording-only findings never cost a round either: the reviewer grades them Minor,
 - **A debate ends** on a round with no new Critical or Important finding and no contested point left open.
 - **Five rounds is the cap,** for each lane in each phase. After that the session pauses and asks you. A spent budget never counts as a pass.
 - **A point contested twice** with evidence on both sides goes to you at once.
-- **Reviewers keep their memory.** A codex lane is resumed each round and must answer a continuity question. If it can't, the next round starts fresh with its earlier replies attached as evidence. An Opus or Fable agent is resumed by its id: `round collect --agent-id` records the id, and `round prepare --resume` checks it.
+- **Reviewers keep their memory.** A CLI lane (Sol, Astra, Muse or Kimi) is resumed each round and must answer a continuity question. If it can't, the next round starts fresh with its earlier replies attached as evidence. An Opus or Fable agent is resumed by its id: `round collect --agent-id` records the id, and `round prepare --resume` checks it.
 
 ### The diff gate
 
@@ -365,13 +368,13 @@ After the build, three reviewers look at the diff in order:
 | Step | Reviewer | Its job |
 |---|---|---|
 | 1 | ![Opus](https://img.shields.io/badge/Opus-pre--review-d97757?style=flat-square) | Catches the obvious before the cross-vendor quota is spent |
-| 2 | ![Sol](https://img.shields.io/badge/Sol-cross--vendor_debate-10a37f?style=flat-square) | Debates the diff to a settled verdict; Astra by name, Kimi only with approval |
+| 2 | ![Sol](https://img.shields.io/badge/Sol-cross--vendor_debate-10a37f?style=flat-square) | Debates the diff to a settled verdict; Astra or Kimi by name, Muse only with approval |
 | 3 | ![Fable](https://img.shields.io/badge/Fable-last_look-d97757?style=flat-square) | A *fresh* agent reviews the final head. The version bump is the last commit before it, so its PASS names the exact commit that ships, or the commit of a "fix now" Minor its confirming question covers. |
 
 A blocking finding anywhere in the gate becomes a fix task, written by the author and built like any other task. Only the commit that the final PASS names is ever merged.
 
 > [!WARNING]
-> **A gate with no cross-vendor lane is degraded, never a PASS.** If codex is down and Kimi isn't approved, the round is recorded as degraded and the finish report says so.
+> **A gate with no cross-vendor lane is degraded, never a PASS.** If codex is down and Muse isn't approved, the round is recorded as degraded and the finish report says so.
 
 ### Panels and polls
 
@@ -447,7 +450,7 @@ checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 
 | Command | What it does |
 |---|---|
-| `round run` | Packages a round and runs it on a CLI lane (Sol, Astra, Kimi) in a clean review worktree |
+| `round run` | Packages a round and runs it on a CLI lane (Sol, Astra, Muse, Kimi) in a clean review worktree |
 | `round prepare` | Packages a round for an in-session seat (Opus, Fable) and prints the dispatch details |
 | `round collect` | Finishes a pending round, or marks it degraded or closed on Minor |
 | `round close` | Removes the feature's review worktrees |
