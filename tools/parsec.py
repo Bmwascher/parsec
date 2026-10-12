@@ -19,6 +19,7 @@ import sys
 import threading
 import time
 import tomllib
+import uuid
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -28,7 +29,7 @@ POLL_SECONDS = 30                              # the watcher's period; a test ov
 CAP_SECONDS = 28 * 60                          # Brandon's cap, no config key; a test overrides it
 STILL_MINUTES = (10, 15, 20, 25)
 KINDS = ("design", "prereview", "diff", "lastlook", "panel")
-CLI_LANES = ("astra", "sol", "kimi")
+CLI_LANES = ("astra", "sol", "kimi", "muse")
 AGENT_OF = {"opus": "reviewer-opus", "fable": "reviewer-fable"}
 MARKERS = {"FIX": "🔴", "PASS": "🟢", "ESCALATE": "🟡", "BLIND": "🟡"}   # the debate skill's summary shape; NONE and WROTE-FILES are white
 VERDICTS = ("PASS", "FIX", "ESCALATE", "BLIND")
@@ -38,6 +39,12 @@ CODEX_FLAGS = ["exec", "--sandbox", "read-only",                     # 2026-07-2
                "--disable", "plugins", "--disable", "apps",           # 2026-07-28: sources on the reviewer's machine steered a review
                "--disable", "memories",                               # 2026-08-12: observed on without it; free
                "-c", "mcp_servers.node_repl.enabled=false"]           # 2026-08-11: the JavaScript tool was left on by two flags
+MUSE_FLAGS = ["exec", "--contributor-mode", "off",                  # 2026-10-12 Q2-A (Brandon): no reviewed code goes to Meta's training
+              "--disable-write", "--disable-shell", "--disable-web-tools",   # 2026-10-12 P1: none of the three tools listed, a write refused
+              "--disable-reminders",                                # P1: four reminder agents, each a Wonder Full call
+              "--no-foreign-personal-context",                      # P3: without it, ~/.claude/CLAUDE.md reached the model
+              "--sandbox-network", "restricted"]                    # D2, unmeasured with the shell off; never --trust-workspace: it loads the project's rules and skills (P1, P4)
+PROMPT = "Read the file .parsec/brief.md and follow it exactly."   # kimi and muse; nothing a driver typed reaches an argument list
 CLOSING = ("Do not run commands or attempt verification: the test steps, the commit step and "
            "everything after the file edits are not yours; your only job is the file edits. "
            "To find text in a file, use your grep_search tool, never a command.")   # 2026-09-28 poll: four field denials, all Select-String
@@ -515,8 +522,12 @@ def kimi_argv(row, session, empty):
         argv += ["--session", session]           # exactly the token printed after -r, prefix included (owed 11)
     else:
         argv += ["--agent-file", str(PLUGIN / "lanes" / "kimi-reviewer.md")]   # the lane's only read-only control
-    return argv + ["--skills-dir", str(empty), "--output-format", "text",
-                   "-p", "Read the file .parsec/brief.md and follow it exactly."]
+    return argv + ["--skills-dir", str(empty), "--output-format", "text", "-p", PROMPT]
+
+
+def muse_argv(row, session):
+    return [program(row), *row["command"][1:], *MUSE_FLAGS, "--model", row["model"], "--effort", row["effort"],
+            "--session-id", session, PROMPT]     # one flag starts a new session and resumes an old one (P1, P2); the prompt is last
 
 
 def codex_session_file(session):
@@ -528,6 +539,11 @@ def kimi_session_file(home, tree_name):
     root = Path(home) / "sessions"
     cands = [p for p in root.glob(f"wd_{tree_name}_*/session_*/agents/main/wire.jsonl")] if root.is_dir() else []
     return max(cands, key=lambda p: p.stat().st_mtime) if cands else None
+
+
+def muse_session_file(session):
+    hits = list((Path.home() / ".local" / "share" / "muse" / "sessions").glob(f"*/*/*/{session}/session.jsonl"))
+    return hits[0] if hits else None             # P4: reply.md and standard error stay still; only this file grows
 
 
 def session_of(lane, transcript_text):
@@ -638,7 +654,7 @@ def prepare(args, launch):
         warnings.append("no --file evidence but replies: pass the gate log, or the reviewer marks every test claim unverified")
     pending = {"kind": args.kind, "round": args.round, "lane": args.lane, "head": args.head, "base": args.base,
                "start": stamp(), "brief_sha256": sha256(args.brief), "tier": "fast" if args.fast else "default",
-               "model": model, "effort": effort, "agent": agent, "resumed": bool(session), "session": session,
+               "model": model, "effort": effort, "agent": agent, "resumed": bool(session), "session": session or (str(uuid.uuid4()) if args.lane == "muse" else None),   # D3: muse takes the tool's own id from round 1
                "subject": subject, "worktree": str(tree), "feature": frel, "warnings": warnings}
     write_json(folder / "pending.json", pending)
     if not launch:
@@ -665,6 +681,10 @@ def run_round(args, primary, fdir, folder, pending, tree):
         env = dict(child_env(), KIMI_CODE_HOME=str(resolve_under(PLUGIN, row["home"])))
         out, err, stdin = reply, transcript, None
         watch = lambda: [transcript, reply, kimi_session_file(env["KIMI_CODE_HOME"], tree.name)]
+    elif args.lane == "muse":
+        argv, env = muse_argv(row, session), child_env()
+        out, err, stdin = reply, transcript, None
+        watch = lambda: [transcript, reply, muse_session_file(session)]
     else:
         argv = codex_argv(row, "priority" if args.fast else "default", reply.resolve(), session)
         env = child_env()
@@ -713,7 +733,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
         warnings.append("the reply has no counts line: count the findings by hand")
     continuity = tag_line(text, "CONTINUITY") if pend.get("resumed") else None
     session = pend.get("session") or agent_id or session_of(lane, transcript) or "unknown"   # an agent round's id comes from --agent-id (spec review, Q3)
-    cli_version = (re.search(r"OpenAI Codex v(\S+)", transcript) or [None, "unknown"])[1] if lane != "kimi" else "unknown"
+    cli_version = (re.search(r"OpenAI Codex v(\S+)", transcript) or [None, "unknown"])[1] if lane in ("astra", "sol") else "unknown"   # kimi and muse print no version on their streams (2026-10-12 P1, P4)
     clean = None
     if pend.get("worktree") and not Path(pend["worktree"]).is_dir():   # 2026-09-22 review: a removed tree left the round unfinalisable;
         verdict, warnings = "NONE", warnings + ["worktree missing: no clean-tree evidence, so no verdict"]   # r2 (Sol): and no PASS without it
@@ -1134,7 +1154,7 @@ def parser():
     p.add_argument("--repo", default=os.getcwd(), help="a checkout; the primary is found from it")
     sub = p.add_subparsers(dest="cmd", required=True)
     rnd = sub.add_parser("round", help="run, prepare, collect or close a review round").add_subparsers(dest="sub", required=True)
-    for name, hint in (("run", "one round on a CLI lane (astra, sol, kimi)"), ("prepare", "the package for an in-session lane (opus, fable)")):
+    for name, hint in (("run", "one round on a CLI lane (astra, sol, kimi, muse)"), ("prepare", "the package for an in-session lane (opus, fable)")):
         q = rnd.add_parser(name, help=hint)
         q.add_argument("--feature", required=True, help="feature folder under the docs root")
         q.add_argument("--kind", required=True, choices=KINDS)

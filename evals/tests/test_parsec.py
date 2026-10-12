@@ -8,6 +8,7 @@ import stat
 import subprocess
 import sys
 import time
+import uuid
 from pathlib import Path
 
 import pytest
@@ -154,6 +155,39 @@ def test_kimi_arguments_and_home(env):
     code, out = rnd(e, 2, "kimi")
     a = e.calls()[-1]
     assert "--agent-file" not in a and a[a.index("--session") + 1] == "session_2fc45d80-9dc5-4b9b-9561-65f39c787383"
+
+
+# row 2b: the Muse argument list, its session id and its child environment (2026-10-12 probes P1 to P4)
+def test_muse_arguments_session_and_env(env):
+    e = env
+    e.mp.setenv("FAKE_STDOUT", "Summary.\n\nVERDICT: PASS\n")
+    e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
+    e.mp.setenv("META_API_KEY", "stray-key")
+    code, out = rnd(e, 1, "muse")
+    assert code == 0, out
+    a = e.calls()[-1]
+    pairs = list(zip(a, a[1:]))
+    for flag in (("--contributor-mode", "off"), ("--sandbox-network", "restricted"), ("--model", "muse-wonder-full-1.0"), ("--effort", "high")):
+        assert flag in pairs, (flag, a)
+    assert a[0] == "exec" and all(f in a for f in ("--disable-write", "--disable-shell", "--disable-web-tools", "--disable-reminders", "--no-foreign-personal-context"))
+    assert "--trust-workspace" not in a and a[-1] == "Read the file .parsec/brief.md and follow it exactly."
+    sid = a[a.index("--session-id") + 1]
+    rec = e.record("design", 1, "muse")
+    assert str(uuid.UUID(sid)) == sid and rec["session"] == sid and rec["resumed"] is False and rec["verdict"] == "PASS" and rec["cli_version"] == "unknown"
+    child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
+    assert "META_API_KEY" not in child and child["MUSE_NO_AUTO_UPDATE"] == "1" and child["NO_COLOR"] == "1"
+    assert "- your lane, Muse: read with your file tools only; you have no shell" in (e.wt / "_review" / "proj-09-22-x-design-muse" / ".parsec" / "context.md").read_text(encoding="utf-8")
+    assert rnd(e, 2, "muse")[0] == 0
+    a = e.calls()[-1]
+    assert a[a.index("--session-id") + 1] == sid and e.record("design", 2, "muse")["resumed"] is True
+    assert "CONTINUITY:" in (e.feat / "rounds" / "design-r2-muse" / "brief.md").read_text(encoding="utf-8")
+    rnd(e, 3, "muse", "design", "--fresh")
+    a = e.calls()[-1]
+    assert a[a.index("--session-id") + 1] != sid and e.record("design", 3, "muse")["resumed"] is False
+    folder = e.home / ".local" / "share" / "muse" / "sessions" / "2026" / "10" / "12" / sid
+    folder.mkdir(parents=True)
+    (folder / "session.jsonl").write_text("{}\n", encoding="utf-8")
+    assert parsec.muse_session_file(sid) == folder / "session.jsonl" and parsec.muse_session_file(str(uuid.uuid4())) is None   # P4: the watcher's only growing file
 
 
 # row 3: CODEX_HOME is absent from the codex child (2026-07-24)
