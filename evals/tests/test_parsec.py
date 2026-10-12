@@ -161,6 +161,7 @@ def test_kimi_arguments_and_home(env):
 def test_muse_arguments_session_and_env(env):
     e = env
     e.mp.setenv("FAKE_STDOUT", "Summary.\n\nVERDICT: PASS\n")
+    e.mp.setenv("FAKE_STDERR", "OpenAI Codex v9.9.9\n")   # pre-review F1: a codex-shaped line must not become a muse round's version
     e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
     e.mp.setenv("META_API_KEY", "stray-key")
     code, out = rnd(e, 1, "muse")
