@@ -15,11 +15,17 @@ effort = "high"
 command = ["codex"]
 update = ["npm", "install", "-g", "@openai/codex@latest"]
 
-[kimi]                                  # effort lives in the lane home's config (no CLI flag)
+[kimi]                                  # by name since 2026-10-12 (Muse is the backup); effort lives in the lane home's config (no CLI flag)
 model = "kimi-code/k3"
 command = ["kimi"]
 home = "C:/Users/Brandon/.kimi-code-lane"
 update = ["kimi", "update", "-y"]           # -y: the doctor has no one to answer the confirmation (kimi 0.43.0+)
+
+[muse]                                  # the backup when codex is unavailable (Brandon, 2026-10-12)
+model = "muse-wonder-full-1.0"          # Muse Wonder Full: the Power Usage and Maximum Usage plans only (2026-10-12)
+effort = "high"                         # muse model-profile show: default_reasoning_effort high at every tier (2026-10-12)
+command = ["muse"]
+update = ["muse", "--version"]          # 1.4.6 has no update subcommand; the doctor sets MUSE_SYNC_UPDATE=1, so the launcher updates in the foreground
 
 [gemini]                                # the implementer, run by `build run`; no agent around it
 model = "gemini-3.8-flash-high"

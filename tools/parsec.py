@@ -46,6 +46,7 @@ CONTINUITY = ("\n- This is a resumed round: above the VERDICT line, one line sta
 ROUTE_LINES = ("Print mode: starting", "Propagating selected model override", "applying agent mode accept-edits")
 SOFT_DENY = "soft-denying tool confirmation"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+MUSE_AUTH = lambda: Path.home() / ".config" / "muse" / "auth.json"   # 2026-10-12: muse has no login status command; presence only, never opened
 
 
 class Exit(Exception):
@@ -142,8 +143,9 @@ def is_link(p):
 
 
 def child_env():
-    env = {k: v for k, v in os.environ.items() if k != "CODEX_HOME"}   # 2026-07-24: a redirected home read "Not logged in"
+    env = {k: v for k, v in os.environ.items() if k not in ("CODEX_HOME", "META_API_KEY")}   # 2026-07-24: a redirected home read "Not logged in"; 2026-10-12: META_API_KEY outranks the Muse login and bills pay-as-you-go
     env["NO_COLOR"] = "1"
+    env["MUSE_NO_AUTO_UPDATE"] = "1"             # 2026-10-12: the muse launcher's background update must not land mid-debate
     return env
 
 
@@ -1027,6 +1029,12 @@ def preflight(args):
         lines.append(f"- **CLI:** kimi {ver}")
         lines.append(f"- **Lane home:** {home}, model alias {'present' if alias else 'MISSING'}, "
                      f"default_effort {'present' if effort else 'MISSING'} (effort lives in the lane home)")
+    elif args.lane == "muse":
+        code, ver = probe(cmd + ["--version"], env=child_env())   # 2026-10-12: a version call starts the launcher's update check
+        auth = "present" if MUSE_AUTH().is_file() else "MISSING"
+        fail += ([f"muse: {ver}"] if code != 0 else []) + ([f"login: no {MUSE_AUTH()}; run muse login"] if auth == "MISSING" else [])
+        lines.append(f"- **CLI:** {ver}, auth.json {auth}")
+        lines.append(f"- **Model:** {row['model']}, effort {row['effort']} (lanes.toml), contributor mode off")
     elif args.lane == "gemini":
         code, ver = probe(cmd + ["--version"])
         if code != 0:
@@ -1092,9 +1100,10 @@ def doctor(args):
     ok = sha == head
     out.insert(0, f"- {'🟢' if ok else '🔴'} **plugin install:** " + (f"{entry.get('version')} at {sha[:8]}: " + ("ok" if ok else f"STALE (repo head {head[:8]}; the cache is keyed by version: bump it, then claude plugin update)") if entry else "not installed"))   # old item 65; 2026-09-22 17:16
     for name, row in rows.items():
-        code, ver = probe([row["command"][0], "--version"])
+        code, ver = probe(row["command"] + ["--version"], env=child_env())   # the whole command, as the pre-flight runs it; 2026-10-12: no muse update starts here
         lcode, login = probe(row["command"] + ["login", "status"], env=child_env()) if name in ("astra", "sol") else (0, "login: the first run's log") \
-            if name == "gemini" else (0, f"credentials {'present' if (resolve_under(PLUGIN, row['home']) / 'credentials').exists() else 'MISSING'} in the lane home")
+            if name == "gemini" else (0, f"auth.json {'present' if MUSE_AUTH().is_file() else 'MISSING'}") if name == "muse" \
+            else (0, f"credentials {'present' if (resolve_under(PLUGIN, row['home']) / 'credentials').exists() else 'MISSING'} in the lane home")
         good = code == 0 and lcode == 0 and "not logged in" not in login.lower() and "MISSING" not in login   # the login's own exit too (2026-09-23 pre-review)
         out.append(f"- {'🟢' if good else '🔴'} **lane {name}:** {row['model']}, effort {row.get('effort', 'lane home' if name == 'kimi' else 'the model')}, {ver}, {login}")
     for folder, label in ((wt, "worktrees"), (review, "_review")):
@@ -1106,7 +1115,7 @@ def doctor(args):
     if args.update:
         print("\nwarning: a debate may be open in another chat; its lane's update lands mid-debate\n")
         for upd, name in {tuple(r["update"]): ", ".join(m for m, s in rows.items() if s.get("update") == r["update"]) for r in rows.values() if r.get("update")}.items():   # one update per CLI, every lane named (2026-09-22 review, r3)
-            code, msg = probe(list(upd), timeout=600, env=dict(os.environ, AGY_CLI_DISABLE_AUTO_UPDATE="true"))
+            code, msg = probe(list(upd), timeout=600, env=dict(os.environ, AGY_CLI_DISABLE_AUTO_UPDATE="true", MUSE_SYNC_UPDATE="1"))   # 2026-10-12: muse has no update subcommand; its launcher updates in the foreground
             print(f"- **update {name}:** exit {code}, {msg}")
     return 64 if bad else 0
 

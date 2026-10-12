@@ -65,7 +65,8 @@ def env(tmp_path, monkeypatch):
     lanes.write_text(f'[astra]\nmodel = "gpt-6-astra"\neffort = "high"\ncommand = {cmd}\n'
                      f'[sol]\nmodel = "gpt-5.6-sol"\neffort = "high"\ncommand = {cmd}\n'
                      f'[kimi]\nmodel = "kimi-code/k3"\ncommand = {cmd}\nhome = "{(tmp_path / "kimi-home").as_posix()}"\n'
-                     f'[gemini]\nmodel = "gemini-3.8-flash-high"\ncommand = {cmd}\n', encoding="utf-8")
+                     f'[gemini]\nmodel = "gemini-3.8-flash-high"\ncommand = {cmd}\n'
+                     f'[muse]\nmodel = "muse-wonder-full-1.0"\neffort = "high"\ncommand = {cmd}\n', encoding="utf-8")
     (tmp_path / "kimi-home").mkdir()
     (tmp_path / "kimi-home" / "config.toml").write_text('[models."kimi-code/k3"]\ndefault_effort = "high"\n', encoding="utf-8")
     monkeypatch.setattr(parsec, "LANES_FILE", lanes)
@@ -486,11 +487,13 @@ def test_doctor_stale_install(env):
     upd = json.dumps([sys.executable, str(FAKE), "update"])
     (e.tmp / "lanes.toml").write_text(f'[astra]\nmodel = "a"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n'
                                       f'[sol]\nmodel = "s"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n'
-                                      f'[gemini]\nmodel = "g"\ncommand = {cmd}\nupdate = {upd[:-1]}, "agy"]\n', encoding="utf-8")
+                                      f'[gemini]\nmodel = "g"\ncommand = {cmd}\nupdate = {upd[:-1]}, "agy"]\n'
+                                      f'[muse]\nmodel = "m"\neffort = "high"\ncommand = {cmd}\nupdate = {upd[:-1]}, "muse"]\n', encoding="utf-8")
     e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
     code, out = run(e, "doctor", "--update")
-    assert code == 0 and [c for c in e.calls() if c[:1] == ["update"]] == [["update"], ["update", "agy"]]   # 2026-09-22 review: codex updated twice
-    assert json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true"
+    assert code == 0 and [c for c in e.calls() if c[:1] == ["update"]] == [["update"], ["update", "agy"], ["update", "muse"]]   # 2026-09-22 review: codex updated twice
+    dump = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
+    assert dump["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and dump["MUSE_SYNC_UPDATE"] == "1"   # 2026-10-12: muse has no update subcommand; its launcher updates in the foreground
 
 
 # row 14: inputs, the pre-flight, the in-session package (old item 100; the 2026-09-21 dry run and Kimi login; "in this directory")
@@ -750,6 +753,26 @@ def test_named_evidence(env):
     assert "the brief names" not in rnd(e, 2, "astra", "design", "--file", str(e.tmp / "canvas.json"))[1]
     assert "no --file evidence but replies" in rnd(e, 2, "sol", "diff")[1]
     assert "no --file evidence" not in rnd(e, 3, "sol", "diff", "--file", str(e.feat / "notes.md"))[1]
+
+
+# row 14g: the Muse pre-flight and doctor row; Muse has no login status command, so auth.json's presence (2026-10-12)
+def test_muse_preflight_and_doctor(env):
+    e = env
+    e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
+    e.mp.setenv("META_API_KEY", "stray-key")
+    code, out = run(e, "doctor", "--lane", "muse", "--kind", "design", "--feature", "09-22-x")
+    assert code == 64 and out.startswith("### 🔴 Pre-flight: Muse · design debate · FAILED") and "- **CLI:** fake-cli 1.0, auth.json MISSING" in out, out
+    child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
+    assert child["MUSE_NO_AUTO_UPDATE"] == "1" and "META_API_KEY" not in child   # 2026-10-12: a version call starts the launcher's update check
+    row = [l for l in run(e, "doctor")[1].splitlines() if "**lane muse:**" in l]
+    assert row == ["- 🔴 **lane muse:** muse-wonder-full-1.0, effort high, fake-cli 1.0, auth.json MISSING"], row
+    child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))   # the table's last call is muse's version call
+    assert child["MUSE_NO_AUTO_UPDATE"] == "1" and "META_API_KEY" not in child
+    (e.home / ".config" / "muse").mkdir(parents=True)
+    (e.home / ".config" / "muse" / "auth.json").write_text("{}", encoding="utf-8")
+    code, out = run(e, "doctor", "--lane", "muse", "--kind", "design", "--feature", "09-22-x")
+    assert code == 0 and "- **CLI:** fake-cli 1.0, auth.json present\n- **Model:** muse-wonder-full-1.0, effort high (lanes.toml), contributor mode off" in out, out
+    assert "- 🟢 **lane muse:** muse-wonder-full-1.0, effort high, fake-cli 1.0, auth.json present" in run(e, "doctor")[1]
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
