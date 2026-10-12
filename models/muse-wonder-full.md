@@ -13,5 +13,4 @@ The backup review lane when codex is unavailable (Brandon, 2026-10-12), on the M
 
 ## Unmeasured
 
-- Whether its counts line says `Important` under the real brief: a probe's reply wrote `Major`.
 - Continuity answers across three or more resumes.
