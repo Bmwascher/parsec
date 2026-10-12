@@ -7,7 +7,7 @@ description: Use when Brandon asks for a panel (several lanes answer one questio
 
 Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-rules.md`; read it first. The rounds run as in `debate`, "Running a round", with `--kind panel`.
 
-- **At least one cross-vendor lane** (Sol, Astra by name, or Kimi); never an all-Claude panel. Most panels are two lanes.
+- **At least one cross-vendor lane** (Sol, Astra by name, Muse, or Kimi by name); never an all-Claude panel. Most panels are two lanes.
 - **Hub and spoke**: lanes never talk to each other or learn who raised a point.
 - **The brief** follows `templates/brief-panel.md`. One brief file serves every lane, each lane its own named background task.
 - **The host checks each claim** against the repo before relaying it and marks what it could not check UNVERIFIED. A point raised by more than one lane is the strongest signal, counted once and marked convergent. A split between lanes is a signal to read the file, never a tie the host breaks by preference (old item 74).

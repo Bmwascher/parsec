@@ -13,7 +13,8 @@ One file per CLI and per model, holding only what a driver acts on, each fact da
 | `reviewer-fable` | `fable.md` | `agents/reviewer-fable.md` |
 | Sol lane (default) | `codex-cli.md`, `sol.md` | `lanes.toml`, row `sol` |
 | Astra lane (alternate, by name) | `codex-cli.md`, `astra.md` | `lanes.toml`, row `astra` |
-| Kimi lane (backup) | `kimi-cli.md`, `kimi-k3.md` | `lanes.toml`, row `kimi`; effort in the lane home |
+| Muse lane (backup) | `muse-cli.md`, `muse-wonder-full.md` | `lanes.toml`, row `muse` |
+| Kimi lane (by name) | `kimi-cli.md`, `kimi-k3.md` | `lanes.toml`, row `kimi`; effort in the lane home |
 | Driver | `opus.md` on Opus | the session's own model; not pinned by the plugin |
 
 ## Seat-invariant rules

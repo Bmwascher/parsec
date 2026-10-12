@@ -32,8 +32,8 @@ docs_root = "dev/docs/parsec"
 worktrees = "C:/Users/Brandon/Documents/KitnDev/_worktrees"
 
 [reviewer]                       # optional; these are the defaults
-codex_lane        = "sol"        # or "astra"; round run's lane when --lane is omitted
-kimi_substitution = "ask"        # or "approved"
+codex_lane          = "sol"      # or "astra"; round run's lane when --lane is omitted
+backup_substitution = "ask"      # or "approved": Muse when codex is unavailable
 
 [[context]]                      # read first: the reviewer's rubric
 path     = "C:/Users/Brandon/Documents/KitnDev/AGENTS.md"

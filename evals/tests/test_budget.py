@@ -10,6 +10,7 @@ PROSE = [f"skills/{s}/SKILL.md" for s in SKILLS] + [
     "templates/implementer-contract.md", "agents/backup-implementer.md", "agents/reviewer-opus.md", "agents/reviewer-fable.md",
     "agents/author.md", "lanes/kimi-reviewer.md", "commands/doctor.md", "models/index.md", "models/codex-cli.md",
     "models/kimi-cli.md", "models/astra.md", "models/kimi-k3.md", "models/fable.md", "models/opus.md", "models/sol.md",
+    "models/muse-cli.md", "models/muse-wonder-full.md",
     "models/agy-cli.md", "CLAUDE.md"]
 CHECKERS = ["evals/tools/ste_lint.py", "evals/tools/ste_allow.txt", "evals/tools/check_changelog.py"]
 
