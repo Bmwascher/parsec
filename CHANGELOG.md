@@ -2,6 +2,20 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.28 (2026-10-12)
+
+Muse Wonder Full from Meta is now the backup review lane. The driver asks you before it uses Muse when codex is not available. Kimi stays as a lane that you name.
+
+- `round run --lane muse` runs `muse exec` of Muse Code 1.4.6 with the model `muse-wonder-full-1.0` at the effort `high`.
+- A Muse round has no write tool, no shell and no web tool. It does not load the rules files of the project or your own Claude rules.
+- Each Muse round sets contributor mode to off, so Meta does not use the reviewed code to train its models.
+- The tool removes `META_API_KEY` from each Muse round and from the Muse version calls of the pre-flight and the doctor table. That key comes before the account login, and Meta bills each request. For these calls the tool also sets `MUSE_NO_AUTO_UPDATE=1`, so that Muse does not update itself during a debate.
+- The tool makes the session ID and gives it to `--session-id` on round 1 and on each later round. It reads no ID from the output.
+- The pre-flight and the doctor show the Muse version, the model and the effort. They also show if `~/.config/muse/auth.json` is there, because Muse has no command that shows the login.
+- `doctor --update` updates Muse with `MUSE_SYNC_UPDATE=1`.
+- The config key `kimi_substitution` changes to `backup_substitution`. With only the old key, the driver asks you before it uses Muse.
+- New model notes: `models/muse-cli.md` and `models/muse-wonder-full.md`.
+
 ## v0.1.27 (2026-10-09)
 
 The author agent now asks for a prompt cache that lasts one hour. Before, its cache lasted five minutes, so a resume after a longer pause wrote the full context again.
