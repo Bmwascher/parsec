@@ -516,7 +516,7 @@ The plugin stays lean because its size limits fail the build. An addition that w
 | All skill, template, agent and model prose | 12,000 words |
 | Any one skill | 1,600 words |
 
-The notes for the Muse and Kimi lanes are not counted, because a session reads them only when that backup lane runs.
+The notes for the Muse and Kimi lanes are not counted, because a session reads them only when that lane runs: Muse as the backup, Kimi by name.
 
 ### House rules
 

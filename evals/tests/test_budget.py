@@ -5,7 +5,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 SKILLS = ["brainstorm", "build", "debate", "setup", "panel"]
 # The Muse and Kimi lane notes (models/muse-*.md, models/kimi-*.md, lanes/kimi-reviewer.md) are read only when
-# that backup lane runs, so they are not counted (Brandon, 2026-10-15).
+# that lane runs, Muse as the backup and Kimi by name, so they are not counted (Brandon, 2026-10-15).
 PROSE = [f"skills/{s}/SKILL.md" for s in SKILLS] + [
     "templates/driver-rules.md", "templates/spec.md", "templates/task-list.md", "templates/brief.md",
     "templates/brief-design.md", "templates/brief-diff.md", "templates/brief-lastlook.md", "templates/brief-panel.md", "templates/ledger.md",
