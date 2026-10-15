@@ -2,6 +2,13 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.29 (2026-10-15)
+
+The budget test does not count the notes of the Muse and Kimi lanes now. A session reads these notes only when that lane runs.
+
+- `evals/tests/test_budget.py` does not count `models/muse-cli.md`, `models/muse-wonder-full.md`, `models/kimi-cli.md`, `models/kimi-k3.md` and `lanes/kimi-reviewer.md`. The prose count goes from 11,933 to 10,895 words of the 12,000.
+- `CLAUDE.md` has a new rule for work on parsec. When a rule that we wrote as prose fails again, it gets a tool refusal or a test. The new check must fail on the mistake that it answers. The evidence is field audit 4: after a compaction, the session read the rules again in only 2 of 31 compactions.
+
 ## v0.1.28 (2026-10-12)
 
 Muse Wonder Full from Meta is now the backup review lane. The driver asks you before it uses Muse when codex is not available. Kimi stays as a lane that you name.
