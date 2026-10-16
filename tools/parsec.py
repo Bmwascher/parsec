@@ -247,10 +247,11 @@ FINDING = re.compile(rf"^(?!(?:Critical|Important|Minor)\b)({ID}(?: ?/ ?{ID})*)\
 GRADES = ("Critical", "Important", "Minor")
 
 
-def bullet_title(t):
-    """"F1 (Important, new): x" gives x; a cut falls on a word and closes a code span (2026-09-28 audit: gk-4, gk-5, gk-7 broke mid-span)."""
-    t = re.sub(r"^[^:—()]{0,40}\)[^\w`]*", "", t.replace("**", "")).strip()
-    t = t if len(t) <= 120 else t[:120].rsplit(" ", 1)[0] + " …"
+def bullet_title(t, wrapped=False):
+    """"F1 (Important, new): x" and "F1 · Minor (carried: Opus F2): x" give x; a cut falls on a word and closes a code span
+    (2026-09-28 audit: gk-4, gk-5, gk-7 broke mid-span); a title the reviewer hard-wrapped ends " …" too (field audit 4)."""
+    t = re.sub(r"^[^—()]{0,40}\)[^\w`]*", "", t.replace("**", "")).strip()
+    t = (t if len(t) <= 120 else t[:120].rsplit(" ", 1)[0]) + (" …" if len(t) > 120 or wrapped else "")
     return t + "`" * (t.count("`") % 2)
 
 
@@ -262,9 +263,10 @@ def summary_bullets(text, counts, reply="the reply"):
     the reply's finding lines parse, and '?' naming the reply for each the counts line has beyond them (2026-09-28 audit: a Fable
     look's carried Minors, in four shapes, blanked every bullet); all '?' when the parsed lines exceed the counts."""
     found = {}
-    for line in text.splitlines():
+    for k, line in enumerate(lines := text.splitlines()):
         if (m := FINDING.match(strip_line(line))) and m[1] not in found:
-            found[m[1]] = (m[2], bullet_title(m[3]))
+            nxt = lines[k + 1].strip() if k + 1 < len(lines) else ""   # a next line that runs on in lower case, after a line with no closing mark, is the title's rest
+            found[m[1]] = (m[2], bullet_title(m[3], bool(re.match(r"[a-z\d(]", nxt)) and not FINDING.match(nxt) and not re.search(r"[.!?:;)`*]$", line.rstrip())))
     have = tuple(sum(g == s for g, _ in found.values()) for s in GRADES)
     fits = counts is not None and all(h <= c for h, c in zip(have, counts))
     rows = [(i, g, t) for i, (g, t) in found.items()] if fits else []
@@ -733,7 +735,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     verdict, counts = verdict_of(text), severity_counts(text)
     if verdict == "NONE" and text.strip():       # pre-review F3, Sol diff r1 F2: a draft, a cut reply or a line naming no single verdict word
         warnings.append("the reply's last line is not a VERDICT line with one verdict word: rerun on the session, asking only for the verdict")
-    elif verdict in VERDICTS and counts is None:   # 2026-09-25 audit: fld-7's derived briefs lost the counts line unseen
+    elif verdict in VERDICTS[:3] and counts is None:   # 2026-09-25 audit: fld-7's derived briefs lost the counts line unseen; a BLIND lane has none (field audit 4)
         warnings.append("the reply has no counts line: count the findings by hand")
     continuity = tag_line(text, "CONTINUITY") if pend.get("resumed") else None
     session = pend.get("session") or agent_id or session_of(lane, transcript) or "unknown"   # an agent round's id comes from --agent-id (spec review, Q3)
@@ -793,7 +795,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
         pf.unlink(missing_ok=True)
     except OSError as e:                         # pre-review F3: past the record, a read error must not cost the block
         print(f"warning: the pre-flight line was not read: {e}")
-    block = (f"### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min, {'resumed' if pend.get('resumed') else 'fresh'})"
+    block = (f"### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min{' since prepare' * (lane in AGENT_OF)}, {'resumed' if pend.get('resumed') else 'fresh'})"
              + ("\n\nCritical {} · Important {} · Minor {}".format(*counts) if counts else "") + pre + "".join(f"\n\n{b}" for b in bullets))
     try:                                         # 2026-09-28 audit: 68 of 153 blocks posted and none reached a delegator; the finish report carries this file
         with open(fdir / "summaries.md", "a", encoding="utf-8", newline="\n") as f:
@@ -1185,7 +1187,7 @@ def parser():
     q.add_argument("--agent-id", metavar="AGENT_ID", help="opus or fable: the agent that answered, recorded as the round's session")
     q = rnd.add_parser("close", help="remove the feature's review worktrees")
     q.add_argument("--feature", required=True)
-    q.add_argument("--kind", choices=KINDS)       # 2026-09-22 r2 (Sol): a free string reached the name pattern
+    q.add_argument("--kind", choices=("panel",))  # 2026-09-22 r2 (Sol): a free string reached the name pattern; field audit 4: --kind lastlook left the diff tree
     q = sub.add_parser("verify", help="spec.md and tasks.md against the newest design record or amendment")
     q.add_argument("--feature", required=True)
     q.add_argument("--record-amendment", metavar="REASON", type=reason)

@@ -420,8 +420,8 @@ def test_verify_states(env):
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     code, out = v("--record-amendment", "fix task for a gate finding")
     assert code == 64 and "panel-r1-fable is prepared but not collected" in out   # 2026-09-25 fld-14: an amendment landed before the FIX it answered
-    (e.feat / "rounds" / "panel-r1-fable" / "reply.md").write_text("VERDICT: PASS\n", encoding="utf-8")
-    run(e, "round", "collect", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable")
+    (e.feat / "rounds" / "panel-r1-fable" / "reply.md").write_text("VERDICT: BLIND\n", encoding="utf-8")
+    assert "no counts line" not in run(e, "round", "collect", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable")[1]   # field audit 4: 8 of 8 blind panel records warned
     code, out = v("--record-amendment", "fix task for a gate finding")
     assert code == 0 and "amendment 1 recorded" in out and v()[1].strip() == "MATCH (DEGRADED PASS)"   # the flag carries
     assert (e.feat / "rounds" / "amendment-1.json").is_file()
@@ -630,7 +630,7 @@ def test_inputs_and_preflight(env):
     conf.write_text(conf.read_text(encoding="utf-8") + '[reviewer]\ncodex_lane = "astra"\n', encoding="utf-8")
     code, out = run(e, "round", "run", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--brief", str(e.brief), "--head", e.head)
     assert code == 0 and e.record("design", 1, "astra")["lane"] == "astra"   # 2026-09-22 review: codex_lane was a key nothing read; r2 (Sol): run only, prepare needs its seat
-    assert run(e, "round", "close", "--feature", "09-22-x", "--kind", "d.sign")[0] == 2   # r2 (Sol): a free string reached the name pattern
+    assert run(e, "round", "close", "--feature", "09-22-x", "--kind", "lastlook")[0] == 2   # r2 (Sol): a free string reached the name pattern; field audit 4: --kind lastlook left the diff worktree
     assert run(e, "round", "collect", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable")[0] == 65   # no reply yet: NONE
     rnd(e, 1, "kimi")
     seven = e.feat / "rounds" / "design-r1-kimi"                  # a killed run, its tree closed by hand, then a manual collect
@@ -720,7 +720,7 @@ def test_summary_head(env):
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable", "--brief", str(e.brief), "--head", e.head)
     (e.feat / "rounds" / "design-r1-fable" / "reply.md").write_text("VERDICT: FIX\n", encoding="utf-8")
     out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable")[1]
-    assert blk(out).endswith("### 🔴 Fable R1 Design Round: FIX (0 min, fresh)\n") and "warning: the reply has no counts line" in out   # pre-review F2: an agent round gets its minutes too
+    assert blk(out).endswith("### 🔴 Fable R1 Design Round: FIX (0 min since prepare, fresh)\n") and "warning: the reply has no counts line" in out   # pre-review F2: an agent round gets its minutes too; field audit 4: "185 min, fresh" read as review time
 
 
 # row 14e: the whole summary block, one bullet per finding (2026-09-25 audit: the heading alone was pasted in about a third of rounds)
@@ -739,19 +739,19 @@ def test_summary_bullets(env):
     out = rnd(e, 3)[1]
     assert out.index("- **I1 · Important:**") < out.index("- **M1 · Minor:**"), out
     span = "see `" + "long " * 30 + "code` end"                        # 2026-09-28 audit: gk-4, gk-5, gk-7 bullets broke their Markdown
-    e.mp.setenv("FAKE_REPLY", f"F1 · Minor: `KE:Hide` is gone\nF2 · Minor: {span}\nOpus F1 (the fake): `ride`\n\nCritical 0 · Important 0 · Minor 3\n\nVERDICT: PASS\n")
+    e.mp.setenv("FAKE_REPLY", f"F1 · Minor: `KE:Hide` is gone when\nthe frame hides\nF2 · Minor: {span}\nOpus F1 (the fake): `ride`\n\nCritical 0 · Important 0 · Minor 3\n\nVERDICT: PASS\n")
     out = rnd(e, 4)[1]
-    assert "- **F1 · Minor:** `KE:Hide` is gone" in out and "long …`" + ask in out and blk(out).endswith("- **? · Minor:** not parsed, see rounds\\design-r4-astra\\reply.md" + ask + "\n"), out   # a carried Minor: parsed rows stay; 2026-10-04 Afterparty: summaries.md kept blank ? bullets
+    assert "- **F1 · Minor:** `KE:Hide` is gone when …" + ask in out and "long …`" + ask in out and blk(out).endswith("- **? · Minor:** not parsed, see rounds\\design-r4-astra\\reply.md" + ask + "\n"), out   # a carried Minor: parsed rows stay; 2026-10-04 Afterparty: summaries.md kept blank ? bullets
     assert (e.feat / "summaries.md").read_text(encoding="utf-8").endswith(blk(out)[out.index("### 🟢 Astra R4"):].replace(parsec.PENDING, "").rstrip() + "\n\n")   # decision 1a: the finish report's file; pre-review F4: no "pending"
     (e.feat / "rounds" / "design-r1-astra" / "reply.md").write_text("the author's answer\n", encoding="utf-8")   # 2026-09-26 gk-1
     out = rnd(e, 5)[1]
     assert "design-r1-astra" in out and "changed after its round was collected" in out and "design-r3-astra.dead" not in out   # a dead round's reply is its own
     e.mp.setenv("FAKE_REPLY", "- Opus F2 · Minor: carried: ride, wording\n- Opus F3 / Sol F1 · Minor: twice\n- api-validator 2 · Minor: no ID\n"
-                "- Sol R3 F1 / Astra R3 F2 · Minor: lanes\n- api-validator t2-7 1 · Minor: tasks\n- api-validator r2-M1 · Minor: round\nThe round 1 Important findings are closed.\n"   # field audit 4: about 87 ? bullets in 24 gate blocks
-                "### FabF1 · Minor · own\n\nCritical 0 · Important 0 · Minor 7\n\nVERDICT: PASS\n")   # 2026-10-04 to 10-06 Afterparty: carried Minors in these shapes were ? bullets
+                "- Sol R3 F1 / Astra R3 F2 · Minor: lanes\n- api-validator t2-7 1 · Minor: tasks\n- api-validator r2-M1 · Minor: round\n\nThe round 1 Important findings are closed.\n"   # field audit 4: about 87 ? bullets in 24 gate blocks
+                "- F9 · Minor (carried: Opus F2, Sol F1): kept\n### FabF1 · Minor · own\n\nCritical 0 · Important 0 · Minor 8\n\nVERDICT: PASS\n")   # 2026-10-04 to 10-06 Afterparty: carried Minors in these shapes were ? bullets
     out = rnd(e, 6)[1]
     assert "do not match" not in out and all(f"- **{i} · Minor:** {t}" in out for i, t in (("Opus F2", "carried: ride, wording"), ("Opus F3 / Sol F1", "twice"), ("api-validator 2", "no ID"), ("FabF1", "own"),
-                                                                                         ("Sol R3 F1 / Astra R3 F2", "lanes"), ("api-validator t2-7 1", "tasks"), ("api-validator r2-M1", "round"))), out
+                                                                                         ("Sol R3 F1 / Astra R3 F2", "lanes"), ("api-validator t2-7 1", "tasks"), ("api-validator r2-M1", "round"), ("F9", "kept"))), out
 
 
 # row 14f: what the brief names reaches the package (2026-09-28 audit: notes.md and a canvas file no package held; gate logs in 4 of 16 phases)
