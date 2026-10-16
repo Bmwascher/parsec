@@ -2,6 +2,18 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.30 (2026-10-16)
+
+parsec now has two hooks. After a compaction in a parsec session, Claude gets the driver rules and the ledger template again. The plugin refuses a dispatch of a parsec agent that sets a model.
+
+- `hooks/hooks.json` holds the two hooks. Each hook runs the new script `tools/hooks.py`. A new budget test keeps the script at 60 lines or fewer.
+- After a compaction, the first hook reads the transcript. If the session started a parsec skill, the hook tells Claude to read the skill, the ledger and the notes again. Then it prints `templates/driver-rules.md` and `templates/ledger.md` in full. In a different session it prints nothing.
+- In field audit 4, the session read the rules again after only 2 of 31 compactions. The ledger template holds the clock rule, and the old list of files to read again did not include it.
+- The second hook refuses an `Agent` call when the agent name starts with `parsec:` and the call sets `model`. The reason tells Claude to dispatch again without a model. Three backup builds ran on Sonnet because a dispatch set `model`.
+- If a hook cannot read its input, the transcript or a template, it stops and prints nothing. Claude Code then continues without the hook. `disableAllHooks` in your settings turns the hooks off.
+- Each hook command ends with `exit 0`. So if Python cannot start the script, the hook does not block an `Agent` call. A bad line in the transcript does not hide a later skill launch.
+- `evals/tests/test_hooks.py` holds the new tests. We made each test fail once on the mistake that it answers.
+
 ## v0.1.29 (2026-10-15)
 
 The budget test does not count the notes of the Muse and Kimi lanes now. A session reads these notes only when that lane runs.
