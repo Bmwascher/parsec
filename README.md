@@ -495,7 +495,7 @@ Each rail exists because its failure happened at least once. The dates live in t
 | The rail | The failure it prevents |
 |---|---|
 | Review worktrees are removed links-first | A plain recursive delete following a `References` or docs junction into the real files |
-| `build` removes only a worktree it made itself, and never when it stops to report | Deleting a checkout you handed it |
+| `build` removes only the checkout it made itself, and never when it stops to report; a worktree the session made for a review or a check goes when that step ends | Deleting a checkout you handed it |
 
 ![Hooks](https://img.shields.io/badge/hooks-4c6ef5?style=for-the-badge)
 

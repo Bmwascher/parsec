@@ -588,9 +588,9 @@ def prepare(args, launch):
     if args.kind == "design" and not all((fdir / n).is_file() for n in ("spec.md", "tasks.md")):
         raise Exit(64, f"design round without spec.md and tasks.md in {fdir}")
     lines = [l.decode() for _, l in unfenced(read_text(fdir / "spec.md").encode())] if args.kind != "panel" and (fdir / "spec.md").is_file() else []   # every round that packs the spec (write_package)
-    at = next((k + 1 for k, l in enumerate(lines) if re.match(r"##\s+Decision summary\b", l, re.I)), len(lines))
-    words = len(" ".join(lines[at:next((k for k in range(at, len(lines)) if lines[k].startswith("#")), len(lines))]).split())
-    log = next((l.strip() for l in lines if re.match(r"##\s+(?:\d+\.\s+)?(?:amendment|change ?log|change record|questions from)", l, re.I)), None)   # ## only, anchored at the heading text: a deeper level holds design sections, a later word may name record.json (H-Q4, Fable poll)
+    at = next((k + 1 for k, l in enumerate(lines) if re.match(r" {0,3}##\s+Decision summary\b", l, re.I)), len(lines))   # a heading as CommonMark reads it: up to 3 spaces, the hashes, then whitespace (Sol diff r1 F2)
+    words = len(" ".join(lines[at:next((k for k in range(at, len(lines)) if re.match(r" {0,3}#{1,6}(?:\s|$)", lines[k])), len(lines))]).split())   # only a heading ends the summary; ##text is text (Sol diff r1 F1)
+    log = next((l.strip() for l in lines if re.match(r" {0,3}##\s+(?:\d+\.\s+)?(?:amendment|change ?log|change record|questions from)", l, re.I)), None)   # ## only, anchored at the heading text: a deeper level holds design sections, a later word may name record.json (H-Q4, Fable poll)
     if words > 150 or log:                       # field audit 4 (H9): summaries of 545 to 636 words went to Brandon; appended logs of about 2,290 lines rode in every package
         raise Exit(64, "spec.md: " + (f"its decision summary has {words} words, at most 150" if words > 150 else f"{log} is an appended change log: the history lives in the ledger's amendment lines") + " (templates/spec.md)")
     cli = args.lane in CLI_LANES
