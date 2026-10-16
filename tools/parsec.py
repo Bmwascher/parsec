@@ -238,7 +238,8 @@ def severity_counts(text):                       # the LAST one line naming all 
     return tuple(int(g) for g in hits[-1].groups() if g) if hits else None
 
 
-ID = r"(?:(?:(?!(?:Critical|Important|Minor|[Rr]ound)\b)[A-Za-z][\w-]* ){1,3}(?:[\w-]*\d[\w-]* )?[\w-]*\d[\w-]*|[A-Z][A-Za-z]{0,3}\d{1,3})"   # F1, FabF1, Opus F2, api-validator 2 (2026-10-04 to 10-06 Afterparty); Sol R3 F1, api-validator t2-7 1, r1-2, 15 M1 (field audit 4)
+WORD, TAG = r"(?!(?:Critical|Important|Minor|[Rr]ound)\b)[A-Za-z][\w-]*", r"[\w-]*(?:[A-Za-z-]\d|\d[A-Za-z-])[\w-]*"   # a label word; a token joining a digit to a letter or hyphen
+ID = rf"(?:(?:{WORD} ){{1,3}}(?:(?:{TAG}|\d{{1,3}}) )?{TAG}|(?:{WORD} ){{1,3}}{TAG} \d{{1,3}}|(?:{WORD} ){{0,2}}[A-Za-z]\w*-[\w-]* \d{{1,3}}|{WORD} \d{{1,3}}|[A-Z][A-Za-z]{{0,3}}\d{{1,3}})"   # F1, FabF1, Opus F2, api-validator 2 (2026-10-04 to 10-06 Afterparty); Sol R3 F1, api-validator t2-7 1, r1-2, 15 M1 (field audit 4); never "There are 2" (pre-review F1)
 FINDING = re.compile(rf"^(?!(?:Critical|Important|Minor)\b)({ID}(?: ?/ ?{ID})*)\W{{1,6}}(Critical|Important|Minor)\b[^\w`]*(.*)")   # 2026-09-28 audit: \W* ate a title's opening backtick
 GRADES = ("Critical", "Important", "Minor")
 
@@ -652,7 +653,7 @@ def prepare(args, launch):
     warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
                  for n in sorted(named) if n not in loose and Path(n.replace("\\", "/")).name not in {Path(f).name for f in given} | {"reply.md", "record.json", "summaries.md", "pending.json"}   # pre-review F1, Sol diff r1 F2
                  and not any((b / n).exists() for b in (root, root / ".parsec", tree)) and n not in held]
-    if args.kind in ("prereview", "diff", "lastlook") and not any(re.search(r"gate|check|test|\.log$", Path(f).name, re.I) for f in given):   # 2026-09-28 audit: gate logs in 4 of 16 phases; field audit 4: other files kept it silent
+    if args.kind in ("prereview", "diff", "lastlook") and not any(re.search(r"(?<![a-z])(?:gate|check|test)(?![a-rt-z])|\.log$", Path(f).name, re.I) for f in given):   # 2026-09-28 audit: gate logs in 4 of 16 phases; field audit 4: other files kept it silent; pre-review F5: never inside a word
         warnings.append("no --file named like a gate log (gate, check, test or .log in its name): pass the gate log, or the reviewer marks every test claim unverified")
     pending = {"kind": args.kind, "round": args.round, "lane": args.lane, "head": args.head, "base": args.base,
                "start": stamp(), "brief_sha256": sha256(args.brief), "tier": "fast" if args.fast else "default",
