@@ -2,6 +2,20 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.32 (2026-10-16)
+
+This release adds the batch H rules from field audit 4. A spec now lists each claim that nobody ran, and the session probes it before the build. The tool refuses a spec with a long decision summary or an appended change log.
+
+- `round prepare` and `round run` refuse a round when `spec.md` has a decision summary of more than 150 words. In field audit 4, only 4 of 28 summaries kept to 150 words. Three phases posted 545 to 636 words for approval.
+- They also refuse a `spec.md` with a `##` line that starts with Amendment, Change log, Change record or Questions from. A section number can come first, as in `## 8. Amendment`. Four specs carried about 2,290 lines of such logs into each round.
+- The spec template has a new part, "Claims to probe". Each claim has a status word: open, held, refuted or waived. The task list waits until no claim is open.
+- Driver rule 7 tells the session to probe a claim about game or API behaviour before it builds on it. The session first reads the source or asks the API checker. A probe that needs the game goes to you as numbered steps, with the macro and the expected output.
+- In bounded work, a small change that a reader can judge from the diff alone can pass the gate with no cross-vendor round. It has 20 or fewer changed lines in 2 or fewer files, and test files count only for lines. It adds or changes no API call, hook or event handler, and does not change when code runs. No Opus pre-review round finds a Critical or Important issue. The driver writes the reason in the ledger, and the Fable last look still runs. A Critical or Important issue in that last look makes the change a full gate again.
+- Bounded work becomes architectural when it changes how a feature works, or after two fixes of one symptom fail the smoke test.
+- A commit after the pre-review starts the gate again, unless it is a gate fix or the version bump. The Fable last look reviews the bump. A rebased head keeps the PASS only when its patch id is the same and the checks pass on it. The session sees each Gemini task with a test fail before it passes, with a named stash.
+- A change that needs several commits is several tasks. A codex 429 gets one rerun after 5 minutes. A relay from a peer session, or an approval for another scope, is only a heads-up. After the merge, the session drops its stashes, or lists them for you.
+- The budgets did not change. To make space, we removed a tool helper with one caller and merged four pairs of test lines.
+
 ## v0.1.31 (2026-10-16)
 
 This release fixes eight tool problems that field audit 4 found. The doctor now shows Claude Code, and its update option updates it.
