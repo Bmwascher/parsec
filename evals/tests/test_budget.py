@@ -30,6 +30,10 @@ def test_tool_within_1250_lines():
     assert lines(REPO / "tools" / "parsec.py") <= 1250
 
 
+def test_hooks_within_60_lines():
+    assert lines(REPO / "tools" / "hooks.py") <= 60
+
+
 def test_tests_within_1500_lines():
     tests = sorted((REPO / "evals" / "tests").glob("*.py"))
     assert tests, "missing input: the test folder"
