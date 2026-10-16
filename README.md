@@ -218,14 +218,15 @@ Restart Claude Code afterwards so the skills load.
 /parsec:doctor
 ```
 
-The plugin install line compares the installed copy with the head of the repository the marketplace points at. If it says anything but `ok`, the plugin cache is stale; see [Releasing](#releasing). `/parsec:doctor update` runs each CLI's own update command once and names every lane it serves. The session posts the output as Markdown, so a red line stands out on a phone.
+The plugin install line compares the installed copy with the head of the repository the marketplace points at. If it says anything but `ok`, the plugin cache is stale; see [Releasing](#releasing). The Claude Code line is red when `claude --version` fails. `/parsec:doctor update` runs `claude update`, then each CLI's own update command once, and names every lane it serves. The session posts the output as Markdown, so a red line stands out on a phone.
 
 <details>
 <summary><b>What a healthy result looks like</b></summary>
 
 > ### 🟢 parsec doctor
 >
-> - 🟢 **plugin install:** 0.1.21 at <commit>: ok
+> - 🟢 **plugin install:** 0.1.31 at <commit>: ok
+> - 🟢 **Claude Code:** 2.1.288 (Claude Code)
 > - 🟢 **lane astra:** gpt-6-astra, effort high, codex-cli 0.159.2, Logged in using ChatGPT
 > - 🟢 **lane sol:** gpt-6.1-sol, effort high, codex-cli 0.159.2, Logged in using ChatGPT
 > - 🟢 **lane kimi:** kimi-code/k3, effort lane home, 2.1.1, credentials present in the lane home
@@ -472,6 +473,9 @@ Each rail exists because its failure happened at least once. The dates live in t
 | The rail | The failure it prevents |
 |---|---|
 | The pre-flight checks the lane is installed, logged in and has quota, and that every rubric file and section exists | A round spent on a setup that could never answer |
+| The pre-flight turns 🟡 below 20% quota left and 🔴 below 10%, is posted at once, and never stops the round | A green pre-flight at "week 4% left", then a Sol round that died after 575 s |
+| `round prepare` and `round run` refuse a brief that has a part 3 but no `## <n>. Final check` part | Four design briefs ended at part 6, and three of those rounds came back with no verdict |
+| The tool prints the "post now" line after the summary block and the stale-version notice as its last line | A driver filter (`sed -n '/^###/,$p'`, `tail`, `grep -v "^warning"`) dropped both |
 | A brief is written with a file tool, never through a shell, and copied into the package byte for byte | A shell heredoc once stripped every apostrophe and backtick while every check still passed |
 
 ![During a build](https://img.shields.io/badge/during_a_build-2f9e44?style=for-the-badge)
@@ -481,6 +485,7 @@ Each rail exists because its failure happened at least once. The dates live in t
 | `build run` refuses any other checkout, a checkout with uncommitted changes, and a base that isn't the expected commit | A run once transcribed its edits exactly, onto a checkout one commit too early |
 | A task that flipped a file's line endings fails | A whole-file change that hides the real edit in the diff |
 | The tool reads the task's success test, never Gemini's exit code | Gemini has reported success on runs that failed |
+| The success test needs every docs-root file in the task's Files field to change | Two tasks passed on their code edits alone, with their smoke-file steps skipped |
 | Deletes, renames, moves and binary files go straight to the backup implementer | Gemini's print mode has no delete tool and runs no command |
 | A second failed attempt at the same task, for any reason, goes to you | A retry loop that burns quota on a task that's wrong |
 
