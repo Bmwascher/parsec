@@ -364,6 +364,8 @@ def assemble(brief, kind, lane, resume, warnings):
     if (at := next((a for a, line in heads if line.startswith(b"## 3.")), None)) is None:
         warnings += ["the brief has no `## 3.` part outside a fence, so no insert was added (a verdict-only rerun needs none)"] if names else []
         return text
+    if not any(re.match(rb"## \d+\. Final check", line) for _, line in heads):   # field audit 4: Moving Day phase 13's four design briefs ended at part 6, 3 read NONE
+        raise Exit(64, f"{brief} has no `## <n>. Final check` part outside a fence: templates/brief.md part 7 asks for the counts and VERDICT lines")
     add = b"".join(b"### " + (PLUGIN / "templates" / f"brief-{n}.md").read_bytes().replace(b"\r\n", b"\n").lstrip(b"# ").rstrip(b"\n") + b"\n\n" for n in names)
     return text[:at] + add + text[at:]
 

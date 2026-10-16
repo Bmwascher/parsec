@@ -208,17 +208,17 @@ def test_brief_bytes_reach_stdin(env):
     rnd(e, 1)
     assert (e.tmp / "stdin.bin").read_bytes() == TRICKY.encode("utf-8")   # no part 3, a verdict-only rerun: no insert (pre-review F1)
     assert "no `## 3.` part outside a fence, so no insert" in "".join(e.record("design", 1, "astra")["warnings"])
-    e.brief.write_bytes(b"# Brief\n\n## 2. Task\n\nread it\n\n## 3. Rules\n\n- r\n")
+    e.brief.write_bytes(b"# Brief\n\n## 2. Task\n\nread it\n\n## 3. Rules\n\n- r\n\n## 7. Final check\n")
     rnd(e, 2)
     sent = (e.feat / "rounds" / "design-r2-astra" / "brief.md").read_bytes()
-    assert sent == b"# Brief\n\n## 2. Task\n\nread it\n\n### " + (REPO / "templates" / "brief-design.md").read_bytes().replace(b"\r\n", b"\n")[2:].rstrip(b"\n") + b"\n\n## 3. Rules\n\n- r\n" + parsec.CONTINUITY.encode()   # resumed: the tool adds the line (2026-09-28 audit, gk-4)
+    assert sent == b"# Brief\n\n## 2. Task\n\nread it\n\n### " + (REPO / "templates" / "brief-design.md").read_bytes().replace(b"\r\n", b"\n")[2:].rstrip(b"\n") + b"\n\n## 3. Rules\n\n- r\n\n## 7. Final check\n" + parsec.CONTINUITY.encode()   # resumed: the tool adds the line (2026-09-28 audit, gk-4)
     assert (e.tmp / "stdin.bin").read_bytes() == sent and e.record("design", 2, "astra")["brief_sha256"] == parsec.sha256(e.feat / "rounds" / "design-r2-astra" / "brief.md")
     prep = lambda kind, lane, *x: run(e, "round", "prepare", "--feature", "09-22-x", "--kind", kind, "--round", "2" if x else "1", "--lane", lane, "--brief", str(e.brief),
                                       "--head", e.head, *(["--base", e.base] if kind != "design" else []), *x)
     for kind, lane, want in (("design", "fable", [b"Design", b"Fable-look"]), ("lastlook", "fable", [b"Diff", b"Fable-look"]), ("prereview", "opus", [b"Diff"])):
         assert prep(kind, lane)[0] == 0
         pkg = (e.feat / "rounds" / f"{kind}-r1-{lane}" / ".parsec" / "brief.md").read_bytes()
-        assert pkg.startswith(b"# Brief\n\n## 2. Task\n\nread it\n\n### ") and pkg.endswith(b"\n\n## 3. Rules\n\n- r\n") and pkg.count(b" insert\n") == len(want)
+        assert pkg.startswith(b"# Brief\n\n## 2. Task\n\nread it\n\n### ") and pkg.endswith(b"\n\n## 3. Rules\n\n- r\n\n## 7. Final check\n") and pkg.count(b" insert\n") == len(want)
         assert all(b"### " + w + b" insert" in pkg for w in want)
     (e.feat / "rounds" / "design-r1-fable" / "reply.md").write_text("VERDICT: FIX\n", encoding="utf-8")
     run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable", "--agent-id", "a-1")
@@ -231,6 +231,8 @@ def test_brief_bytes_reach_stdin(env):
     e.brief.write_bytes(b"## 2. Task\n\n# Diff insert\n\n## 3. Rules\n")
     code, out = prep("diff", "opus")
     assert code == 64 and "already carries an insert" in out and not (e.feat / "rounds" / "diff-r1-opus").exists()
+    e.brief.write_bytes(b"## 2. Task\n\n## 3. Rules\n\n## 6. Boundaries\n\n```\n## 7. Final check\n```\n")   # field audit 4: Moving Day phase 13's four design briefs ended at part 6 (3 NONE)
+    assert prep("diff", "opus")[0] == rnd(e, 3)[0] == 64 and "no `## <n>. Final check` part" in prep("diff", "opus")[1] and not (e.feat / "rounds" / "diff-r1-opus").exists()
 
 
 # row 5: resume by the recorded id, never --last; the rerun rule (2026-09-01; the scoping note's seven briefs)
@@ -480,9 +482,9 @@ def test_fenced_hash_line_is_no_heading(env):
     assert run(e, "task-brief", "--feature", "09-22-x", "--task", "2")[0] == 0 and run(e, "task-brief", "--feature", "09-22-x", "--task", "9")[0] == 64
     (e.tmp / "rub.md").write_text("# Rules\n\n```md\n# Fake\n```\n\n## Git\n", encoding="utf-8")
     assert parsec.heading_index(e.tmp / "rub.md") == ["Rules", "Git"]
-    e.brief.write_bytes(b"## 2. Task\n\n```\n## 3. quoted\n# Diff insert\n```\n\n## 3. Rules\n")
+    e.brief.write_bytes(b"## 2. Task\n\n```\n## 3. quoted\n# Diff insert\n```\n\n## 3. Rules\n## 4. Final check\n")
     out = parsec.assemble(e.brief, "diff", "sol", None, [])
-    assert out.startswith(b"## 2. Task\n\n```\n## 3. quoted\n# Diff insert\n```\n\n### ") and out.endswith(b"\n\n## 3. Rules\n")
+    assert out.startswith(b"## 2. Task\n\n```\n## 3. quoted\n# Diff insert\n```\n\n### ") and out.endswith(b"\n\n## 3. Rules\n## 4. Final check\n")
 
 
 # row 13: the doctor reads a stale install (old item 65)
