@@ -760,9 +760,11 @@ def test_summary_bullets(env):
     out = rnd(e, 5)[1]
     assert "design-r1-astra" in out and "changed after its round was collected" in out and "design-r3-astra.dead" not in out   # a dead round's reply is its own
     e.mp.setenv("FAKE_REPLY", "- Opus F2 · Minor: carried: ride, wording\n- Opus F3 / Sol F1 · Minor: twice\n- api-validator 2 · Minor: no ID\n"
-                "### FabF1 · Minor · own\n\nCritical 0 · Important 0 · Minor 4\n\nVERDICT: PASS\n")   # 2026-10-04 to 10-06 Afterparty: carried Minors in these shapes were ? bullets
+                "- Sol R3 F1 / Astra R3 F2 · Minor: lanes\n- api-validator t2-7 1 · Minor: tasks\n- api-validator r2-M1 · Minor: round\nThe round 1 Important findings are closed.\n"   # field audit 4: about 87 ? bullets in 24 gate blocks
+                "### FabF1 · Minor · own\n\nCritical 0 · Important 0 · Minor 7\n\nVERDICT: PASS\n")   # 2026-10-04 to 10-06 Afterparty: carried Minors in these shapes were ? bullets
     out = rnd(e, 6)[1]
-    assert "do not match" not in out and all(f"- **{i} · Minor:** {t}" in out for i, t in (("Opus F2", "carried: ride, wording"), ("Opus F3 / Sol F1", "twice"), ("api-validator 2", "no ID"), ("FabF1", "own"))), out
+    assert "do not match" not in out and all(f"- **{i} · Minor:** {t}" in out for i, t in (("Opus F2", "carried: ride, wording"), ("Opus F3 / Sol F1", "twice"), ("api-validator 2", "no ID"), ("FabF1", "own"),
+                                                                                         ("Sol R3 F1 / Astra R3 F2", "lanes"), ("api-validator t2-7 1", "tasks"), ("api-validator r2-M1", "round"))), out
 
 
 # row 14f: what the brief names reaches the package (2026-09-28 audit: notes.md and a canvas file no package held; gate logs in 4 of 16 phases)

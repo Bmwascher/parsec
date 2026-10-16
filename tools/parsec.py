@@ -242,7 +242,7 @@ def severity_counts(text):                       # the LAST one line naming all 
     return tuple(int(g) for g in hits[-1].groups() if g) if hits else None
 
 
-ID = r"(?:(?:[A-Za-z][\w-]* )?[A-Z][A-Za-z]{0,3}\d{1,3}|[A-Za-z][\w-]* \d{1,3})"   # F1, FabF1, Opus F2, api-validator 2 (2026-10-04 to 10-06 Afterparty: carried Minors blanked)
+ID = r"(?:(?:(?!(?:Critical|Important|Minor|[Rr]ound)\b)[A-Za-z][\w-]* ){1,3}(?:[\w-]*\d[\w-]* )?[\w-]*\d[\w-]*|[A-Z][A-Za-z]{0,3}\d{1,3})"   # F1, FabF1, Opus F2, api-validator 2 (2026-10-04 to 10-06 Afterparty); Sol R3 F1, api-validator t2-7 1, r1-2, 15 M1 (field audit 4)
 FINDING = re.compile(rf"^(?!(?:Critical|Important|Minor)\b)({ID}(?: ?/ ?{ID})*)\W{{1,6}}(Critical|Important|Minor)\b[^\w`]*(.*)")   # 2026-09-28 audit: \W* ate a title's opening backtick
 GRADES = ("Critical", "Important", "Minor")
 
