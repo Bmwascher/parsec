@@ -2,6 +2,22 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.31 (2026-10-16)
+
+This release fixes eight tool problems that field audit 4 found. The doctor now shows Claude Code and updates it.
+
+- `round prepare` and `round run` refuse a brief that has a part 3 but no `## <n>. Final check` part. In one KitnEssentials phase, four design briefs stopped at part 6, and three of those rounds gave no verdict.
+- The summary reads more IDs of findings: `Sol R3 F1 / Astra R3 F2`, `api-validator t2-7 1`, `api-validator r1-2`, `api-validator V5-3` and `api-validator 15 M1`. It does not read a sentence such as "There are 2 Important findings". Over all earlier replies, the `?` bullets go from 256 to 184.
+- `round prepare` prepares again an Opus or Fable round that nobody collected. It renames the old folder `.dead<k>` and tells you so. It still refuses a CLI round that nobody collected, because that round can still run.
+- `round run` prints its warnings when the lane starts. The evidence warning now fires unless a `--file` has a name like a gate log (gate, check, test or `.log`).
+- The "post now" line comes after the summary block and gives the number of warnings above the block. The stale-version notice is the last line, and it starts with `stale:`. A filter such as `sed -n '/^###/,$p'`, `tail` or `grep -v "^warning"` keeps both lines.
+- The pre-flight shows 🟡 when a quota window has less than 20% left, and 🔴 when it has less than 10% left. These colors do not stop the round. The session posts a pre-flight with low quota at once.
+- In `build run`, each docs-root file that the Files field of the task names must change. Before, code edits were enough, so two tasks passed without their smoke-file steps. The Files reader also reads list items at the start of the line, `**Files**` with no colon, and lines that wrap with no indent.
+- `round close --kind` accepts only `panel`. A blind panel reply gets no "no counts line" warning. When the reviewer wraps a title onto a second line, the bullet ends with "…". The summary removes a "carried" prefix from the title. The minutes of an Opus or Fable round show "since prepare".
+- The compaction hook counts a Skill call as a parsec launch only for a skill in `skills/`. So a `parsec:doctor` Skill call does not send the rules again.
+- The doctor has a Claude Code line from `claude --version`. It is red when the call fails. `doctor --update` runs `claude update` first.
+- The budgets did not change. To make space, we removed duplicate code: two items in the tool and seven checks or setups in the tests.
+
 ## v0.1.30 (2026-10-16)
 
 parsec now has two hooks. After a compaction in a parsec session, Claude gets the driver rules and the ledger template again. The plugin refuses a dispatch of a parsec agent that sets a model.
