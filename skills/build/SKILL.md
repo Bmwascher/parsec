@@ -17,12 +17,16 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 
 Skips all of the above: no `verify`, Brandon's yes is the go, the session builds and commits it, then runs the diff gate (`debate`, `--kind diff`). A BLOCKING code finding there is fixed by the session directly (no task list, no `author`, no `verify`), and the next round runs on the new head. A session fix covers every site or input order of its class, or names those left open (2026-09-28).
 
+Its class is checked out loud first (`brainstorm`), and a claim it rests on is probed first (driver rule 7).
+
+**A small change** passes the gate with no cross-vendor round when a reader can judge it right from the diff alone (values, labels, renames, a new entry in an existing table, a copy of a pattern already in the same file); it has 20 or fewer changed lines (`git diff --numstat`, added plus removed) in 2 or fewer files, test files counted in the lines but not the files; it adds or changes no game API call, hook, event handler or timing; and no Opus pre-review round on it found a Critical or Important. After that PASS the driver checks each point and writes the `small` ledger line; a delegator never makes this call for a phase chat. The Fable last look still runs, and its posted summary and the finish report say `small: no cross-vendor round` (Brandon, 2026-10-15).
+
 ## Each task, in order
 
 1. **Before task 1**: `doctor --lane gemini --kind build --feature <folder>` in the background (`Pre-flight: Gemini`), posted as is. When it finds no agy, every task goes to the `backup-implementer`.
 2. `task-brief --feature <folder> --task N` writes `build\task-NN-brief.md` (the task, the header and the global constraints, byte for byte) and prints its SHA-256.
 3. `build run --feature <folder> --task N --checkout <path> --head <commit>` in the background, named `Task N Implement`, where `--head` is the commit the task builds on (the ledger base, then the previous task's commit). The tool refuses any other checkout, refuses a dirty checkout and fails a task that flipped a modified file's line endings; the lane checks none of these (2026-09-22). The tool runs agy, writes `build\task-NN-report.md` and prints the success test. The session reads that, never agy's exit code.
-4. **The session checks the task itself before the next**: run the task's **Checks** in the background (a Gemini task's first run, since print mode runs no command; red-then-green is observed only on the `backup-implementer` lane); read the diff against the task's files and its fenced code (an edit in the docs root, such as the smoke file, is in no diff: open the file); then make the task's commit with the task's own commit step. No per-task reviewer subagent.
+4. **The session checks the task itself before the next**: run the task's **Checks** in the background (a Gemini task's first run, since print mode runs no command). On the Gemini lane a task with a test is first run red: stash the task's non-test files by name (`git stash push --include-untracked -m "<feature> task N red" -- <files>`), run the Checks and see the expected failure, pop that entry by its `stash@{k}` in `git stash list`, never a bare pop (field audit 4: one reached a leftover stash), then run them green. With no entry of that name, nothing is popped and no red is recorded; Checks still green with the files stashed mean the test proves nothing ("A failing task", step 3). Then read the diff against the task's files and its fenced code (an edit in the docs root, such as the smoke file, is in no diff: open the file); then make the task's commit with the task's own commit step. No per-task reviewer subagent.
 5. Ledger line: the task's commit and result, with the lane that built it.
 
 ## To the `backup-implementer` instead
@@ -52,10 +56,12 @@ A `task-NN-brief.md` with no `task-NN-report.md` beside it means a build may sti
 
 ## The gate and the finish
 
-Then the diff gate (`debate`, `--kind diff`), then the finish. The gate runs first, the project's human check (a smoke, on Brandon's yes) last, on the final head.
+Then the diff gate (`debate`, `--kind diff`), then the finish. The gate runs first, the project's human check (a smoke, on Brandon's yes) last, on the final head. A commit other than a gate fix or the release's version bump, which the last look reviews, added after the pre-review was packaged, restarts the gate on the new head. A fix for a symptom seen in game passes `--reference` when its module was ported (`debate`), and its gate summary says the PASS covers the code, not the symptom: the smoke decides.
 
 The finish is STOP AND REPORT unless Brandon, a handoff or the project's finishing rule says merge or pull request. The report takes the shape and destination the handoff or project gives, and lists every open Minor finding, every refutation the driver made and every round it closed on Minor findings, each with its reply path, then every "Open, not ruled" item, every site left open for Brandon and every delegated decision, for him to confirm or reverse, so nothing decided on Brandon's behalf is silently dropped, and carries `summaries.md` whole and, unless he approved the spec himself, the decision summary, which a delegator's relay keeps (2026-09-28). A degraded gate blocks a clean report. Only the commit the final PASS names is merged.
 
+A rebased head counts as the commit the final PASS names only when `git patch-id --stable` gives the same id for the passed range and the rebased one, and the project's checks are green on it; otherwise the last look runs again on it. When the feature merges, the session drops each stash it made for it, by its `stash@{k}` in `git stash list`, where the project's guard allows; the finish report lists each stash it did not drop by its message, with the one command for Brandon. A worktree the session made by hand for a review or a check, not the checkout `build` made (Start), is removed when its step ends.
+
 ## Ledger lines this skill writes
 
-Step 5's task line, the worktree line (Start), each gate result, the smoke, the finish.
+Step 5's task line, the worktree line (Start), the small line (Bounded work), each probe result or claim waiver (driver rule 7, Bounded work), each gate result, the smoke, the finish.
