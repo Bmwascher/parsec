@@ -918,7 +918,7 @@ def build_run(args):
     task = ([b for h, b in sections(text)[0] if re.match(r"## Task \d+", h)] or [text])[-1]
     files, on = [], False
     for _, l in unfenced(task):                  # Sol diff r1-r2 F1: the task's own Files field, never a quoted one; 2026-10-04 ap-2 task 2: bare or "Files:**" too
-        on = bool(re.match(rb"[ \t]*(?:[-*][ \t]*)?\*\*Files(?:\*\*:|:\*\*)", l)) or (on and l[:1] in (b" ", b"\t") and bool(l.strip()))   # ap-8 task 5: its indented lines
+        on = bool(re.match(rb"[ \t]*(?:[-*][ \t]*)?\*\*Files(?:\*\*:?|:\*\*)", l)) or (on and bool(l.strip()) and not re.match(rb"[ \t]*(?:[-*][ \t]*)?(?:\*\*|\[[ xX]\]|#|\d+\.)", l))   # ap-8 task 5: its indented lines; field audit 4: up to the next field, step or blank line
         files += [l.decode()] if on else []
     files = "\n".join(files)
     toks = [re.sub(r":\d+(-\d+)?$", "", t) for t in re.findall(r"`([^`\s]+)`", files)]   # 2026-09-28 audit: a task editing only the smoke file read "failed" (gk-14)
@@ -957,7 +957,8 @@ def build_run(args):
     status = "\n".join(dirt())
     checks = [(f"route line present: {r}", r in log_text) for r in ROUTE_LINES]
     checks += [("no soft-denied step", SOFT_DENY not in log_text), ("final message non-empty", bool(message)),
-               ("git status non-empty, or a docs-root file the task names changed (an empty diff is never done)", bool(status) or docs_state() != docs_before),
+               ("every docs-root file the task's Files field names changed, and git status is non-empty when it names none (an empty diff is never done)",   # field audit 4: code alone passed phase 10 tasks 27 and 29
+                (bool(status) or bool(named)) and all(v != docs_before[q] for q, v in docs_state().items())),
                ("line endings kept on every modified file", all(eol_before.get(p, w) in (w, "w/none", "w/") or w in ("w/none", "w/") for p, w in eol_map(checkout).items() if not (rel and p.startswith(rel + "/")))),   # r2 (Sol): no ending yet, or a file gone, is nothing to flip; r4: nor the docs root
                ("finished within the cap", code is not None)]   # 2026-09-22 review: a capped run failed with no named reason
     ok = all(c for _, c in checks)

@@ -80,9 +80,7 @@ def env(tmp_path, monkeypatch):
     for k in ("FAKE_EXIT", "FAKE_SLEEP", "FAKE_WRITE", "FAKE_STDERR", "FAKE_STDIN_COPY", "FAKE_ENV_DUMP", "FAKE_CHILD_PID_FILE"):
         monkeypatch.delenv(k, raising=False)
 
-    class E:
-        pass
-    e = E()
+    e = type("E", (), {})()
     e.tmp, e.repo, e.feat, e.brief, e.head, e.base, e.wt, e.home, e.log, e.mp = tmp_path, repo, feat, brief, head, base, wt, home, log, monkeypatch
     e.calls = lambda: [json.loads(l) for l in log.read_text(encoding="utf-8").splitlines()] if log.exists() else []
     e.ledger = lambda: (feat / "ledger.md").read_text(encoding="utf-8")
@@ -312,10 +310,7 @@ def test_exit_codes_and_dead_cli(env):
     e.mp.setenv("FAKE_EXIT", "3")
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n")
     code, out = rnd(e, 1)
-    assert code == 3
-    code, out = run(e, "round", "run", "--feature", "nope", "--kind", "design", "--round", "1", "--lane", "astra",
-                    "--brief", str(e.brief), "--head", e.head)
-    assert code == 64
+    assert code == 3                                              # a missing feature folder: row 14's prepare, which round run shares
 
 
 # row 8: the cap stops a fake that sleeps, its child included; the still-running line (old item 71)
@@ -481,13 +476,12 @@ def test_doctor_stale_install(env):
     e = env
     plug = e.home / ".claude" / "plugins"
     plug.mkdir(parents=True)
-    plug.joinpath("installed_plugins.json").write_text(json.dumps(
-        {"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": "0" * 40}]}}), encoding="utf-8")
+    inst = lambda entry: plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": entry}}), encoding="utf-8")
+    inst([{"version": "0.1.0", "gitCommitSha": "0" * 40}])
     e.mp.setattr(parsec, "PLUGIN", e.repo)
     code, out = run(e, "doctor")
     assert code == 0 and "STALE" in out and "bump it, then claude plugin update" in out   # 2026-09-22 17:16: update said "already latest"
-    plug.joinpath("installed_plugins.json").write_text(json.dumps(
-        {"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head}]}}), encoding="utf-8")
+    inst([{"version": "0.1.0", "gitCommitSha": e.head}])
     assert "0.1.0 at " in run(e, "doctor")[1] and "STALE" not in run(e, "doctor")[1]
     plug.joinpath("known_marketplaces.json").write_text(json.dumps({"parsec": {"installLocation": str(e.repo)}}), encoding="utf-8")
     (e.tmp / "cache-copy").mkdir()                                  # 2026-09-23: the cached copy is no git checkout, so the head read blank: STALE
@@ -495,18 +489,18 @@ def test_doctor_stale_install(env):
     assert "🟢 **plugin install:** 0.1.0 at " in run(e, "doctor")[1]
     plug.joinpath("known_marketplaces.json").write_text("[]", encoding="utf-8")
     assert "repo head unknown" in run(e, "doctor")[1]               # a malformed marketplace file falls back, never a traceback
-    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": []}}), encoding="utf-8")
+    inst([])
     assert run(e, "doctor")[0] == 0                                 # 2026-09-23 pre-review: an empty entry crashed every command
     plug.joinpath("installed_plugins.json").write_text("[]", encoding="utf-8")
     assert "not installed" in run(e, "doctor")[1]                   # 2026-09-23, Astra: a malformed file crashed the doctor
-    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"gitCommitSha": None}]}}), encoding="utf-8")
+    inst([{"gitCommitSha": None}])
     assert "STALE" in run(e, "doctor")[1]                           # and so did a null commit (Astra r2)
-    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head, "installPath": None}]}}), encoding="utf-8")
+    inst([{"version": "0.1.0", "gitCommitSha": e.head, "installPath": None}])
     e.mp.setattr(parsec, "PLUGIN", e.repo)
     (e.repo / ".claude-plugin").mkdir()
     (e.repo / ".claude-plugin" / "plugin.json").write_text('{"version": "0.0.9"}', encoding="utf-8")
     assert "the new tool is ?\n" in run(e, "doctor")[1]              # pre-review F6: a null path hid the whole warning; Sol diff r1 F3: "?" alone
-    plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head, "installPath": str(e.tmp / "c010")}]}}), encoding="utf-8")
+    inst([{"version": "0.1.0", "gitCommitSha": e.head, "installPath": str(e.tmp / "c010")}])
     out = run(e, "doctor")[1]                                       # 2026-09-23: three phases ran 0.1.6 after 0.1.7; 2026-09-25: a re-invoked skill kept 0.1.13
     assert out.endswith("\nstale: this tool is parsec 0.0.9, but 0.1.0 is installed: this session's skills and templates stay at 0.0.9 until a new session, "   # field audit 4: a first line that grep -v "^warning" hid
                         f"so start one; the new tool is {e.tmp / 'c010' / 'tools' / 'parsec.py'}\n") and "warning: this tool" not in out
@@ -740,9 +734,7 @@ def test_summary_bullets(env):
     out = rnd(e, 2)[1]
     assert "warning: the reply's finding lines do not match its counts line" in out and blk(out).endswith("- **? · Minor:** not parsed, see rounds\\design-r2-astra\\reply.md" + ask + "\n")
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n\nlater draft text\n")
-    assert "the reply's last line is not a VERDICT line with one verdict word" in rnd(e, 3)[1]
-    e.mp.setenv("FAKE_REPLY", "draft text only\n")                      # Sol diff r1 F2: no counts line and no verdict
-    assert "the reply's last line is not a VERDICT line" in rnd(e, 3)[1]   # a NONE round reruns under its number
+    assert "the reply's last line is not a VERDICT line with one verdict word" in rnd(e, 3)[1]   # and the next round 3 below reruns it under its number
     e.mp.setenv("FAKE_REPLY", "- M1 · Minor: wording.\n- I1 · Important: the hold is lost.\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")   # 0.1.15 last look F1: a Minor first in the reply
     out = rnd(e, 3)[1]
     assert out.index("- **I1 · Important:**") < out.index("- **M1 · Minor:**"), out
@@ -862,26 +854,31 @@ def test_build_run_success_test(env):
     e.mp.setenv("FAKE_STDOUT", "done\n")
     e.mp.delenv("FAKE_WRITE")
     code, out = b("--again")
-    assert code == 65 and "FAILED: git status non-empty" in out     # an empty diff is never done
+    assert code == 65 and "FAILED: every docs-root file" in out     # an empty diff is never done
     (e.feat / "build" / "task-01-brief.md").write_text("## Global constraints\n\n- **Files**: keep `docs/09-22-x/other.md`\n\n## Task 1: t\n\n- keep `docs/09-22-x/other.md` too\n- **Files**: `docs/09-22-x/smoke.md:3` only\n\n```md\n- **Files**: `docs/09-22-x/other.md`\n## Task 2: quoted\n```\n", encoding="utf-8")
     e.mp.setenv("FAKE_WRITE", str(e.feat / "other.md"))
-    assert "FAILED: git status non-empty" in b("--again")[1]      # Sol diff r1-r2 F1: a docs file outside the task's Files field is no success
+    assert "FAILED: every docs-root file" in b("--again")[1]      # Sol diff r1-r2 F1: a docs file outside the task's Files field is no success
     e.mp.setenv("FAKE_WRITE", str(e.feat / "smoke.md"))
     code, out = b("--again")
-    assert code == 0 and "ok: git status non-empty, or a docs-root file the task names changed" in out, out   # 2026-09-28 audit: gk-14's smoke-only task read "failed"
+    assert code == 0 and "ok: every docs-root file" in out, out   # 2026-09-28 audit: gk-14's smoke-only task read "failed"
     for k, field in enumerate(("**Files**:", "**Files:**", "* **Files:**")):   # 2026-10-04 Afterparty ap-2 task 2: a bare Files line named nothing, so a docs-only task read "failed"
         (e.feat / "build" / "task-01-brief.md").write_text(f"## Task 1: t\n\n{field} `docs/09-22-x/s{k}.md`\n", encoding="utf-8")
         e.mp.setenv("FAKE_WRITE", str(e.feat / f"s{k}.md"))
-        assert "ok: git status non-empty, or a docs-root file the task names changed" in b("--again")[1], field
-    for k, field in ((3, "- **Files**:\n  - `docs/09-22-x/s3.md`\n"), (4, "- **Files**: `code.txt` (new),\n  `docs/09-22-x/s4.md`\n")):   # 2026-10-04 ap-8 task 5: paths under the Files line
+        assert "ok: every docs-root file" in b("--again")[1], field
+    for k, field in ((3, "- **Files**:\n  - `docs/09-22-x/s3.md`\n"), (4, "- **Files**: `code.txt` (new),\n  `docs/09-22-x/s4.md`\n"),   # 2026-10-04 ap-8 task 5: paths under the Files line
+                     (5, "- **Files**:\n- `docs/09-22-x/s5.md`\n"), (6, "- **Files**: `x.lua`,\n`docs/09-22-x/s6.md`\n"), (7, "**Files** `docs/09-22-x/s7.md`\n")):   # field audit 4: 110 of 266 tasks
         (e.feat / "build" / "task-01-brief.md").write_text(f"## Task 1: t\n\n{field}- **Checks**: `docs/09-22-x/other.md`\n", encoding="utf-8")
         e.mp.setenv("FAKE_WRITE", str(e.feat / f"s{k}.md"))
-        assert "ok: git status non-empty, or a docs-root file the task names changed" in b("--again")[1], field
+        assert "ok: every docs-root file" in b("--again")[1], field
     e.mp.setenv("FAKE_WRITE", str(e.feat / "checks.md"))
     (e.feat / "build" / "task-01-brief.md").write_text("## Task 1: t\n\n- **Files**:\n  - `docs/09-22-x/s3.md`\n- **Checks**: `docs/09-22-x/checks.md`\n", encoding="utf-8")
-    assert "FAILED: git status non-empty" in b("--again")[1]      # pre-review F4: the field stops at the next one
-    e.mp.setenv("FAKE_AGY_LOG", "Print mode: starting\n")
+    assert "FAILED: every docs-root file" in b("--again")[1]      # pre-review F4: the field stops at the next one
     e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
+    (e.feat / "build" / "task-01-brief.md").write_text("## Task 1: t\n\n- **Files**: `new.txt`, `docs/09-22-x/s9.md`\n", encoding="utf-8")
+    assert "FAILED: every docs-root file" in b("--again")[1]      # field audit 4: Moving Day phase 10 tasks 27 and 29 skipped their smoke-file steps
+    clean()
+    (e.feat / "build" / "task-01-brief.md").write_text("## Task 1: t\n\n- **Files**: `new.txt`\n", encoding="utf-8")
+    e.mp.setenv("FAKE_AGY_LOG", "Print mode: starting\n")
     code, out = b("--again")
     assert code == 65 and "FAILED: route line present: applying agent mode accept-edits" in out
     clean()
@@ -933,7 +930,7 @@ def test_build_run_success_test(env):
     assert code == 0 and "result: ok" in out, out                  # the feature's own ledger and spec are not dirt either
     assert e.calls()[-1].count("--add-dir") == 1                   # a docs root inside the checkout is not added again
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead19" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead23" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)
