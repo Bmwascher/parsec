@@ -375,7 +375,7 @@ After the build, three reviewers look at the diff in order:
 A blocking finding anywhere in the gate becomes a fix task, written by the author and built like any other task. Only the commit that the final PASS names is ever merged.
 
 > [!WARNING]
-> **A gate with no cross-vendor lane is degraded, never a PASS**, except a small change in bounded work: one you can judge from the diff alone, 20 or fewer changed lines in 2 or fewer files (test files count only toward the lines), no new or changed API call, hook, event handler or timing, and no Critical or Important in any Opus pre-review round. The driver records why in the ledger, and the Fable last look still runs. If codex is down and Muse isn't approved, the round is recorded as degraded and the finish report says so.
+> **A gate with no cross-vendor lane is degraded, never a PASS**, except a small change in bounded work: one you can judge from the diff alone, 20 or fewer changed lines in 2 or fewer files (test files count only toward the lines), no new or changed API call, hook, event handler or timing, and no Critical or Important in any Opus pre-review round. The driver records why in the ledger, and the Fable last look still runs. A Critical or Important in that last look makes it not small: after the fix, the cross-vendor round runs, then Fable's confirming question. If codex is down and Muse isn't approved, the round is recorded as degraded and the finish report says so.
 
 ### Panels and polls
 
