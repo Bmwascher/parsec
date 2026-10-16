@@ -11,13 +11,12 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "tools" / "hooks.py"
-REASON = ("parsec agents run with no model; the agent file names Brandon's choice (driver rule 1). "
-          "Dispatch again without model.")
+REASON = "parsec agents run with no model; the agent file names Brandon's choice (driver rule 1). Dispatch again without model."
 HEADER = b"driver rule 3: reread the skill in use and the feature's ledger and notes now"
-SKILL_LINE = ('{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"a"}},'
+SKILL_LINE = ('{"type":"assistant","message":{"content":[{"type":"text","text":"a"},'
               '{"type":"tool_use","name":"Skill","input":{"skill":"parsec:build"}}]}}')
 TYPED_LINE = '{"type":"user","message":{"role":"user","content":"<command-message>parsec:build</command-message>\\n<command-name>/parsec:build</command-name>"}}'
+GIT_BASH = Path(subprocess.run(["git", "--exec-path"], capture_output=True, text=True).stdout.strip()).parents[2] / "bin" / "bash.exe"
 
 
 def wiring():
@@ -25,8 +24,8 @@ def wiring():
 
 
 def hook(event, payload, script=None):
-    """The command hooks.json names for the event; returns (exit code, stdout bytes, stderr bytes)."""
-    argv = shlex.split(wiring()["hooks"][event][0]["hooks"][0]["command"].replace("${CLAUDE_PLUGIN_ROOT}", REPO.as_posix()))
+    """The command hooks.json names for the event, up to its `; exit 0`; returns (exit code, stdout bytes, stderr bytes)."""
+    argv = shlex.split(wiring()["hooks"][event][0]["hooks"][0]["command"].split(";")[0].replace("${CLAUDE_PLUGIN_ROOT}", REPO.as_posix()))
     argv[0] = sys.executable
     if script:
         argv[1] = str(script)
@@ -48,14 +47,19 @@ def test_wiring():
     for event, matcher, sub in (("SessionStart", "compact", "compact"), ("PreToolUse", "Agent|Task", "agent")):
         entry = data["hooks"][event][0]
         assert entry["matcher"] == matcher
-        assert shlex.split(entry["hooks"][0]["command"]) == ["python", "${CLAUDE_PLUGIN_ROOT}/tools/hooks.py", sub]
+        assert entry["hooks"][0]["command"] == f'python "${{CLAUDE_PLUGIN_ROOT}}/tools/hooks.py" {sub}; exit 0'
+
+
+@pytest.mark.parametrize("shell,event", [(s, e) for s in (["pwsh", "-NoProfile", "-Command"], [str(GIT_BASH), "-c"]) for e in ("SessionStart", "PreToolUse")])
+def test_missing_script_exits_0(shell, event):        # 2026-10-16 diff pre-review r1 (Opus F1): python exits 2 on a missing script, and 2 blocks the Agent call
+    command = wiring()["hooks"][event][0]["hooks"][0]["command"].replace("${CLAUDE_PLUGIN_ROOT}", "C:/no/such/plugin")
+    assert subprocess.run([*shell, command], input=b"{}", capture_output=True).returncode == 0
 
 
 def test_parsec_model_is_denied():
     code, out, err = hook("PreToolUse", {"tool_name": "Agent", "tool_input": {"subagent_type": "parsec:backup-implementer", "model": "sonnet"}})
     assert code == 0, err
-    assert json.loads(out) == {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
-                                                      "permissionDecisionReason": REASON}}
+    assert json.loads(out) == {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": REASON}}
 
 
 @pytest.mark.parametrize("call", [{"subagent_type": "parsec:author"}, {"subagent_type": "parsec:author", "model": ""},
@@ -65,19 +69,18 @@ def test_dispatch_goes_ahead(call):
 
 
 @pytest.mark.parametrize("launch", [SKILL_LINE, TYPED_LINE])
-def test_compaction_rereads_rules(tmp_path, launch):
-    code, out, err = hook("SessionStart", compact_event(tmp_path, '{"type":"user"}', launch))
-    rules = [(REPO / "templates" / name).read_bytes() for name in ("driver-rules.md", "ledger.md")]
+def test_compaction_rereads_rules(tmp_path, launch):   # 2026-10-16 diff pre-review r1 (Opus F2): two bad marked records first never hide the launch
+    code, out, err = hook("SessionStart", compact_event(tmp_path, '{"skill":"parsec:', '{"message":"<command-name>/parsec:"}', launch))
     assert code == 0, err
-    assert out == HEADER + b"\n\n" + rules[0] + b"\n" + rules[1]
+    assert out == HEADER + b"\n\n" + b"\n".join((REPO / "templates" / name).read_bytes() for name in ("driver-rules.md", "ledger.md"))
     assert len(out.decode("utf-8")) < 10_000          # the harness cap; past it Claude gets a path and a preview
 
 
 @pytest.mark.parametrize("line", [SKILL_LINE.replace("parsec:build", "superpowers:brainstorming"),
                                   SKILL_LINE.replace('"name":"Skill"', '"name":"Read"'),
-                                  '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"example":'
-                                  '{"type":"tool_use","name":"Skill","input":{"skill":"parsec:build"}}}}]}}',
-                                  '{"type":"user","toolUseResult":' + SKILL_LINE + '}',
+                                  '{"type":"assistant","message":{"content":[{"type":"text","name":"Skill","input":{"skill":"parsec:build"}}]}}',
+                                  '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"example":{"type":"tool_use","name":"Skill","input":{"skill":"parsec:build"}}}}]}}',
+                                  '{"type":"user","message":{"content":[]},"toolUseResult":' + SKILL_LINE + '}',
                                   TYPED_LINE.replace("parsec:build", "parsec:doctor"),
                                   TYPED_LINE.replace("<command-message>parsec:build</command-message>\\n", "see "),
                                   json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "content": json.loads(TYPED_LINE)["message"]["content"]}]}}),
@@ -96,8 +99,7 @@ def test_fails_open(event, payload):
 
 
 def test_missing_template_prints_nothing(tmp_path):
-    for sub in ("tools", "templates"):
-        (tmp_path / sub).mkdir()
-    shutil.copyfile(SCRIPT, tmp_path / "tools" / "hooks.py")
+    shutil.copytree(REPO / "tools", tmp_path / "tools")
+    (tmp_path / "templates").mkdir()
     shutil.copyfile(REPO / "templates" / "driver-rules.md", tmp_path / "templates" / "driver-rules.md")
     assert hook("SessionStart", compact_event(tmp_path, SKILL_LINE), tmp_path / "tools" / "hooks.py") == (0, b"", b"")

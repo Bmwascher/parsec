@@ -5,7 +5,7 @@
       {
         "matcher": "compact",
         "hooks": [
-          {"type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/tools/hooks.py\" compact", "timeout": 30}
+          {"type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/tools/hooks.py\" compact; exit 0", "timeout": 30}
         ]
       }
     ],
@@ -13,7 +13,7 @@
       {
         "matcher": "Agent|Task",
         "hooks": [
-          {"type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/tools/hooks.py\" agent", "timeout": 30}
+          {"type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/tools/hooks.py\" agent; exit 0", "timeout": 30}
         ]
       }
     ]

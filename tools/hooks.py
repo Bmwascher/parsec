@@ -17,12 +17,14 @@ TEMPLATES = ("driver-rules.md", "ledger.md")
 
 
 def launched(line):                                  # 2026-10-16 design r1, r2 (Sol F1): a Skill block of the message itself, never data inside one
-    blocks = json.loads(line).get("message", {}).get("content", [])
-    if isinstance(blocks, str):                      # 2026-10-16 Fable design r1 F1: a typed launch of a skill in skills/, never /parsec:doctor
-        skills = [p.name for p in (PLUGIN / "skills").iterdir() if p.is_dir()]
-        return blocks.startswith("<command-message>") and any(f"<command-name>/parsec:{s}</command-name>" in blocks for s in skills)
-    return any(isinstance(b, dict) and b.get("type") == "tool_use" and b.get("name") == "Skill"
-               and str(b.get("input", {}).get("skill")).startswith("parsec:") for b in blocks)
+    try:
+        blocks = json.loads(line)["message"]["content"]
+        if isinstance(blocks, str):                  # 2026-10-16 Fable design r1 F1: a typed launch of a skill in skills/, never /parsec:doctor
+            skills = [p.name for p in (PLUGIN / "skills").iterdir()]
+            return blocks.startswith("<command-message>") and any(f"<command-name>/parsec:{s}</command-name>" in blocks for s in skills)
+        return any(b["type"] == "tool_use" and b["name"] == "Skill" and b["input"]["skill"].startswith("parsec:") for b in blocks)
+    except (ValueError, LookupError, TypeError, AttributeError, OSError):   # 2026-10-16 diff pre-review r1 (Opus F2): a bad record is no launch, and never hides a later one
+        return False
 
 
 def compact(event):
