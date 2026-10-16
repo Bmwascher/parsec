@@ -6,6 +6,10 @@ What a driver acts on. Version in use: codex-cli 0.159.2 (2026-09-30; written on
 
 Probed 2026-07-24 on 0.144.1: `codex exec ... resume <unknown id>` exits 1 with `thread/resume failed: no rollout found for thread id` and writes no reply file. A round that shows this line is not retried on the same id: the record's session id is wrong or its rollout is gone, and the next round runs `--fresh` with the earlier briefs and replies passed by `--file`.
 
+## A 429 gets one rerun
+
+A `429 Too Many Requests` (or `exceeded retry limit` with it) reruns the round once, 5 minutes later, before codex is called unavailable (2026-10-14: gui-17's Sol round became a question to Brandon, and the retry 33 minutes later passed). An "out until <date>" is checked again by a fresh pre-flight before anyone acts on it or relays it (a day after "out until 10-18", Sol showed 89% left). A low quota is already posted at once (0.1.31).
+
 ## The free quota read
 
 `codex app-server --stdio` answers the JSON-RPC method `account/rateLimits/read` (probed 2026-07-24; an experimental surface, drift expected). The doctor prints it as information only; it never fails a pre-flight.
