@@ -498,7 +498,7 @@ Each rail exists because its failure happened at least once. The dates live in t
 | After a compaction in a session that launched a parsec skill, a hook puts the driver rules and the ledger template back in Claude's context, under a line that says to reread the skill, the ledger and the notes | The reread after a compaction held in 2 of 31 phase chats; the misses cost a fresh author, a dropped diff round and about 45 ledger lines with wrong times |
 | A hook denies a `parsec:` agent dispatch that sets `model`, and tells Claude to dispatch again without it | Three backup builds ran on Sonnet because the dispatch named a model |
 
-Both hooks are in `hooks/hooks.json` and run `tools/hooks.py`. If a hook hits any error, it prints nothing and Claude Code carries on. `"disableAllHooks": true` in your settings turns them off, along with every other hook.
+Both hooks are in `hooks/hooks.json` and run `tools/hooks.py`. If a hook hits any error, it prints nothing to Claude, exits 0 and Claude Code carries on; a missing script still leaves Python's error on stderr. `"disableAllHooks": true` in your settings turns them off, along with every other hook.
 
 ---
 

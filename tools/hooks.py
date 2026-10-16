@@ -23,7 +23,7 @@ def launched(line):                                  # 2026-10-16 design r1, r2 
             skills = [p.name for p in (PLUGIN / "skills").iterdir()]
             return blocks.startswith("<command-message>") and any(f"<command-name>/parsec:{s}</command-name>" in blocks for s in skills)
         return any(b["type"] == "tool_use" and b["name"] == "Skill" and b["input"]["skill"].startswith("parsec:") for b in blocks)
-    except (ValueError, LookupError, TypeError, AttributeError, OSError):   # 2026-10-16 diff pre-review r1 (Opus F2): a bad record is no launch, and never hides a later one
+    except (ValueError, LookupError, TypeError, AttributeError, OSError, RecursionError):   # 2026-10-16 diff pre-review r1 (Opus F2), Sol diff r1: a bad record is no launch, and never hides a later one
         return False
 
 

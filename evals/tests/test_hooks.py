@@ -69,8 +69,8 @@ def test_dispatch_goes_ahead(call):
 
 
 @pytest.mark.parametrize("launch", [SKILL_LINE, TYPED_LINE])
-def test_compaction_rereads_rules(tmp_path, launch):   # 2026-10-16 diff pre-review r1 (Opus F2): two bad marked records first never hide the launch
-    code, out, err = hook("SessionStart", compact_event(tmp_path, '{"skill":"parsec:', '{"message":"<command-name>/parsec:"}', launch))
+def test_compaction_rereads_rules(tmp_path, launch):   # 2026-10-16 diff pre-review r1 (Opus F2), Sol diff r1: bad marked records first, one too deep to parse, never hide the launch
+    code, out, err = hook("SessionStart", compact_event(tmp_path, '{"skill":"parsec:', '{"message":"<command-name>/parsec:"}', "[" * 5000 + '"skill":"parsec:', launch))
     assert code == 0, err
     assert out == HEADER + b"\n\n" + b"\n".join((REPO / "templates" / name).read_bytes() for name in ("driver-rules.md", "ledger.md"))
     assert len(out.decode("utf-8")) < 10_000          # the harness cap; past it Claude gets a path and a preview
