@@ -653,7 +653,7 @@ def prepare(args, launch):
     warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
                  for n in sorted(named) if n not in loose and Path(n.replace("\\", "/")).name not in {Path(f).name for f in given} | {"reply.md", "record.json", "summaries.md", "pending.json"}   # pre-review F1, Sol diff r1 F2
                  and not any((b / n).exists() for b in (root, root / ".parsec", tree)) and n not in held]
-    if args.kind in ("prereview", "diff", "lastlook") and not any(re.search(r"(?<![a-z])(?:gate|check|test)(?![a-rt-z])|\.log$", Path(f).name, re.I) for f in given):   # 2026-09-28 audit: gate logs in 4 of 16 phases; field audit 4: other files kept it silent; pre-review F5: never inside a word
+    if args.kind in ("prereview", "diff", "lastlook") and not any(re.search(r"(?<![a-z])(?:gate|check|test)(?!s[a-z]|[a-rt-z])|\.log$", Path(f).name, re.I) for f in given):   # 2026-09-28 audit: gate logs in 4 of 16 phases; field audit 4: other files kept it silent; pre-review F5, Sol F1: never inside a word
         warnings.append("no --file named like a gate log (gate, check, test or .log in its name): pass the gate log, or the reviewer marks every test claim unverified")
     pending = {"kind": args.kind, "round": args.round, "lane": args.lane, "head": args.head, "base": args.base,
                "start": stamp(), "brief_sha256": sha256(args.brief), "tier": "fast" if args.fast else "default",

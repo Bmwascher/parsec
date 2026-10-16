@@ -782,9 +782,9 @@ def test_named_evidence(env):
     (e.tmp / "canvas.json").write_text("{}", encoding="utf-8")
     assert "the brief names" not in rnd(e, 2, "astra", "design", "--file", str(e.tmp / "canvas.json"))[1]
     assert "no --file named like a gate log" in rnd(e, 2, "sol", "diff")[1]
-    for name in ("gate-log.txt", "latest-checkout-notes.md"):            # field audit 4: Moving Day phase 7's smoke and AceGUI files kept the warning silent; pre-review F5: so did a word holding "test"
+    for name in ("gate-log.txt", "latest-checkout-checksums.md"):            # field audit 4: Moving Day phase 7's smoke and AceGUI files kept the warning silent; pre-review F5: so did a word holding "test"; Sol F1: and "checksums"
         (e.tmp / name).write_text("busted: 9 passed\n", encoding="utf-8")
-    assert "like a gate log" in rnd(e, 3, "sol", "diff", "--file", str(e.tmp / "latest-checkout-notes.md"))[1] and "like a gate log" not in rnd(e, 4, "sol", "diff", "--file", str(e.tmp / "gate-log.txt"))[1]
+    assert "like a gate log" in rnd(e, 3, "sol", "diff", "--file", str(e.tmp / "latest-checkout-checksums.md"))[1] and "like a gate log" not in rnd(e, 4, "sol", "diff", "--file", str(e.tmp / "gate-log.txt"))[1]
 
 
 # row 14g: the Muse pre-flight and doctor row; Muse has no login status command, so auth.json's presence (2026-10-12)
