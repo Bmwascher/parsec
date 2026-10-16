@@ -12,7 +12,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 Say which it is before anything else. It only ever gets heavier, never lighter.
 
 - **Spike**: exploration with nothing to keep. No feature folder, no spec, no debate. Say what was learned and stop.
-- **Bounded work**: a change small enough to make without a design (a fix, a rename, a guard). No spec, no task list. Brandon's yes is the go (`build`, "Bounded work").
+- **Bounded work**: a change small enough to make without a design (a fix, a rename, a guard). No spec, no task list. Brandon's yes is the go (`build`, "Bounded work"). It becomes architectural when it changes how a feature works (a new mechanism or state, a default the user sees, the core of a display), or when two bounded fixes of one symptom have already failed the smoke, counted across feature folders and from the smoke record, not the ledger alone; the next fix goes through one spec. A class a handoff gives is checked out loud, never copied.
 - **Architectural**: everything else. The full flow below.
 
 ## What is asked, and what is not
@@ -36,7 +36,7 @@ Keep `notes.md` as a running record: each question, Brandon's exact answer, the 
 
 The session never writes the two files itself: the author's fresh context proves the notes complete and keeps the session small.
 
-Brandon reviews the written spec before the task list, from its decision summary posted in chat, unless his go-ahead words ("go all the way") waive that reading or his own words delegate the approval (driver rule 2); neither waives the design debate or the Fable look (2026-09-28); a pre-approved handoff never waives it: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Unless he approved it himself, its decision summary goes in the finish report (2026-09-28). Approving the spec is not a go. After approval or its waiver, the same `author` agent, resumed, writes the task list (`Author: task list`).
+Brandon reviews the written spec before the task list, from its decision summary posted in chat, unless his go-ahead words ("go all the way") waive that reading or his own words delegate the approval (driver rule 2); neither waives the design debate or the Fable look (2026-09-28); a pre-approved handoff never waives it: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Unless he approved it himself, its decision summary goes in the finish report (2026-09-28). Approving the spec is not a go. After approval or its waiver, and once each claim to probe has a result or his waiver (driver rule 7), the same `author` agent, resumed, writes the task list (`Author: task list`).
 
 ## The go (its one home)
 
@@ -51,7 +51,7 @@ One debate over both files, `--kind design`, run by `debate` on the cross-vendor
 
 ## Ledger lines this skill writes
 
-Shapes in `templates/ledger.md`: the head (the one place the base is written), the handoff facts, the spec's approval or its waiver, the go.
+Shapes in `templates/ledger.md`: the head (the one place the base is written), the handoff facts, the spec's approval or its waiver, the go, each probe result or claim waiver (driver rule 7).
 
 ## Known clashes, not fixed
 
