@@ -19,7 +19,7 @@ if env.get("FAKE_CHILD_PID_FILE"):                       # a grandchild that mus
     child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(600)"])
     Path(env["FAKE_CHILD_PID_FILE"]).write_text(str(child.pid))
 if argv[:1] == ["app-server"]:                           # codex app-server: one quota answer, then it stays open
-    print(json.dumps({"id": 2, "result": {"rateLimits": {"primary": {"usedPercent": 40, "windowDurationMins": 300}}}}), flush=True)
+    print(json.dumps({"id": 2, "result": {"rateLimits": {"primary": {"usedPercent": int(env.get("FAKE_USED", "40")), "windowDurationMins": 300}}}}), flush=True)
     time.sleep(600)
 if env.get("FAKE_DELETE"):                               # a lane that deletes a tracked file
     Path(env["FAKE_DELETE"]).unlink()

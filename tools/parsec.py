@@ -1087,11 +1087,12 @@ def preflight(args):
         if not wt.is_dir():
             fail.append("worktrees folder missing")
     title = f"Pre-flight: {args.lane.capitalize()} · {args.kind}" + (" debate" if args.kind != "build" else "")   # Markdown, posted as is (Brandon, 2026-09-23)
-    print(f"### 🔴 {title} · FAILED\n\n**{'; '.join(fail)}**" if fail else f"### 🟢 {title}")
+    left = min((float(x) for x in re.findall(r"(\d+(?:\.\d+)?)% left", "\n".join(lines))), default=100)   # G-Q2 (Brandon, 2026-10-16): amber below 20%, red below 10%, never a stop
+    print(f"### 🔴 {title} · FAILED\n\n**{'; '.join(fail)}**" if fail else f"### {'🔴' if left < 10 else '🟡' if left < 20 else '🟢'} {title}" + (f" · quota {left:g}% left" if left < 20 else ""))
     print((f"\n**{args.feature}**\n" if args.feature else "") + "\n" + "\n".join(lines))
     pf, saved = fdir / "rounds" / f"preflight-{args.lane}.txt" if fdir and args.kind != "build" else None, False
     try:
-        if pf and fail:
+        if pf and (fail or left < 20):           # field audit 4: "week 4% left" read green and rode; a low quota is posted now
             pf.unlink(missing_ok=True)           # pre-review F2: an older green line never rides after a FAILED one
         elif pf and fdir.is_dir():               # pre-review F1: a new panel has no folder yet, so its pre-flight is posted
             pf.parent.mkdir(exist_ok=True)

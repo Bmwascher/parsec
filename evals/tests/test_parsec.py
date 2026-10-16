@@ -573,6 +573,11 @@ def test_inputs_and_preflight(env):
     pid = (e.tmp / "quota.pid").read_text()
     assert not WIN or pid not in subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True).stdout   # r3 (Sol): the .CMD's child outlived the probe
     e.mp.delenv("FAKE_CHILD_PID_FILE")
+    for used, mark in (("85", "🟡"), ("96", "🔴")):                # G-Q2 (Brandon, 2026-10-16); field audit 4: "week 4% left" read green, then Sol died after 575 s
+        e.mp.setenv("FAKE_USED", used)
+        code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
+        assert code == 0 and out.startswith(f"### {mark} Pre-flight: Astra · design debate · quota {100 - int(used)}% left") and out.endswith("outside a code block\n") and not (e.feat / "rounds" / "preflight-astra.txt").exists()
+    e.mp.delenv("FAKE_USED")
     bad = e.tmp / "bad-lanes.toml"
     bad.write_text('[astra]\nmodel = "gpt-6-astra"\neffort = "high"\ncommand = ["no-such-program-xyz"]\n', encoding="utf-8")
     e.mp.setattr(parsec, "LANES_FILE", bad)
