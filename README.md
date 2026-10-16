@@ -491,6 +491,15 @@ Each rail exists because its failure happened at least once. The dates live in t
 | Review worktrees are removed links-first | A plain recursive delete following a `References` or docs junction into the real files |
 | `build` removes only a worktree it made itself, and never when it stops to report | Deleting a checkout you handed it |
 
+![Hooks](https://img.shields.io/badge/hooks-4c6ef5?style=for-the-badge)
+
+| The rail | The failure it prevents |
+|---|---|
+| After a compaction in a session that launched a parsec skill, a hook puts the driver rules and the ledger template back in Claude's context, under a line that says to reread the skill, the ledger and the notes | The reread after a compaction held in 2 of 31 phase chats; the misses cost a fresh author, a dropped diff round and about 45 ledger lines with wrong times |
+| A hook denies a `parsec:` agent dispatch that sets `model`, and tells Claude to dispatch again without it | Three backup builds ran on Sonnet because the dispatch named a model |
+
+Both hooks are in `hooks/hooks.json` and run `tools/hooks.py`. If a hook hits any error, it prints nothing and Claude Code carries on. `"disableAllHooks": true` in your settings turns them off, along with every other hook.
+
 ---
 
 ## Working on parsec itself
@@ -511,6 +520,7 @@ The plugin stays lean because its size limits fail the build. An addition that w
 | What | Limit |
 |---|---|
 | `tools/parsec.py` | 1,250 lines |
+| `tools/hooks.py` | 60 lines |
 | All tests | 1,500 lines |
 | The frozen checkers | 522 lines |
 | All skill, template, agent and model prose | 12,000 words |
@@ -549,11 +559,12 @@ parsec/
 ├── .github/            CI, the release workflow, README images
 ├── agents/             the four Claude seats: author, backup-implementer, reviewer-opus, reviewer-fable
 ├── commands/           /parsec:doctor
+├── hooks/              hooks.json: the compaction re-inject and the model refusal
 ├── skills/             brainstorm, build, debate, panel, setup
 ├── templates/          spec, task list, ledger, briefs, driver rules, the backup implementer's contract
 ├── models/             dated notes on each model and CLI
 ├── lanes/              the Kimi reviewer's agent file
-├── tools/parsec.py     the one tool
+├── tools/              parsec.py, the one tool; hooks.py, the script the two hooks run
 ├── evals/              tests, the fake CLI, the STE and changelog checkers
 ├── lanes.toml          the CLI lanes: model, effort, command, update
 ├── CHANGELOG.md
