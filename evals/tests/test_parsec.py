@@ -72,6 +72,7 @@ def env(tmp_path, monkeypatch):
     (tmp_path / "kimi-home").mkdir()
     (tmp_path / "kimi-home" / "config.toml").write_text('[models."kimi-code/k3"]\ndefault_effort = "high"\n', encoding="utf-8")
     monkeypatch.setattr(parsec, "LANES_FILE", lanes)
+    monkeypatch.setattr(parsec, "CLAUDE", [sys.executable, str(FAKE)], raising=False)   # never the real claude, whose update would install
     monkeypatch.setattr(parsec, "POLL_SECONDS", 0.05)
     log = tmp_path / "calls.jsonl"
     monkeypatch.setenv("FAKE_LOG", str(log))
@@ -480,7 +481,7 @@ def test_doctor_stale_install(env):
     inst([{"version": "0.1.0", "gitCommitSha": "0" * 40}])
     e.mp.setattr(parsec, "PLUGIN", e.repo)
     code, out = run(e, "doctor")
-    assert code == 0 and "STALE" in out and "bump it, then claude plugin update" in out   # 2026-09-22 17:16: update said "already latest"
+    assert code == 0 and "STALE" in out and "bump it, then claude plugin update" in out and "\n- 🟢 **Claude Code:** fake-cli 1.0\n" in out   # 2026-09-22 17:16: update said "already latest"
     inst([{"version": "0.1.0", "gitCommitSha": e.head}])
     assert "0.1.0 at " in run(e, "doctor")[1] and "STALE" not in run(e, "doctor")[1]
     plug.joinpath("known_marketplaces.json").write_text(json.dumps({"parsec": {"installLocation": str(e.repo)}}), encoding="utf-8")
@@ -512,9 +513,11 @@ def test_doctor_stale_install(env):
                                       f'[muse]\nmodel = "m"\neffort = "high"\ncommand = {cmd}\nupdate = {upd[:-1]}, "muse"]\n', encoding="utf-8")
     e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
     code, out = run(e, "doctor", "--update")
-    assert code == 0 and [c for c in e.calls() if c[:1] == ["update"]] == [["update"], ["update", "agy"], ["update", "muse"]]   # 2026-09-22 review: codex updated twice
+    assert code == 0 and [c for c in e.calls() if c[:1] == ["update"]] == [["update"], ["update"], ["update", "agy"], ["update", "muse"]]   # 2026-09-22 review: codex updated twice; Claude Code first
     dump = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
-    assert dump["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and dump["MUSE_SYNC_UPDATE"] == "1"   # 2026-10-12: muse has no update subcommand; its launcher updates in the foreground
+    assert dump["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and dump["MUSE_SYNC_UPDATE"] == "1" and "- **update Claude Code:** exit 0" in out   # 2026-10-12: muse has no update subcommand; its launcher updates in the foreground
+    e.mp.setattr(parsec, "CLAUDE", ["parsec-no-such-claude"])        # Brandon, 2026-10-16: "it should check and update the Claude code cli"
+    assert "\n- 🔴 **Claude Code:** parsec-no-such-claude not found on PATH\n" in run(e, "doctor")[1]
 
 
 # row 14: inputs, the pre-flight, the in-session package (old item 100; the 2026-09-21 dry run and Kimi login; "in this directory")

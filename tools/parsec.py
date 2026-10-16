@@ -22,9 +22,9 @@ import tomllib
 import uuid
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-PLUGIN = HERE.parent
+PLUGIN = Path(__file__).resolve().parent.parent
 LANES_FILE = PLUGIN / "lanes.toml"             # a test points this at a file that names a fake CLI
+CLAUDE = ["claude"]                            # Brandon, 2026-10-16: the doctor checks and updates Claude Code; a test points this at the fake
 POLL_SECONDS = 30                              # the watcher's period; a test overrides it
 CAP_SECONDS = 28 * 60                          # Brandon's cap, no config key; a test overrides it
 STILL_MINUTES = (10, 15, 20, 25)
@@ -143,10 +143,6 @@ def agent_seat(lane):
     head = text.split("---")[1] if text.startswith("---") else ""
     keys = dict(re.findall(r"^(\w+):\s*(.+?)\s*$", head, re.M))
     return keys.get("model", "unknown"), keys.get("effort", "unknown"), AGENT_OF[lane]
-
-
-def is_link(p):
-    return Path(p).is_symlink() or Path(p).is_junction()
 
 
 def child_env():
@@ -450,7 +446,7 @@ def unlink_links(top):
 
 def remove_worktree(primary, path):
     path = Path(path)
-    if is_link(path):
+    if path.is_symlink() or path.is_junction():
         raise Exit(64, f"{path} is a link; refused before anything was scanned")
     if not path.is_dir():
         raise Exit(64, f"{path} is not a directory")
@@ -1128,6 +1124,8 @@ def doctor(args):
     sha = entry.get("gitCommitSha") if isinstance(entry.get("gitCommitSha"), str) else ""   # a null commit crashed the doctor (2026-09-23, Astra r2)
     ok = sha == head
     out.insert(0, f"- {'🟢' if ok else '🔴'} **plugin install:** " + (f"{entry.get('version')} at {sha[:8]}: " + ("ok" if ok else f"STALE (repo head {head[:8]}; the cache is keyed by version: bump it, then claude plugin update)") if entry else "not installed"))   # old item 65; 2026-09-22 17:16
+    code, ver = probe(CLAUDE + ["--version"])
+    out.append(f"- {'🟢' if code == 0 else '🔴'} **Claude Code:** {ver}")
     for name, row in rows.items():
         code, ver = probe(row["command"] + ["--version"], env=child_env())   # the whole command, as the pre-flight runs it; 2026-10-12: no muse update starts here
         lcode, login = probe(row["command"] + ["login", "status"], env=child_env()) if name in ("astra", "sol") else (0, "login: the first run's log") \
@@ -1143,6 +1141,8 @@ def doctor(args):
     print(f"### {'🔴' if any('🔴' in l for l in out) else '🟢'} parsec doctor\n\n" + "\n".join(out))   # Markdown, posted as is (Brandon, 2026-09-23)
     if args.update:
         print("\nwarning: a debate may be open in another chat; its lane's update lands mid-debate\n")
+        code, msg = probe(CLAUDE + ["update"], timeout=600)
+        print(f"- **update Claude Code:** exit {code}, {msg}")
         for upd, name in {tuple(r["update"]): ", ".join(m for m, s in rows.items() if s.get("update") == r["update"]) for r in rows.values() if r.get("update")}.items():   # one update per CLI, every lane named (2026-09-22 review, r3)
             code, msg = probe(list(upd), timeout=600, env=dict(os.environ, AGY_CLI_DISABLE_AUTO_UPDATE="true", MUSE_SYNC_UPDATE="1"))   # 2026-10-12: muse has no update subcommand; its launcher updates in the foreground
             print(f"- **update {name}:** exit {code}, {msg}")
