@@ -21,7 +21,7 @@ A new file, or a file rewritten whole, is one fence. Every other edit quotes an 
 
 ## Task sizing
 
-Small edits of one shape are one task (rename a field in five files: one task). A task is what one implementer can transcribe and one test run can check. A task never depends on a task after it.
+Small edits of one shape are one task (rename a field in five files: one task). A task is what one implementer can transcribe and one test run can check. A task never depends on a task after it. A change that needs several commits is several tasks, one commit each (field audit 4: three such tasks went to the backup).
 
 ## Task shape
 

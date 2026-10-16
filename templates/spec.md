@@ -12,9 +12,10 @@ The spec opens with an unnumbered `## Decision summary`, before section 1: at mo
 4. **Design.** The files, names, signatures and call sites touched, with the patterns already in the code that they follow. Design for isolation; no unrelated refactoring.
 5. **Behaviour.** The observable behaviour, case by case, including errors and edges.
 6. **Testing.** What the project's test policy calls for here, and any case that has nothing worth testing, named with its check instead.
-7. **Open questions.** Anything still to decide, each with its owner; never a question the notes already answer. With none, the section says "Open questions: None."
+7. **Claims to probe.** Each game or API behaviour the design rests on that nobody ran, one per line: `C<n>: <the claim>. Probe: <how>. Status: <open | held | refuted | waived>`. The author writes each as `open`; the task list waits until none is (driver rule 7). With none, the section says "Claims to probe: None."
+8. **Open questions.** Anything still to decide, each with its owner; never a question the notes already answer. With none, the section says "Open questions: None."
 
-Goal and Behaviour state the current design, with no round tag or date; a correction's source goes in Approach or the ledger.
+Goal and Behaviour state the current design, with no round tag or date; a correction's source goes in Approach or the ledger. The spec holds no appended change log, amendment or questions section: an answer rewrites the section it changes, and the history lives in the ledger's amendment lines. `round prepare` and `round run` refuse a spec that has one, or a decision summary over 150 words.
 
 ## Self-review, four points, before the file is handed over
 
