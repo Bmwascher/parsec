@@ -58,7 +58,7 @@ Every request is sorted first, and it can only ever get heavier, never lighter.
 | Kind | What it is | What happens |
 |---|---|---|
 | **Spike** | Exploration with nothing to keep | No folder, no spec, no review. You hear what was learned. |
-| **Bounded work** | A fix, a rename, a guard: small enough to need no plan | Your "yes" is the go. The session builds and commits it, then runs the review gate. |
+| **Bounded work** | A fix, a rename, a guard: small enough to need no plan | Your "yes" is the go. The session builds and commits it, then runs the review gate. It turns architectural when it changes how a feature works, or after two fixes of one symptom fail the smoke. |
 | **Architectural** | Everything else | The full flow below. |
 
 ![you decide](https://img.shields.io/badge/you_decide-f08c00?style=flat-square)
@@ -98,7 +98,7 @@ flowchart TD
 > [!IMPORTANT]
 > **The one hard stop is the go.** Nothing is built until you say it, and approving the spec is not the same as a go. A pre-approved handoff counts as one.
 
-**The finish is "stop and report"** unless you, the handoff or the project's own rules say to merge or open a pull request. The report lists every open minor finding, every point the driver refuted, every round closed early, every open item you have not ruled, every site left open for you and every decision a delegator took for you, and carries every round summary and, unless you approved the spec yourself, its decision summary, so nothing decided on your behalf is silently dropped.
+**The finish is "stop and report"** unless you, the handoff or the project's own rules say to merge or open a pull request. The report lists every open minor finding, every point the driver refuted, every round closed early, every open item you have not ruled, every site left open for you, every decision a delegator took for you and every stash the session could not drop, and carries every round summary and, unless you approved the spec yourself, its decision summary, so nothing decided on your behalf is silently dropped.
 
 ---
 
@@ -375,7 +375,7 @@ After the build, three reviewers look at the diff in order:
 A blocking finding anywhere in the gate becomes a fix task, written by the author and built like any other task. Only the commit that the final PASS names is ever merged.
 
 > [!WARNING]
-> **A gate with no cross-vendor lane is degraded, never a PASS.** If codex is down and Muse isn't approved, the round is recorded as degraded and the finish report says so.
+> **A gate with no cross-vendor lane is degraded, never a PASS**, except a small change in bounded work: one you can judge from the diff alone, 20 or fewer changed lines in 2 or fewer files (test files count only toward the lines), no new or changed API call, hook, event handler or timing, and no Critical or Important in any Opus pre-review round. The driver records why in the ledger, and the Fable last look still runs. If codex is down and Muse isn't approved, the round is recorded as degraded and the finish report says so.
 
 ### Panels and polls
 
@@ -475,6 +475,7 @@ Each rail exists because its failure happened at least once. The dates live in t
 | The pre-flight checks the lane is installed, logged in and has quota, and that every rubric file and section exists | A round spent on a setup that could never answer |
 | The pre-flight turns 🟡 below 20% quota left and 🔴 below 10%, is posted at once, and never stops the round | A green pre-flight at "week 4% left", then a Sol round that died after 575 s |
 | `round prepare` and `round run` refuse a brief that has a part 3 but no `## <n>. Final check` part | Four design briefs ended at part 6, and three of those rounds came back with no verdict |
+| `round prepare` and `round run` refuse a round whose spec has a decision summary over 150 words, or a `##` heading that starts an appended change log (Amendment, Change log, Change record, Questions from) | Summaries of 545 to 636 words were posted for approval, and appended logs of about 2,290 lines rode in every round's package |
 | The tool prints the "post now" line after the summary block and the stale-version notice as its last line | A driver filter (`sed -n '/^###/,$p'`, `tail`, `grep -v "^warning"`) dropped both |
 | A brief is written with a file tool, never through a shell, and copied into the package byte for byte | A shell heredoc once stripped every apostrophe and backtick while every check still passed |
 
