@@ -19,6 +19,7 @@ spec = importlib.util.spec_from_file_location("parsec", REPO / "tools" / "parsec
 parsec = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(parsec)
 WIN = os.name == "nt"
+blk = lambda out: out[:out.rindex("\n\nnext: post the block above")] + "\n"   # the summary block, less the post line printed after it (field audit 4)
 TRICKY = "em — dash, \"quotes\", it's, `tick`, back\\slash, $HOME, 100%\n\n\nthree blank lines above, LF only\n"
 
 
@@ -507,7 +508,8 @@ def test_doctor_stale_install(env):
     assert "the new tool is ?\n" in run(e, "doctor")[1]              # pre-review F6: a null path hid the whole warning; Sol diff r1 F3: "?" alone
     plug.joinpath("installed_plugins.json").write_text(json.dumps({"plugins": {"parsec@parsec": [{"version": "0.1.0", "gitCommitSha": e.head, "installPath": str(e.tmp / "c010")}]}}), encoding="utf-8")
     out = run(e, "doctor")[1]                                       # 2026-09-23: three phases ran 0.1.6 after 0.1.7; 2026-09-25: a re-invoked skill kept 0.1.13
-    assert "warning: this tool is parsec 0.0.9, but 0.1.0 is installed: this session's skills and templates stay at 0.0.9 until a new session" in out and str(e.tmp / "c010" / "tools" / "parsec.py") in out
+    assert out.endswith("\nstale: this tool is parsec 0.0.9, but 0.1.0 is installed: this session's skills and templates stay at 0.0.9 until a new session, "   # field audit 4: a first line that grep -v "^warning" hid
+                        f"so start one; the new tool is {e.tmp / 'c010' / 'tools' / 'parsec.py'}\n") and "warning: this tool" not in out
     cmd = json.dumps([sys.executable, str(FAKE)])
     upd = json.dumps([sys.executable, str(FAKE), "update"])
     (e.tmp / "lanes.toml").write_text(f'[astra]\nmodel = "a"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n'
@@ -709,17 +711,17 @@ def test_summary_head(env):
     e.mp.setenv("FAKE_REPLY", "- F2 · Important: 3 of 20 lack it.\n\nCritical 0, Important 1, Minor 2\n\nVERDICT: FIX\n")   # pre-review F1: printed Important 3
     assert run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")[0] == 0   # 2026-10-04 Afterparty: 2 of 5 pre-flights and 4 of 18 summaries posted
     out = rnd(e, 1)[1]
-    assert "before any other step\n\n### 🔴 Astra R1 Design Round: FIX (0 min, fresh)\n\nCritical 0 · Important 1 · Minor 2\n\n🟢 Pre-flight (" in out, out
+    assert "\n\n### 🔴 Astra R1 Design Round: FIX (0 min, fresh)\n\nCritical 0 · Important 1 · Minor 2\n\n🟢 Pre-flight (" in out, out
     assert "· Model gpt" in out and not (e.feat / "rounds" / "preflight-astra.txt").exists()   # the green pre-flight rides once, in the lane's next summary
     e.mp.setenv("FAKE_REPLY", "**0 Critical, 0 Important, 3 Minor.**\n\nVERDICT: PASS\n")
     out = rnd(e, 2)[1]
     assert "\n### 🟢 Astra R2 Design Round: PASS (0 min, resumed)\n\nCritical 0 · Important 0 · Minor 3\n" in out and "Pre-flight" not in out
     e.mp.setenv("FAKE_REPLY", "Critical: 0\nImportant: 1\nMinor: 2\n\nVERDICT: PASS\n")   # pre-review F1: printed 0, 0, 1; no one line holds all three
-    assert rnd(e, 3)[1].endswith("### 🟢 Astra R3 Design Round: PASS (0 min, resumed)\n")
+    assert blk(rnd(e, 3)[1]).endswith("### 🟢 Astra R3 Design Round: PASS (0 min, resumed)\n")
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable", "--brief", str(e.brief), "--head", e.head)
     (e.feat / "rounds" / "design-r1-fable" / "reply.md").write_text("VERDICT: FIX\n", encoding="utf-8")
     out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "1", "--lane", "fable")[1]
-    assert out.endswith("### 🔴 Fable R1 Design Round: FIX (0 min, fresh)\n") and "warning: the reply has no counts line" in out   # pre-review F2: an agent round gets its minutes too
+    assert blk(out).endswith("### 🔴 Fable R1 Design Round: FIX (0 min, fresh)\n") and "warning: the reply has no counts line" in out   # pre-review F2: an agent round gets its minutes too
 
 
 # row 14e: the whole summary block, one bullet per finding (2026-09-25 audit: the heading alone was pasted in about a third of rounds)
@@ -728,10 +730,10 @@ def test_summary_bullets(env):
     ask = "\n\n  → **Answer:** pending"
     e.mp.setenv("FAKE_REPLY", "### F1 (Important, new): the hold is lost.\n- **M2 · Minor — wording.**\nC1: holds\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")
     out = rnd(e, 1)[1]
-    assert out.endswith("Critical 0 · Important 1 · Minor 1\n\n- **F1 · Important:** the hold is lost." + ask + "\n\n- **M2 · Minor:** wording." + ask + "\n"), out
+    assert blk(out).endswith("Critical 0 · Important 1 · Minor 1\n\n- **F1 · Important:** the hold is lost." + ask + "\n\n- **M2 · Minor:** wording." + ask + "\n"), out
     e.mp.setenv("FAKE_REPLY", "- **M1.** no grade\n\nCritical 0 · Important 0 · Minor 1\n\nVERDICT: PASS\n")   # four shapes in five replies (Fable poll): no ID guessed
     out = rnd(e, 2)[1]
-    assert "warning: the reply's finding lines do not match its counts line" in out and out.endswith("- **? · Minor:** not parsed, see rounds\\design-r2-astra\\reply.md" + ask + "\n")
+    assert "warning: the reply's finding lines do not match its counts line" in out and blk(out).endswith("- **? · Minor:** not parsed, see rounds\\design-r2-astra\\reply.md" + ask + "\n")
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n\nlater draft text\n")
     assert "the reply's last line is not a VERDICT line with one verdict word" in rnd(e, 3)[1]
     e.mp.setenv("FAKE_REPLY", "draft text only\n")                      # Sol diff r1 F2: no counts line and no verdict
@@ -742,8 +744,8 @@ def test_summary_bullets(env):
     span = "see `" + "long " * 30 + "code` end"                        # 2026-09-28 audit: gk-4, gk-5, gk-7 bullets broke their Markdown
     e.mp.setenv("FAKE_REPLY", f"F1 · Minor: `KE:Hide` is gone\nF2 · Minor: {span}\nOpus F1 (the fake): `ride`\n\nCritical 0 · Important 0 · Minor 3\n\nVERDICT: PASS\n")
     out = rnd(e, 4)[1]
-    assert "- **F1 · Minor:** `KE:Hide` is gone" in out and "long …`" + ask in out and out.endswith("- **? · Minor:** not parsed, see rounds\\design-r4-astra\\reply.md" + ask + "\n"), out   # a carried Minor: parsed rows stay; 2026-10-04 Afterparty: summaries.md kept blank ? bullets
-    assert (e.feat / "summaries.md").read_text(encoding="utf-8").endswith(out[out.index("### 🟢 Astra R4"):].replace(parsec.PENDING, "").rstrip() + "\n\n")   # decision 1a: the finish report's file; pre-review F4: no "pending"
+    assert "- **F1 · Minor:** `KE:Hide` is gone" in out and "long …`" + ask in out and blk(out).endswith("- **? · Minor:** not parsed, see rounds\\design-r4-astra\\reply.md" + ask + "\n"), out   # a carried Minor: parsed rows stay; 2026-10-04 Afterparty: summaries.md kept blank ? bullets
+    assert (e.feat / "summaries.md").read_text(encoding="utf-8").endswith(blk(out)[out.index("### 🟢 Astra R4"):].replace(parsec.PENDING, "").rstrip() + "\n\n")   # decision 1a: the finish report's file; pre-review F4: no "pending"
     (e.feat / "rounds" / "design-r1-astra" / "reply.md").write_text("the author's answer\n", encoding="utf-8")   # 2026-09-26 gk-1
     out = rnd(e, 5)[1]
     assert "design-r1-astra" in out and "changed after its round was collected" in out and "design-r3-astra.dead" not in out   # a dead round's reply is its own
@@ -769,17 +771,19 @@ def test_named_evidence(env):
     out = rnd(e, 1)[1]
     ctx = (e.wt / "_review" / "proj-09-22-x-design-astra" / ".parsec" / "context.md").read_text(encoding="utf-8")
     assert "- notes: .parsec/notes.md, the brainstorm record" in ctx and out.count("the brief names") == 2 and "names pages/canvas.json" in out and "names ghost.json" in out, out
+    assert out.index("names ghost.json") < out.index("verdict:") and out.endswith("before any other step; 5 warning(s) above the block\n")   # field audit 4: printed only after the lane finished; a sed from ### dropped the post line
     assert "- evidence: .parsec/evidence/1-gate-zero.md is a copy of gate-zero.md" in ctx and "packed gate-zero.md from the feature folder" in out
     (e.feat / "rounds" / "answers.md").write_text("a\n", encoding="utf-8")   # pre-review F1, F2: the path as named, inside the feature folder only
     e.brief.write_text("Read `gate-zero.md`, `../other/gate-zero.md` and `rounds/answers.md`.\n", encoding="utf-8")
     out = rnd(e, 1, "sol", "diff")[1]
     ctx = (e.wt / "_review" / "proj-09-22-x-diff-sol" / ".parsec" / "context.md").read_text(encoding="utf-8")
-    assert "names ../other/gate-zero.md" in out and "1-gate-zero.md" in ctx and "2-answers.md" in ctx and "no --file evidence but replies" in out, out   # F4: packed files are no gate log
+    assert "names ../other/gate-zero.md" in out and "1-gate-zero.md" in ctx and "2-answers.md" in ctx and "no --file named like a gate log" in out, out   # F4: packed files are no gate log
     e.brief.write_text("Read `notes.md`, the earlier `reply.md` and `pages/canvas.json`.\n", encoding="utf-8")   # pre-review F1, Sol diff r1 F2: a passed file is found by its name
     (e.tmp / "canvas.json").write_text("{}", encoding="utf-8")
     assert "the brief names" not in rnd(e, 2, "astra", "design", "--file", str(e.tmp / "canvas.json"))[1]
-    assert "no --file evidence but replies" in rnd(e, 2, "sol", "diff")[1]
-    assert "no --file evidence" not in rnd(e, 3, "sol", "diff", "--file", str(e.feat / "notes.md"))[1]
+    assert "no --file named like a gate log" in rnd(e, 2, "sol", "diff")[1]
+    (e.tmp / "gate-log.txt").write_text("busted: 9 passed\n", encoding="utf-8")   # field audit 4: Moving Day phase 7's smoke and AceGUI files kept the warning silent
+    assert "like a gate log" in rnd(e, 3, "sol", "diff", "--file", str(e.feat / "notes.md"))[1] and "like a gate log" not in rnd(e, 4, "sol", "diff", "--file", str(e.tmp / "gate-log.txt"))[1]
 
 
 # row 14g: the Muse pre-flight and doctor row; Muse has no login status command, so auth.json's presence (2026-10-12)

@@ -654,13 +654,15 @@ def prepare(args, launch):
     warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
                  for n in sorted(named) if n not in loose and Path(n.replace("\\", "/")).name not in {Path(f).name for f in given} | {"reply.md", "record.json", "summaries.md", "pending.json"}   # pre-review F1, Sol diff r1 F2
                  and not any((b / n).exists() for b in (root, root / ".parsec", tree)) and n not in held]
-    if args.kind in ("prereview", "diff", "lastlook") and all(Path(f).name == "reply.md" for f in given):   # 2026-09-28 audit: gate logs in 4 of 16 phases
-        warnings.append("no --file evidence but replies: pass the gate log, or the reviewer marks every test claim unverified")
+    if args.kind in ("prereview", "diff", "lastlook") and not any(re.search(r"gate|check|test|\.log$", Path(f).name, re.I) for f in given):   # 2026-09-28 audit: gate logs in 4 of 16 phases; field audit 4: other files kept it silent
+        warnings.append("no --file named like a gate log (gate, check, test or .log in its name): pass the gate log, or the reviewer marks every test claim unverified")
     pending = {"kind": args.kind, "round": args.round, "lane": args.lane, "head": args.head, "base": args.base,
                "start": stamp(), "brief_sha256": sha256(args.brief), "tier": "fast" if args.fast else "default",
                "model": model, "effort": effort, "agent": agent, "resumed": bool(session), "session": session or (str(uuid.uuid4()) if args.lane == "muse" else None),   # D3: muse takes the tool's own id from round 1
                "subject": subject, "worktree": str(tree), "feature": frel, "warnings": warnings}
     write_json(folder / "pending.json", pending)
+    for wl in warnings:                          # field audit 4: round run printed them only after the lane had finished
+        print(f"warning: {wl}", flush=True)
     if not launch:
         print(f"task name: {pretty_name(args.lane, args.kind, args.round)}")
         print(f"brief: {folder / '.parsec' / 'brief.md'}")   # 2026-09-23: four phases hunted for the package
@@ -670,8 +672,6 @@ def prepare(args, launch):
             n = len(read_text(patch).splitlines())   # 2026-09-24 fld-11: 2,000 lines of a 96 KB patch passed the Read tool's token cap
             print(f"diff.patch: {n} lines (Read pages {max(100, min(2000, n * 40000 // max(1, patch.stat().st_size) // 100 * 100))} lines at a time)")
         print(f"report path: {folder / 'reply.md'}")
-        for wl in warnings:
-            print(f"warning: {wl}")
         return 0
     return run_round(args, primary, fdir, folder, pending, tree)
 
@@ -724,7 +724,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     pend = read_json(pend_path)
     if agent_id and pend.get("session") not in (None, agent_id):   # a resumed round's agent is the one prepare named (2026-09-23, Q2)
         raise Exit(64, f"--agent-id {agent_id}: this round was prepared to resume {pend['session']}")
-    warnings += pend.get("warnings", [])
+    warnings += pend.get("warnings", []); said = len(warnings) if run else 0   # round run printed these at launch
     warnings += [f"{p} changed after its round was collected" for r in records(fdir)   # 2026-09-26 gk-1: the author wrote over Sol's reply unseen
                  if r.get("reply_sha256") and not ((p := Path(r["_path"]).with_name("reply.md")).is_file() and sha256(p) == r["reply_sha256"])]   # beside the record: a dead round's "reply" names its rerun's
     reply = folder / "reply.md"
@@ -778,7 +778,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     print(f"{pretty_name(lane, kind, n)}\nverdict: {verdict}    " + ("in-session agent" if lane in AGENT_OF else f"cli exit: {run['cli_exit']}    {run['seconds']} s    "
           f"{'resumed' if pend.get('resumed') else 'fresh'} session {session}    tier {tier}") + (f"\ndegraded: {degraded}" if degraded else ""))
     print(f"repo:    {primary}    head {pend.get('head')}\nreply:   {reply}" + (f"\nsubject: {sub}" if sub else ""))
-    for w in warnings:
+    for w in warnings[said:]:
         print(f"warning: {w}")
     code = 67 if run["timeout"] else 66 if verdict == "WROTE-FILES" else 65 if verdict == "NONE" else (run["cli_exit"] or 0)
     if code and transcript:
@@ -800,7 +800,8 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
             f.write(block.replace(PENDING, "").rstrip() + "\n\n")   # pre-review F4: the answers are in chat, never a stale "pending"
     except OSError as e:
         print(f"warning: summaries.md append failed: {e}")
-    print("\nnext: post the block below in chat now, as is, outside a code block, before any other step\n\n" + block)   # 2026-10-04 Afterparty phases 2 to 4: 4 of 18 posted
+    n = len(warnings) + (bool(bullets) and not ok)   # field audit 4: sed -n '/^###/,$p', tail and grep dropped a line printed above the block
+    print(f"\n{block}\n\nnext: post the block above in chat now, as is, outside a code block, before any other step" + (f"; {n} warning(s) above the block" if n else ""))   # 2026-10-04 Afterparty phases 2 to 4: 4 of 18 posted
     return code
 
 
@@ -1213,9 +1214,7 @@ def parser():
 def main(argv=None):
     if hasattr(sys.stdout, "reconfigure"):     # 2026-08-11: em dashes as ??? (a test's StringIO has no reconfigure)
         sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
-    args = parser().parse_args(argv)
-    if (late := behind()):
-        print(f"warning: {late}")
+    args, late = parser().parse_args(argv), behind()
     try:
         if args.cmd == "round" and args.sub in ("run", "prepare"):
             return prepare(args, launch=args.sub == "run")
@@ -1236,6 +1235,9 @@ def main(argv=None):
     except Exit as e:
         print(f"error: {e}", flush=True)
         return e.code
+    finally:
+        if late:                                 # field audit 4: grep -v "^warning" hid it in 71 of 78 calls; the last line survives that, sed and tail
+            print(f"stale: {late}")
 
 
 if __name__ == "__main__":
