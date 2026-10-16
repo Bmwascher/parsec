@@ -110,11 +110,13 @@ def rnd(e, n=1, lane="astra", kind="design", *extra, **kw):
     return run(e, *args)
 
 
-# row 1: codex argument list, on round 1 and on resume; 2026-07-24, 07-28, 08-11, 09-22 (the inherited tier)
+# row 1: codex argument list, on round 1 and on resume; 2026-07-24, 07-28, 08-11, 09-22 (the inherited tier); row 3: CODEX_HOME is absent from the codex child (2026-07-24)
 def test_codex_flags_before_resume(env):
     e = env
+    e.mp.setenv("CODEX_HOME", str(e.tmp / "elsewhere"))
+    e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
     code, out = rnd(e, 1)
-    assert code == 0, out
+    assert code == 0 and "CODEX_HOME" not in (child := json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))) and child["NO_COLOR"] == "1", out
     fresh = e.calls()[-1]
     pairs = list(zip(fresh, fresh[1:]))
     for flag in (("--sandbox", "read-only"), ("--disable", "plugins"), ("--disable", "apps"), ("--disable", "memories"),
@@ -189,16 +191,6 @@ def test_muse_arguments_session_and_env(env):
     folder.mkdir(parents=True)
     (folder / "session.jsonl").write_text("{}\n", encoding="utf-8")
     assert parsec.muse_session_file(sid) == folder / "session.jsonl" and parsec.muse_session_file(str(uuid.uuid4())) is None   # P4: the watcher's only growing file
-
-
-# row 3: CODEX_HOME is absent from the codex child (2026-07-24)
-def test_codex_home_removed(env):
-    e = env
-    e.mp.setenv("CODEX_HOME", str(e.tmp / "elsewhere"))
-    e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
-    rnd(e, 1)
-    child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
-    assert "CODEX_HOME" not in child and child["NO_COLOR"] == "1"
 
 
 # row 4: the brief reaches standard input byte for byte (2026-09-17; 2026-08-11), the kind's insert added by the tool (2026-09-25 audit: seat briefs derived by shell edit)
@@ -288,14 +280,10 @@ def test_verdict_reading(text, want):
     assert parsec.verdict_of(text) == want
 
 
-def test_tag_line_strips_the_kimi_bullet():
-    assert parsec.tag_line("• CONTINUITY: yes\n", "CONTINUITY") == "yes"
-
-
 def test_continuity_and_wrote_files(env):
     e = env
     rnd(e, 1)
-    e.mp.setenv("FAKE_REPLY", "CONTINUITY: FIX, the ledger point\n\nVERDICT: PASS\n")
+    e.mp.setenv("FAKE_REPLY", "• CONTINUITY: FIX, the ledger point\n\nVERDICT: PASS\n")   # 2026-09-24: kimi starts each reply block with "• "
     rnd(e, 2)
     r = e.record("design", 2, "astra")
     assert r["continuity"] == "FIX, the ledger point" and "continuity answered" in e.ledger().splitlines()[-1]
@@ -633,7 +621,7 @@ def test_inputs_and_preflight(env):
     fpkg = e.feat / "rounds" / "panel-r1-fable" / ".parsec"
     assert "- your lane, Fable: read with your file tools only" in (fpkg / "context.md").read_text(encoding="utf-8") and not (fpkg / "spec.md").exists()   # a panel packs no design
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
-    assert code == 64 and "never collected" in out              # 2026-09-22: five Kimi rounds collided on one folder; the refusal held
+    assert code == 0 and "the uncollected package is now panel-r1-fable.dead1" in out and (fpkg.parent.with_name("panel-r1-fable.dead1") / "pending.json").is_file()   # field audit 4: 4 slices hand-edited or deleted it
     code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--lane", "fable", "--brief", str(e.brief))
     assert code == 64 and "--head is required" in out
     assert run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "design", "--round", "9", "--brief", str(e.brief), "--head", e.head)[0] == 2
@@ -888,13 +876,13 @@ def test_build_run_success_test(env):
     code, out = b("--again")
     assert code == 65 and "FAILED: route line present: applying agent mode accept-edits" in out
     clean()
+    b2 = lambda: run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", git("rev-parse", "HEAD", cwd=co), "--again")
     (co / "crlf.txt").write_bytes(b"one\r\ntwo\r\n")
     git("add", "crlf.txt", cwd=co)
     git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "crlf", cwd=co)
     e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG)
     e.mp.setenv("FAKE_WRITE", str(co / "crlf.txt"))                 # the fake writes LF into the CRLF file
-    code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head",
-                    git("rev-parse", "HEAD", cwd=co).strip(), "--again")
+    code, out = b2()
     assert code == 65 and "FAILED: line endings kept" in out     # 2026-09-22 02:06: LF written into CRLF files, tests green
     clean()
     (co / ".gitignore").write_text(".claude/\nignored.txt\n", encoding="utf-8")   # a docs root git does not ignore, as setup allows
@@ -904,15 +892,13 @@ def test_build_run_success_test(env):
     (co / "docs" / "09-22-x" / "rounds").mkdir(parents=True)
     (co / "docs" / "09-22-x" / "rounds" / "pending.md").write_text("open round\n", encoding="utf-8")
     e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
-    code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head",
-                    git("rev-parse", "HEAD", cwd=co).strip(), "--again")
+    code, out = b2()
     assert code == 0 and "result: ok" in out, out                # 2026-09-22 r2 (Sol): open rounds under a tracked docs root are not dirt
     clean()
     (co / "empty.txt").write_bytes(b"")
     (co / "lf.txt").write_bytes(b"one\ntwo\n")
     git("add", "empty.txt", "lf.txt", cwd=co)
     git("commit", "-qm", "empty and lf", cwd=co)
-    b2 = lambda: run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", git("rev-parse", "HEAD", cwd=co), "--again")
     e.mp.setenv("FAKE_WRITE", str(co / "empty.txt"))              # w/none to w/lf: a first ending is no flip (r2, Sol)
     assert "ok: line endings kept" in b2()[1]
     clean()

@@ -604,7 +604,8 @@ def prepare(args, launch):
     sent = assemble(args.brief, args.kind, args.lane, getattr(args, "resume", None), warnings)   # before any write: a refused brief leaves nothing behind
     if args.round > 5:
         warnings.append(f"{args.lane}'s {args.kind} round {args.round}: past five rounds of one lane and kind the skill asks Brandon (old item 24)")
-    if folder.exists() and not (folder / "record.json").is_file() and (folder / "pending.json").is_file():   # before the number check: an uncollected old-style round named round 1 (Kimi r2)
+    stale = folder.exists() and not (folder / "record.json").is_file() and (folder / "pending.json").is_file()
+    if stale and cli:                            # before the number check: an uncollected old-style round named round 1 (Kimi r2); a CLI round may still run
         raise Exit(64, f"{folder} was never collected: run round collect first")
     mine = [r for r in records(fdir) if (r.get("kind"), r.get("lane")) == (args.kind, args.lane)]
     nxt = 1 + max((r["round"] for r in mine if r.get("verdict") in VERDICTS), default=0)
@@ -615,7 +616,8 @@ def prepare(args, launch):
     if resume and (args.fresh or not mine or last not in (None, resume)):   # before any write (2026-09-23, Q2): the id is checked against the record
         raise Exit(64, f"--resume {resume}: needs an earlier {args.kind} round of {args.lane}, no --fresh, and the agent its newest record names ({last})")
     if folder.exists():
-        dead_rename(folder)
+        k = dead_rename(folder)                  # field audit 4: a prepared agent round, never dispatched, was hand-edited, renamed or deleted in 4 slices
+        warnings += [f"the uncollected package is now {folder.name}.dead{k}: dispatch the new one, and stop any agent sent the old one"] if stale else []
     session = resume
     if cli and not args.fresh and mine:          # an agent round resumes only on --resume (design r1, F1)
         session = last
