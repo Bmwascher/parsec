@@ -18,11 +18,10 @@ TEMPLATES = ("driver-rules.md", "ledger.md")
 
 def launched(line):                                  # 2026-10-16 design r1, r2 (Sol F1): a Skill block of the message itself, never data inside one
     try:
-        blocks = json.loads(line)["message"]["content"]
+        blocks, skills = json.loads(line)["message"]["content"], [p.name for p in (PLUGIN / "skills").iterdir()]
         if isinstance(blocks, str):                  # 2026-10-16 Fable design r1 F1: a typed launch of a skill in skills/, never /parsec:doctor
-            skills = [p.name for p in (PLUGIN / "skills").iterdir()]
             return blocks.startswith("<command-message>") and any(f"<command-name>/parsec:{s}</command-name>" in blocks for s in skills)
-        return any(b["type"] == "tool_use" and b["name"] == "Skill" and b["input"]["skill"].startswith("parsec:") for b in blocks)
+        return any(b["type"] == "tool_use" and b["name"] == "Skill" and b["input"]["skill"] in [f"parsec:{s}" for s in skills] for b in blocks)   # 0.1.30 last look F1: nor its Skill call
     except (ValueError, LookupError, TypeError, AttributeError, OSError, RecursionError):   # 2026-10-16 diff pre-review r1 (Opus F2), Sol diff r1: a bad record is no launch, and never hides a later one
         return False
 

@@ -76,7 +76,7 @@ def test_compaction_rereads_rules(tmp_path, launch):   # 2026-10-16 diff pre-rev
     assert len(out.decode("utf-8")) < 10_000          # the harness cap; past it Claude gets a path and a preview
 
 
-@pytest.mark.parametrize("line", [SKILL_LINE.replace("parsec:build", "superpowers:brainstorming"),
+@pytest.mark.parametrize("line", [SKILL_LINE.replace("parsec:build", "superpowers:brainstorming"), SKILL_LINE.replace("parsec:build", "parsec:doctor"),   # 0.1.30 last look F1
                                   SKILL_LINE.replace('"name":"Skill"', '"name":"Read"'),
                                   '{"type":"assistant","message":{"content":[{"type":"text","name":"Skill","input":{"skill":"parsec:build"}}]}}',
                                   '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"example":{"type":"tool_use","name":"Skill","input":{"skill":"parsec:build"}}}}]}}',
