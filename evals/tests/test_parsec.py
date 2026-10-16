@@ -117,8 +117,7 @@ def test_codex_flags_before_resume(env):
     e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
     code, out = rnd(e, 1)
     assert code == 0 and "CODEX_HOME" not in (child := json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))) and child["NO_COLOR"] == "1", out
-    fresh = e.calls()[-1]
-    pairs = list(zip(fresh, fresh[1:]))
+    pairs = list(zip(fresh := e.calls()[-1], fresh[1:]))
     for flag in (("--sandbox", "read-only"), ("--disable", "plugins"), ("--disable", "apps"), ("--disable", "memories"),
                  ("-c", "mcp_servers.node_repl.enabled=false"), ("-c", "service_tier=default"), ("-m", "gpt-6-astra"),
                  ("-c", "model_reasoning_effort=high")):
@@ -150,8 +149,7 @@ def test_kimi_arguments_and_home(env):
     empty = Path(a[a.index("--skills-dir") + 1])
     assert empty.is_dir() and not any(empty.iterdir()) and empty.parent == e.wt / "_review"
     assert a[-2:] == ["-p", "Read the file .parsec/brief.md and follow it exactly."]
-    child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
-    assert child["KIMI_CODE_HOME"] == str(e.tmp / "kimi-home")
+    assert json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))["KIMI_CODE_HOME"] == str(e.tmp / "kimi-home")
     assert e.record("design", 1, "kimi")["session"] == "session_2fc45d80-9dc5-4b9b-9561-65f39c787383"
     assert "- your lane, Kimi: read with your file tools only; you have no shell" in (e.wt / "_review" / "proj-09-22-x-design-kimi" / ".parsec" / "context.md").read_text(encoding="utf-8")   # lanes/kimi-reviewer.md disallows Bash
     code, out = rnd(e, 2, "kimi")
@@ -168,8 +166,7 @@ def test_muse_arguments_session_and_env(env):
     e.mp.setenv("META_API_KEY", "stray-key")
     code, out = rnd(e, 1, "muse")
     assert code == 0, out
-    a = e.calls()[-1]
-    pairs = list(zip(a, a[1:]))
+    pairs = list(zip(a := e.calls()[-1], a[1:]))
     for flag in (("--contributor-mode", "off"), ("--sandbox-network", "restricted"), ("--model", "muse-wonder-full-1.0"), ("--effort", "high")):
         assert flag in pairs, (flag, a)
     assert a[0] == "exec" and all(f in a for f in ("--disable-write", "--disable-shell", "--disable-web-tools", "--disable-reminders", "--no-foreign-personal-context"))
@@ -225,6 +222,11 @@ def test_brief_bytes_reach_stdin(env):
     assert code == 64 and "already carries an insert" in out and not (e.feat / "rounds" / "diff-r1-opus").exists()
     e.brief.write_bytes(b"## 2. Task\n\n## 3. Rules\n\n## 6. Boundaries\n\n```\n## 7. Final check\n```\n")   # field audit 4: Moving Day phase 13's four design briefs ended at part 6 (3 NONE)
     assert prep("diff", "opus")[0] == rnd(e, 3)[0] == 64 and "no `## <n>. Final check` part" in prep("diff", "opus")[1] and not (e.feat / "rounds" / "diff-r1-opus").exists()
+    e.brief.write_bytes(clean)   # field audit 4 (H9): summaries of 545 to 636 words went to Brandon, and md-11's appended amendments rode in every package
+    put = lambda body: (e.feat / "spec.md").write_bytes(b"# Spec\n\n" + body) and prep("diff", "opus")   # write_bytes returns the byte count, never 0 here
+    got = [put(b) for b in (b"## Decision summary\n\n" + b"w " * 151 + b"\n", b"## Amendment 1 (design round 1), 2026-10-12\r\nx\r\n", b"## 8. Amendment (base c9b4b874)\n")]   # md-11 with CRLF ends; md-13's numbered shape
+    assert [(c, w in o) for (c, o), w in zip(got, ("has 151 words, at most 150", "## Amendment 1 (design round 1), 2026-10-12 is an appended change log", "## 8. Amendment (base c9b4b874) is"))] == [(64, True)] * 3 and not (e.feat / "rounds" / "diff-r1-opus").exists() and rnd(e, 3)[0] == 64   # round run shares the check
+    assert put(b"## Decision summary\n\n" + b"w " * 150 + b"\n## 1. Goal\n\n" + b"w " * 200 + b"\n```\n## Amendment 1\n## v0.1.32 (2026-10-16)\n```\n### Change log\n## 4. `record.json` and its amendment lines\n## Functionality changes\n")[0] == 0   # a fence, a deeper level, a later word and a project section never fire
 
 
 # row 5: resume by the recorded id, never --last; the rerun rule (2026-09-01; the scoping note's seven briefs)
@@ -285,8 +287,7 @@ def test_continuity_and_wrote_files(env):
     rnd(e, 1)
     e.mp.setenv("FAKE_REPLY", "• CONTINUITY: FIX, the ledger point\n\nVERDICT: PASS\n")   # 2026-09-24: kimi starts each reply block with "• "
     rnd(e, 2)
-    r = e.record("design", 2, "astra")
-    assert r["continuity"] == "FIX, the ledger point" and "continuity answered" in e.ledger().splitlines()[-1]
+    assert e.record("design", 2, "astra")["continuity"] == "FIX, the ledger point" and "continuity answered" in e.ledger().splitlines()[-1]
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n")
     e.brief.write_bytes(TRICKY.encode() + b"a quoted `CONTINUITY:` tag, and its line starting `CONTINUITY:`\n")   # pre-review F2, Sol diff r1 F3: a quote is not the question
     rnd(e, 3)

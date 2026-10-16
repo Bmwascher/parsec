@@ -221,15 +221,6 @@ def strip_line(line):
     return re.sub(r"^[\s\-\*>#•]*\**", "", line).strip()   # 2026-09-24: kimi starts each reply block with "• " (0.43.1 and 2.1.1)
 
 
-def tag_line(text, tag):
-    """The last line that, after bullets and asterisks, STARTS with the tag; None when there is none."""
-    for line in reversed(text.splitlines()):
-        s = strip_line(line)
-        if s.upper().startswith(tag + ":"):
-            return s[len(tag) + 1:].strip(" *")
-    return None
-
-
 COUNTS = re.compile(r"Critical:? (\d+)\W+Important:? (\d+)\W+Minor:? (\d+)|(\d+) Critical\W+(\d+) Important\W+(\d+) Minor")
 
 
@@ -596,6 +587,12 @@ def prepare(args, launch):
     args.base, args.head = [c and git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary).strip() for c in (args.base, args.head)]   # full ids: "HEAD" in a reused review worktree named its old commit (2026-09-23, Astra)
     if args.kind == "design" and not all((fdir / n).is_file() for n in ("spec.md", "tasks.md")):
         raise Exit(64, f"design round without spec.md and tasks.md in {fdir}")
+    lines = [l.decode() for _, l in unfenced(read_text(fdir / "spec.md").encode())] if args.kind != "panel" and (fdir / "spec.md").is_file() else []   # every round that packs the spec (write_package)
+    at = next((k + 1 for k, l in enumerate(lines) if re.match(r"##\s+Decision summary\b", l, re.I)), len(lines))
+    words = len(" ".join(lines[at:next((k for k in range(at, len(lines)) if lines[k].startswith("#")), len(lines))]).split())
+    log = next((l.strip() for l in lines if re.match(r"##\s+(?:\d+\.\s+)?(?:amendment|change ?log|change record|questions from)", l, re.I)), None)   # ## only, anchored at the heading text: a deeper level holds design sections, a later word may name record.json (H-Q4, Fable poll)
+    if words > 150 or log:                       # field audit 4 (H9): summaries of 545 to 636 words went to Brandon; appended logs of about 2,290 lines rode in every package
+        raise Exit(64, "spec.md: " + (f"its decision summary has {words} words, at most 150" if words > 150 else f"{log} is an appended change log: the history lives in the ledger's amendment lines") + " (templates/spec.md)")
     cli = args.lane in CLI_LANES
     if cli:
         program(row := lane_row(args.lane))      # before anything is written (2026-09-23 last look: a new panel's folder was)
@@ -734,7 +731,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
         warnings.append("the reply's last line is not a VERDICT line with one verdict word: rerun on the session, asking only for the verdict")
     elif verdict in VERDICTS[:3] and counts is None:   # 2026-09-25 audit: fld-7's derived briefs lost the counts line unseen; a BLIND lane has none (field audit 4)
         warnings.append("the reply has no counts line: count the findings by hand")
-    continuity = tag_line(text, "CONTINUITY") if pend.get("resumed") else None
+    continuity = next((s[11:].strip(" *") for ln in reversed(text.splitlines()) if (s := strip_line(ln)).upper().startswith("CONTINUITY:")), None) if pend.get("resumed") else None   # the last line that starts with the tag, after bullets and asterisks
     session = pend.get("session") or agent_id or session_of(lane, transcript) or "unknown"   # an agent round's id comes from --agent-id (spec review, Q3)
     cli_version = (re.search(r"OpenAI Codex v(\S+)", transcript) or [None, "unknown"])[1] if lane in ("astra", "sol") else "unknown"   # kimi and muse print no version on their streams (2026-10-12 P1, P4)
     clean = None
