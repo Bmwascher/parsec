@@ -239,7 +239,7 @@ def severity_counts(text):                       # the LAST one line naming all 
 
 
 WORD, TAG = r"(?!(?:Critical|Important|Minor|[Rr]ound)\b)[A-Za-z][\w-]*", r"[\w-]*(?:[A-Za-z-]\d|\d[A-Za-z-])[\w-]*"   # a label word; a token joining a digit to a letter or hyphen
-ID = rf"(?:(?:{WORD} ){{1,3}}(?:(?:{TAG}|\d{{1,3}}) )?{TAG}|(?:{WORD} ){{1,3}}{TAG} \d{{1,3}}|(?:{WORD} ){{0,2}}[A-Za-z]\w*-[\w-]* \d{{1,3}}|{WORD} \d{{1,3}}|[A-Z][A-Za-z]{{0,3}}\d{{1,3}})"   # F1, FabF1, Opus F2, api-validator 2 (2026-10-04 to 10-06 Afterparty); Sol R3 F1, api-validator t2-7 1, r1-2, 15 M1 (field audit 4); never "There are 2" (pre-review F1)
+ID = rf"(?:(?:{WORD} ){{1,3}}(?:(?:{TAG}|\d{{1,3}}) )?{TAG}|(?:{WORD} ){{1,3}}{TAG} \d{{1,3}}|(?:{WORD} ){{0,2}}(?=[A-Za-z]\w*-){WORD} \d{{1,3}}|{WORD} \d{{1,3}}|[A-Z][A-Za-z]{{0,3}}\d{{1,3}})"   # F1, FabF1, Opus F2, api-validator 2 (2026-10-04 to 10-06 Afterparty); Sol R3 F1, api-validator t2-7 1, r1-2, 15 M1 (field audit 4); never "There are 2" (pre-review F1) or "round-x 2" (Kimi F1)
 FINDING = re.compile(rf"^(?!(?:Critical|Important|Minor)\b)({ID}(?: ?/ ?{ID})*)\W{{1,6}}(Critical|Important|Minor)\b[^\w`]*(.*)")   # 2026-09-28 audit: \W* ate a title's opening backtick
 GRADES = ("Critical", "Important", "Minor")
 

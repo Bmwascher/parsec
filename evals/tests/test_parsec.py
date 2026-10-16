@@ -750,7 +750,7 @@ def test_summary_bullets(env):
     out = rnd(e, 5)[1]
     assert "design-r1-astra" in out and "changed after its round was collected" in out and "design-r3-astra.dead" not in out   # a dead round's reply is its own
     e.mp.setenv("FAKE_REPLY", "- Opus F2 · Minor: carried: ride, wording\n- Opus F3 / Sol F1 · Minor: twice\n- api-validator 2 · Minor: no ID\n"
-                "- Sol R3 F1 / Astra R3 F2 · Minor: lanes\n- api-validator t2-7 1 · Minor: tasks\n- api-validator r2-M1 · Minor: round\n\nThe round 1 Important findings are closed.\nThere are 2 Important findings, I found 3 Minor ones.\n"   # field audit 4: about 87 ? bullets in 24 gate blocks
+                "- Sol R3 F1 / Astra R3 F2 · Minor: lanes\n- api-validator t2-7 1 · Minor: tasks\n- api-validator r2-M1 · Minor: round\n\nThe round 1 Important findings are closed.\nround-api 2 · Minor: x\nThere are 2 Important findings, I found 3 Minor ones.\n"   # field audit 4: about 87 ? bullets in 24 gate blocks; Kimi F1: a hyphenated label never starts "round-"
                 "- F9 · Minor (carried: Opus F2, Sol F1): kept\n### FabF1 · Minor · own\n\nCritical 0 · Important 0 · Minor 8\n\nVERDICT: PASS\n")   # 2026-10-04 to 10-06 Afterparty: carried Minors in these shapes were ? bullets
     out = rnd(e, 6)[1]
     assert "do not match" not in out and all(f"- **{i} · Minor:** {t}" in out for i, t in (("Opus F2", "carried: ride, wording"), ("Opus F3 / Sol F1", "twice"), ("api-validator 2", "no ID"), ("FabF1", "own"),
