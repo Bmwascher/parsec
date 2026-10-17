@@ -25,7 +25,7 @@ The hand-written shapes:
 - The spec's approval: `- <time> spec approved: Brandon, "<his words>"`.
 - A task result: `- <time> task 03: <commit>, <lane>, <tests: red then green | green | red: reason>[, whitespace trimmed]`.
 - A probe result: `- <time> probe <C<n> or a short name>: <held | refuted>, <how: the source, the api-validator or his run>[, Brandon, "<his words>"]` (driver rule 7).
-- A small change: `- <time> small: <base>..<head>, <n> lines in <k> files[ and <t> test files], no API call, hook, handler or timing, pre-review clean`, written after the Opus pre-review ends with no Critical or Important (`build`, "Bounded work").
+- A small change: `- <time> small: <base>..<head>, <n> lines in <k> files[ and <t> test files], no API call, hook, handler or timing, pre-review clean` (`build`, "Bounded work").
 - A decision on a finding: `- <time> decision <ID> (<kind> r<n> <lane>): <fix | ride | accepted as R<k> | change the approach>, Brandon, "<his words>"`; a ride on the reviewer's triage ends `<lane> triage` instead, and a Minor the session chose to fix ends `session`.
 - A waiver: `- <time> waiver: <the stand-in, his reading of the spec, or a claim to probe>, Brandon, "<his words>"`.
 - An owed look: `- <time> owed: <the look or check>, <why>, <what clears it>`.

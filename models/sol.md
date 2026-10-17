@@ -13,7 +13,3 @@ The default codex lane from 2026-09-22 (Brandon's word); GPT-6.1 from 2026-09-30
 - 2026-09-22, `high`, fresh: a diff round in 338 s (Astra 153 s), same verdict and findings plus one Astra missed; a blind panel in 716 s (Astra 464 s), same winner, one defect Astra missed. Slower, reads more.
 - KitnEssentials, 2026-09-22 to 25: every resume answered continuity; 93k to 113k tokens a round (phase 14); `rg` against the lane line in 15 of 27 transcripts; once, draft reasoning after its verdict.
 - From GPT-5.6 Sol, never measured on GPT-6: "A higher effort spread to its subagents and burnt tokens" (old notes, UNDATED); fast tier at 1.5x (the catalog, 2026-09-22).
-
-## Measured here
-
-- Nothing yet on GPT-6.1 beyond the probe.

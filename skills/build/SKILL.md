@@ -23,7 +23,7 @@ Its class is checked out loud first (`brainstorm`), and a claim it rests on is p
 
 ## Each task, in order
 
-1. **Before task 1**: `doctor --lane gemini --kind build --feature <folder>` in the background (`Pre-flight: Gemini`), posted as is. When it finds no agy, every task goes to the `backup-implementer`.
+1. **Before task 1**: `doctor --lane gemini --kind build --feature <folder>` in the background (`Pre-flight: Gemini`), posted as is.
 2. `task-brief --feature <folder> --task N` writes `build\task-NN-brief.md` (the task, the header and the global constraints, byte for byte) and prints its SHA-256.
 3. `build run --feature <folder> --task N --checkout <path> --head <commit>` in the background, named `Task N Implement`, where `--head` is the commit the task builds on (the ledger base, then the previous task's commit). The tool refuses any other checkout, refuses a dirty checkout and fails a task that flipped a modified file's line endings; the lane checks none of these (2026-09-22). The tool runs agy, writes `build\task-NN-report.md` and prints the success test. The session reads that, never agy's exit code.
 4. **The session checks the task itself before the next**: run the task's **Checks** in the background (a Gemini task's first run, since print mode runs no command). On the Gemini lane a task with a test is first run red: stash the task's non-test files under a new name (`git stash push --include-untracked -m "<feature> task N red <time>" -- <files>`), run the Checks and see the expected failure, pop that entry by the `stash@{k}` its name has in `git stash list` then, quoted in PowerShell, never a bare pop (field audit 4: one reached a leftover stash), then run them green. With no entry of that name, nothing is popped and no red is recorded; Checks still green with the files stashed mean the test proves nothing ("A failing task", step 3). Then read the diff against the task's files and its fenced code (an edit in the docs root, such as the smoke file, is in no diff: open the file); then make the task's commit with the task's own commit step. No per-task reviewer subagent.
@@ -31,7 +31,7 @@ Its class is checked out loud first (`brainstorm`), and a claim it rests on is p
 
 ## To the `backup-implementer` instead
 
-Dispatch `agents/backup-implementer.md` in the background, named `Task N Implement`, with the brief path, the contract path (`templates/implementer-contract.md`), the checkout and a report path, for:
+Dispatch `agents/backup-implementer.md` in the background, with the brief path, the contract path (`templates/implementer-contract.md`), the checkout and a report path, for:
 
 - a task that deletes, renames or moves a file (print mode has no delete tool);
 - a task that copies or writes a binary file, such as an image (print mode runs no command; KitnEssentials ap-15 task 1, 2026-10-05);

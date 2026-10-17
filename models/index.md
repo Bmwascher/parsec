@@ -31,7 +31,7 @@ Every note cites a heading or a date, never `path:line`: six such citations went
 ## Swapping a model
 
 1. Effort names do not mean the same amount of thinking across models: every swap re-decides the seat's effort from that model's own guide, and records the starting point here.
-2. Pin the full id in the agent file or `lanes.toml`; what an alias resolves to was never measured (old item 81).
+2. Pin the full id in the agent file or `lanes.toml`; what an alias resolves to was never measured.
 3. Run the pre-flight on the new lane before a round is spent.
 4. Add the model's file here, with its guide's URL and fetch date, and what is unmeasured.
 5. Re-measure the effort claims that the old model's file carried; a claim does not transfer.

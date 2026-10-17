@@ -1,6 +1,6 @@
 # Panel insert
 
-How a panel is asked. The host gives, in part 2: the question; the options; the constraints; Brandon's exact words; the evidence as file paths, never a summary. Then, unless the panel is blind, its own recommendation with its reasons, the strongest argument against it, and what it is unsure of.
+The host gives, in part 2: the question; the options; the constraints; Brandon's exact words; the evidence as file paths, never a summary. Then, unless the panel is blind, its own recommendation with its reasons, the strongest argument against it, and what it is unsure of.
 
 Each lane answers in this order:
 
