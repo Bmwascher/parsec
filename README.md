@@ -247,13 +247,15 @@ Each project answers once. Say **"set up parsec"**, or run any parsec step and t
 
 The config lives in the **primary checkout** at `.claude/parsec.toml` and is always read from there, never from a worktree's stale copy. Only `docs_root` and `worktrees` are required.
 
+> Keep the docs root outside the repository. The desktop app's worktree guard stops a session in a worktree, and the reviewer agents it starts, from writing with file tools anywhere in the primary checkout, so a reviewer could not write its reply there. The pre-flight refuses a reviewer seat in that case.
+
 <details>
 <summary><b>A full example config</b></summary>
 
 ```toml
 # .claude/parsec.toml
-docs_root = "dev/docs/parsec"                                # where feature folders go
-worktrees = "C:/Users/Brandon/Documents/KitnDev/_worktrees"  # where worktrees go
+docs_root = "C:/Users/Brandon/Documents/KitnDev/_parsec/KitnUI"  # where feature folders go, outside the repo
+worktrees = "C:/Users/Brandon/Documents/KitnDev/_worktrees"      # where worktrees go
 
 [reviewer]                       # optional; these are the defaults
 codex_lane          = "sol"      # or "astra"

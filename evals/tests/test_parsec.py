@@ -546,6 +546,8 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "doctor", "--lane", "opus", "--kind", "panel", "--feature", "panels/09-23-new")
     assert code == 0 and out.endswith("post the block above in chat now, as is, outside a code block\n")   # a new panel's pre-flight passes, for a panel round only (2026-09-23, Sol); no folder carries it (pre-review F1)
     assert run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "panels/09-23-new")[0] == 64
+    git("worktree", "add", "--detach", str(e.tmp / "side"), e.head, cwd=e.repo)   # 2026-10-17 KitnUI: a worktree session's seat could not write its reply into the primary's docs root
+    assert run(e, "--repo", str(e.tmp / "side"), "doctor", "--lane", "fable", "--kind", "design", "--feature", "09-22-x")[1].startswith("### 🔴 Pre-flight: Fable · design debate · FAILED\n\n**the docs root")
     code, out = run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "09-22-nope")
     assert code == 64 and out.startswith("### 🔴 Pre-flight: Opus · design debate · FAILED")   # and doctor never checked --feature at all
     (e.repo / "AGENTS.md").write_text("# Rules\n\n## Lua style (renamed)\n\n## Git\n", encoding="utf-8")
