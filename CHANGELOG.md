@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.34 (2026-10-16)
+
+This release makes the last two cuts of the prose trim. The prose is 21 words shorter, at 11,857 of 12,000. The version badge in the README now shows the latest release.
+
+- The Fable model note now gives the 2026-09-22 check of the installed agent. Before, it said that this check was still to do.
+- The setup skill no longer points to a list that is not in the plugin. That list was for the move from the old plugin, and the move is complete.
+- A Fable poll checked the two cuts before the commit.
+
 ## v0.1.33 (2026-10-16)
 
 The prose is 116 words shorter, at 11,878 of 12,000. The build skill is at 1,578 of 1,600. This gives room for the next batch of rules.
