@@ -404,7 +404,7 @@ The **ledger** is the feature's memory. Its head records the base commit once. T
 <summary><b>The full folder tree</b></summary>
 
 ```text
-dev/docs/parsec/
+<docs-root>/
 ├── 09-22-keybind-export/
 │   ├── notes.md
 │   ├── spec.md
