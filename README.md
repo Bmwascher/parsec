@@ -461,7 +461,7 @@ checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 | `task-brief` | Slices task N, and each appendix its steps name, into its own brief and prints its SHA-256 |
 | `build run` | Runs task N through the implementer (Gemini) in the checkout and writes the task report |
 | `build archive` | Renames task N's report and log to `.dead<k>` before a retry |
-| `remove-worktree` | Removes a review worktree, unlinking junctions first so nothing real is deleted |
+| `remove-worktree` | Removes a non-primary worktree (a review worktree or the checkout `build` made), unlinking junctions first so nothing real is deleted; run it from outside that worktree |
 | `doctor` | The health table, one lane's pre-flight (`--lane`), or the updates (`--update`) |
 
 ---
@@ -496,7 +496,7 @@ Each rail exists because its failure happened at least once. The dates live in t
 
 | The rail | The failure it prevents |
 |---|---|
-| Review worktrees are removed links-first | A plain recursive delete following a `References` or docs junction into the real files |
+| Worktrees are removed links-first, by `remove-worktree`; a plain `git worktree remove` leaves a gitignored junction and its folder behind | A plain recursive delete following a `References` or docs junction into the real files |
 | `build` removes only the checkout it made itself, and never when it stops to report; a worktree the session made for a review or a check goes when that step ends | Deleting a checkout you handed it |
 
 ![Hooks](https://img.shields.io/badge/hooks-4c6ef5?style=for-the-badge)

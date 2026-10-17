@@ -1204,7 +1204,7 @@ def parser():
     q = bld.add_parser("archive", help="rename task N's report and log .dead<k>")
     q.add_argument("--feature", required=True)
     q.add_argument("--task", required=True, type=int)
-    q = sub.add_parser("remove-worktree", help="remove a review worktree, links first")
+    q = sub.add_parser("remove-worktree", help="remove a non-primary worktree, links first")
     q.add_argument("path")
     q = sub.add_parser("doctor", help="the table, one lane's pre-flight, or the updates")
     q.add_argument("--lane")
