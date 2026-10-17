@@ -534,25 +534,25 @@ def test_inputs_and_preflight(env):
     assert run(e, "doctor")[0] == 64                            # 2026-09-22 review: the table printed "config:" and exited 0
     (e.repo / ".claude" / "off.toml").rename(e.repo / ".claude" / "parsec.toml")
     (e.repo / "AGENTS.md").rename(e.repo / "A.md")
-    code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
-    assert code == 64 and "rubric file not found" in out        # 2026-09-22 review: a missing rubric file only warned
+    assert (r := run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x"))[0] == 64 and "rubric file not found" in r[1]   # 2026-09-22 review: a missing rubric file only warned
     (e.repo / "A.md").rename(e.repo / "AGENTS.md")
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
     assert code == 0 and "2 of 2 sections found" in out and "fast off" in out and out.startswith("### 🟢 Pre-flight: Astra"), out
     assert out.endswith("rides in the next Astra summary\n") and (e.feat / "rounds" / "preflight-astra.txt").is_file()   # 2026-10-04 Afterparty: 2 of 5 posted
     assert "(lanes.toml), fast\n" in run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x", "--fast")[1]
     assert run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "docs/09-22-x")[0] == 0   # 2026-09-23: the docs-root prefix was refused by round run only
-    code, out = run(e, "doctor", "--lane", "opus", "--kind", "panel", "--feature", "panels/09-23-new")
-    assert code == 0 and out.endswith("post the block above in chat now, as is, outside a code block\n")   # a new panel's pre-flight passes, for a panel round only (2026-09-23, Sol); no folder carries it (pre-review F1)
+    assert (r := run(e, "doctor", "--lane", "opus", "--kind", "panel", "--feature", "panels/09-23-new"))[0] == 0 and r[1].endswith("post the block above in chat now, as is, outside a code block\n")   # a new panel's pre-flight passes, for a panel round only (2026-09-23, Sol); no folder carries it (pre-review F1)
     assert run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "panels/09-23-new")[0] == 64
     git("worktree", "add", "--detach", str(e.tmp / "side"), e.head, cwd=e.repo)   # 2026-10-17 KitnUI: a worktree session's seat could not write its reply into the primary's docs root
-    assert run(e, "--repo", str(e.tmp / "side"), "doctor", "--lane", "fable", "--kind", "design", "--feature", "09-22-x")[0] == 0   # a terminal session is not guarded (Sol diff r1 F1)
+    e.mp.chdir(e.tmp / "side")                                    # the session's own folder, whatever --repo names (Sol diff r2 F1)
+    assert run(e, "doctor", "--lane", "fable", "--kind", "design", "--feature", "09-22-x")[0] == 0   # a terminal session is not guarded (Sol diff r1 F1)
     e.mp.setenv("CLAUDE_CODE_ENTRYPOINT", "claude-desktop")
-    assert run(e, "--repo", str(e.tmp / "side"), "doctor", "--lane", "fable", "--kind", "design", "--feature", "09-22-x")[1].startswith("### 🔴 Pre-flight: Fable · design debate · FAILED\n\n**the docs root")
+    assert run(e, "doctor", "--lane", "fable", "--kind", "design", "--feature", "09-22-x")[1].startswith("### 🔴 Pre-flight: Fable · design debate · FAILED\n\n**the docs root")
+    e.mp.chdir(e.repo)
+    assert run(e, "--repo", str(e.tmp / "side"), "doctor", "--lane", "fable", "--kind", "design", "--feature", "09-22-x")[0] == 0   # a desktop session in the primary passes
     assert (r := run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "09-22-nope"))[0] == 64 and r[1].startswith("### 🔴 Pre-flight: Opus · design debate · FAILED")   # and doctor never checked --feature at all
     (e.repo / "AGENTS.md").write_text("# Rules\n\n## Lua style (renamed)\n\n## Git\n", encoding="utf-8")
-    code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
-    assert code == 64 and 'section not found: "Lua style"' in out and not [p for p in (e.feat / "rounds").iterdir() if p.is_dir()]
+    assert (r := run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x"))[0] == 64 and 'section not found: "Lua style"' in r[1] and not [p for p in (e.feat / "rounds").iterdir() if p.is_dir()]
     assert not (e.feat / "rounds" / "preflight-astra.txt").exists()   # pre-review F2: no older green line rides after a FAILED one
     (e.repo / "AGENTS.md").write_text("# Rules\n\n## Lua style\n\n## Git\n", encoding="utf-8")
     e.mp.setenv("FAKE_LOGIN", "Not logged in")
