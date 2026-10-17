@@ -11,7 +11,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
 
 - Refuse to start without a recorded go (`brainstorm`), or without a design look after the last cross-vendor design round: a `design r<n> fable` ledger line, or, on Brandon's `waiver` ledger line for the stand-in, an Opus stand-in's `design r<n> opus` line (`debate`, "The Fable looks").
 - Run `verify --feature <folder>`: MATCH and MATCH (CLOSED ON MINOR) continue; MATCH (DEGRADED PASS) and CHANGED stop and ask Brandon; NO-PASS-YET refuses.
-- Read the base from the ledger head (written once, by `brainstorm`). A fresh worktree lacks the project's gitignored hook inputs (KitnEssentials: `dev\githooks\upstream-names.local.sh`); copy them before the first commit (2026-09-22). Work in the checkout the session was handed, or make one at `<worktrees>\<Project>-<branch>` and record in the ledger that `build` made it. Only the checkout `build` made is ever removed by it, by `remove-worktree --path <checkout>`, which unlinks the junctions `git worktree remove` leaves (2026-10-17), and never under stop and report.
+- Read the base from the ledger head (written once, by `brainstorm`). A fresh worktree lacks the project's gitignored hook inputs (KitnEssentials: `dev\githooks\upstream-names.local.sh`); copy them before the first commit (2026-09-22). Work in the checkout the session was handed, or make one at `<worktrees>\<Project>-<branch>` and record in the ledger that `build` made it. Only the checkout `build` made is ever removed by it, by `remove-worktree <checkout>` run from outside it, which unlinks the junctions `git worktree remove` leaves (2026-10-17), and never under stop and report.
 
 ## Bounded work
 
