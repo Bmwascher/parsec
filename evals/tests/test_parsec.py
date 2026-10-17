@@ -78,7 +78,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_LOG", str(log))
     monkeypatch.setenv("FAKE_STDOUT", "OpenAI Codex v9.9.9\n--------\nsession id: 01a0c9a2-0000-4000-8000-000000000001\n--------\n")
     monkeypatch.setenv("FAKE_REPLY", "Summary.\n\nVERDICT: FIX\n")
-    for k in ("FAKE_EXIT", "FAKE_SLEEP", "FAKE_WRITE", "FAKE_STDERR", "FAKE_STDIN_COPY", "FAKE_ENV_DUMP", "FAKE_CHILD_PID_FILE"):
+    for k in ("FAKE_EXIT", "FAKE_SLEEP", "FAKE_WRITE", "FAKE_STDERR", "FAKE_STDIN_COPY", "FAKE_ENV_DUMP", "FAKE_CHILD_PID_FILE", "CLAUDE_CODE_ENTRYPOINT"):
         monkeypatch.delenv(k, raising=False)
 
     e = type("E", (), {})()
@@ -530,8 +530,7 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "task-brief", "--feature", "../09-22-x", "--task", "1")
     assert code == 64 and "not under the docs root" in out      # 2026-09-22 review: --feature could climb out of the docs root
     (e.repo / ".claude" / "parsec.toml").rename(e.repo / ".claude" / "off.toml")
-    code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
-    assert code == 64 and "run setup first" in out
+    assert (r := run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x"))[0] == 64 and "run setup first" in r[1]
     assert run(e, "doctor")[0] == 64                            # 2026-09-22 review: the table printed "config:" and exited 0
     (e.repo / ".claude" / "off.toml").rename(e.repo / ".claude" / "parsec.toml")
     (e.repo / "AGENTS.md").rename(e.repo / "A.md")
@@ -547,9 +546,10 @@ def test_inputs_and_preflight(env):
     assert code == 0 and out.endswith("post the block above in chat now, as is, outside a code block\n")   # a new panel's pre-flight passes, for a panel round only (2026-09-23, Sol); no folder carries it (pre-review F1)
     assert run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "panels/09-23-new")[0] == 64
     git("worktree", "add", "--detach", str(e.tmp / "side"), e.head, cwd=e.repo)   # 2026-10-17 KitnUI: a worktree session's seat could not write its reply into the primary's docs root
+    assert run(e, "--repo", str(e.tmp / "side"), "doctor", "--lane", "fable", "--kind", "design", "--feature", "09-22-x")[0] == 0   # a terminal session is not guarded (Sol diff r1 F1)
+    e.mp.setenv("CLAUDE_CODE_ENTRYPOINT", "claude-desktop")
     assert run(e, "--repo", str(e.tmp / "side"), "doctor", "--lane", "fable", "--kind", "design", "--feature", "09-22-x")[1].startswith("### 🔴 Pre-flight: Fable · design debate · FAILED\n\n**the docs root")
-    code, out = run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "09-22-nope")
-    assert code == 64 and out.startswith("### 🔴 Pre-flight: Opus · design debate · FAILED")   # and doctor never checked --feature at all
+    assert (r := run(e, "doctor", "--lane", "opus", "--kind", "design", "--feature", "09-22-nope"))[0] == 64 and r[1].startswith("### 🔴 Pre-flight: Opus · design debate · FAILED")   # and doctor never checked --feature at all
     (e.repo / "AGENTS.md").write_text("# Rules\n\n## Lua style (renamed)\n\n## Git\n", encoding="utf-8")
     code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")
     assert code == 64 and 'section not found: "Lua style"' in out and not [p for p in (e.feat / "rounds").iterdir() if p.is_dir()]

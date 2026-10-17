@@ -1066,8 +1066,8 @@ def preflight(args):
     elif args.lane in AGENT_OF:
         model, effort, agent = agent_seat(args.lane)
         lines.append(f"- **Agent:** {agent}, model {model}, effort {effort} (agent file)")
-        if Path(git_out(["rev-parse", "--show-toplevel"], args.repo).strip()).resolve() != primary.resolve() and resolve_under(primary, cfg["docs_root"]).is_relative_to(primary.resolve()):   # 2026-10-17 KitnUI: the desktop app's worktree guard denied reviewer-opus its reply.md
-            fail.append("the docs root is in the primary checkout and --repo is a worktree, whose file tools may not write there: move docs_root outside the repo (setup)")
+        if os.environ.get("CLAUDE_CODE_ENTRYPOINT") == "claude-desktop" and Path(git_out(["rev-parse", "--show-toplevel"], args.repo).strip()).resolve() != primary.resolve() and resolve_under(primary, cfg["docs_root"]).is_relative_to(primary.resolve()):   # 2026-10-17 KitnUI: the desktop app's worktree guard denied reviewer-opus its reply.md; a terminal session's is not guarded (Sol diff r1 F1)
+            fail.append("the docs root is in the primary checkout and --repo is a worktree, where the desktop app's file tools may not write: move docs_root outside the repo (setup)")
     else:
         raise Exit(64, f"lane {args.lane} is not a lane or a seat")   # 2026-09-22 review: a typo raised KeyError
     fdir = None
