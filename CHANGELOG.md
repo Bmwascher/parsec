@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.33 (2026-10-16)
+
+The prose is 116 words shorter, at 11,878 of 12,000. The build skill is at 1,578 of 1,600. This gives room for the next batch of rules.
+
+- Twelve cuts remove repeated text, old item numbers, one version note and extra words. Each cut keeps its rule, condition and dated measurement.
+- The setup skill shows the pre-flight text for no rubric as the tool prints it.
+- A Fable poll checked each cut before the edit. It kept one rule about stashes and made two cuts smaller. The Opus pre-review kept one version note that dates six agy facts.
+
 ## v0.1.32 (2026-10-16)
 
 This release adds the batch H rules from field audit 4. A spec now lists each claim that nobody ran, and the session probes it before the build. The tool refuses a spec with a long decision summary or an appended change log.
