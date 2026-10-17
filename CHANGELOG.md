@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.36 (2026-10-17)
+
+This release tells the build skill how to remove a worktree. The git command for this leaves a linked folder behind, so the worktree folder stays on disk.
+
+- The build skill now removes its own checkout with the tool's `remove-worktree <checkout>`, from outside that checkout. The tool removes the links first, so the files that a link points to stay. The session removes a worktree that it makes for a review or a check in the same way.
+- The setup skill now proposes a docs root next to the worktrees folder. It no longer proposes a `docs` folder in the repository.
+- A test in a scratch repository showed the problem. After `git worktree remove`, the worktree folder stayed and held only the ignored link.
+
 ## v0.1.35 (2026-10-17)
 
 This release tells you to keep the docs root outside the repository. In the desktop app, a session in a worktree cannot use its file tools to write in the main checkout. So a reviewer agent could not write its reply there.
