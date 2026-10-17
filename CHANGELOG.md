@@ -2,6 +2,14 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.35 (2026-10-17)
+
+This release tells you to keep the docs root outside the repository. In the desktop app, a session in a worktree cannot use its file tools to write in the main checkout. So a reviewer agent could not write its reply there.
+
+- The pre-flight for the Opus and Fable seats now fails when three things are true. The desktop app runs the session, the session's own folder is a worktree of the project, and the docs root is in the main checkout. The message tells you to move the docs root. The pre-flight lets a session in a terminal, or a desktop session in the main checkout, continue.
+- The setup skill and the README now show a docs root outside the repository, next to the worktrees folder, and give the reason.
+- A live test in a KitnUI worktree session showed this. A write to a folder outside the repository worked, and so did a write by the Fable reviewer. The guard refused a write to the main checkout.
+
 ## v0.1.34 (2026-10-16)
 
 This release makes the last two cuts of the prose trim. The prose is 21 words shorter, at 11,857 of 12,000. The version badge in the README now shows the latest release.
