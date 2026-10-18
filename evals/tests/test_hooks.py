@@ -1,14 +1,8 @@
 """Tests for tools/hooks.py and hooks/hooks.json (specs: dev/reviews/10-16-hooks in this repo; 10-17-stop-hook-unposted-block in the parsec docs folder, outside it). Field audit 4, 2026-10-15:
 the reread after a compaction held 2 of 31 times; Moving Day phase 10 tasks 16, 19 and 23 built on Sonnet because a parsec dispatch set model;
 on 2026-10-17 a round block went to the author unposted. Each test runs the command that hooks/hooks.json names, so the wiring is under test."""
-import json
-import shlex
-import shutil
-import subprocess
-import sys
+import json, pytest, shlex, shutil, subprocess, sys
 from pathlib import Path
-
-import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SKILL_LINE = ('{"type":"assistant","message":{"content":[{"type":"text","text":"a"},'

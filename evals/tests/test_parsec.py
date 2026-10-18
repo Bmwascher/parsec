@@ -1,17 +1,8 @@
 """Tests for tools/parsec.py, each standing on a recorded failure (step 5 of the rethink, rows 1 to 17).
 The fake CLI is evals/tests/fake_cli.py; no model call, no network. Rows that need junctions or
 taskkill run on Windows only."""
-import importlib.util
-import json
-import os
-import stat
-import subprocess
-import sys
-import time
-import uuid
+import importlib.util, json, os, pytest, stat, subprocess, sys, time, uuid
 from pathlib import Path
-
-import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 FAKE = Path(__file__).with_name("fake_cli.py")
@@ -73,7 +64,7 @@ def env(tmp_path, monkeypatch):
     (tmp_path / "kimi-home" / "config.toml").write_text('[models."kimi-code/k3"]\ndefault_effort = "high"\n', encoding="utf-8")
     monkeypatch.setattr(parsec, "LANES_FILE", lanes)
     monkeypatch.setattr(parsec, "CLAUDE", [sys.executable, str(FAKE)])   # never the real claude, whose update would install
-    monkeypatch.setattr(parsec, "CLAUDE_LATEST", None, raising=False)    # no lookup for Claude Code; raising=False lets the new doctor test run red on the base tool, and line 485's exact row catches a renamed constant
+    monkeypatch.setattr(parsec, "CLAUDE_LATEST", None, raising=False)    # no lookup for Claude Code; raising=False lets the new doctor test run red on the base tool, and test_doctor_stale_install's exact Claude Code row catches a renamed constant
     monkeypatch.setattr(parsec, "POLL_SECONDS", 0.05)
     log = tmp_path / "calls.jsonl"
     monkeypatch.setenv("FAKE_LOG", str(log))

@@ -7,20 +7,7 @@ No shell parses a prompt: every CLI starts from an argument list, the brief reac
 codex on standard input as bytes, and the tool finds lanes.toml and lanes/ from __file__.
 Every dated comment names the failure the line prevents; the design is step 4 of the
 rethink notes (2026-09-22)."""
-import argparse
-import datetime as dt
-import hashlib
-import json
-import os
-import re
-import shutil
-import subprocess
-import sys
-import threading
-import time
-import tomllib
-import urllib.request
-import uuid
+import argparse, datetime as dt, hashlib, json, os, re, shutil, subprocess, sys, threading, time, tomllib, urllib.request, uuid
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parent.parent
