@@ -21,7 +21,7 @@ Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-ru
   - a known answer in place of `pending`: **Fix** (what changes), **Refute** (the evidence in a few words), **Ride** (a Minor left for later) or **You decide**; one that waits on the `author` stays `pending` for the next round line; a `?` takes the reply's own ID, or F1, F2 and on in its order when it gives none, kept in every later round;
   - **Next:** and what follows.
 
-  Keep every blank line: a single line break renders as a space. Only the verdict word is exact; the reviewer's own words stay in `reply.md`. The tool also appends it to the feature's `summaries.md` (`build`, the finish); a delegator forwards either as received.
+  Keep every blank line: a single line break renders as a space. Only the verdict word is exact; the reviewer's own words stay in `reply.md`. The tool also appends it to the feature's `summaries.md` (`build`, the finish); a delegator forwards either as received. If the newest block a turn posted (summary or pre-flight) came before a tool call, end the turn's last reply with its heading line, as printed: such a post can go unsaved, and the Stop hook then sends the turn back (2026-10-17: 4 of 9).
 - Collect a round whose tool was killed (`round collect`), then rerun it on its session asking only for the verdict.
 - Commit no round folder while the debate is open (`setup`, "Tracked docs root").
 - `round close --feature <folder>` after the Fable last look passes (not after a stand-in or the diff debate's PASS), or on Brandon's word to stop.
