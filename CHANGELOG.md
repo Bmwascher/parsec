@@ -2,6 +2,16 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.39 (2026-10-18)
+
+The Stop hook no longer makes Claude post a block twice. Claude now repeats the first line of a block at the end of the turn.
+
+- Claude Code does not always save a reply that comes before a tool call. On 2026-10-17 it lost 4 of 9 posts of a block. Each time, the hook sent the turn back and Claude posted the block again.
+- The debate skill now tells Claude what to do when it posts a block before a tool call. Claude ends the last reply of the turn with the first line of that block, as the tool printed it.
+- The hook already reads the last reply of the turn, so that line lets the turn end.
+- When the hook sends a turn back, its message now covers a block that Claude already posted in that turn. Claude then replies with the first line only.
+- The hook test checks the new message. We made the test fail on the old hook first.
+
 ## v0.1.38 (2026-10-17)
 
 A new hook makes Claude post the round summary or the pre-flight block before the turn ends. The tool prints these blocks for you, and sessions often did not post them.
