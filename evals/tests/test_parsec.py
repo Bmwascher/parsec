@@ -533,6 +533,8 @@ def test_doctor_stale_install(env):
     assert out.startswith("### 🟡 parsec doctor\n\n**Claude Code**\n- 🟢 **plugin install:** ") and "\n- 🟢 **Claude Code:** codex-cli 0.159.2\n- 🟢 **config:** ok\n" in out and "\n\n**Worktrees**\n- **worktrees:** t1, 0 d old\n" in out, out
     (big := e.tmp / "big.json").write_text('{"version": "9.9.9", "pad": "' + "x" * (1 << 20) + '"}', encoding="utf-8"); e.mp.setattr(parsec, "CLAUDE_LATEST", big.as_uri())   # Sol diff r1 F3: an answer over 1 MiB is cut, so it is no version
     assert "\n- 🟢 **Claude Code:** codex-cli 0.159.2 · latest unknown\n" in run(e, "doctor")[1]
+    (cut := e.tmp / "cut.txt").write_bytes(b"9.9.9" + b" " * ((1 << 20) - 5) + b"</html>"); e.mp.setattr(parsec, "CLAUDE_LATEST", cut.as_uri())   # Sol diff r2 F4: its first MiB strips to 9.9.9, but the whole answer is no version
+    assert "\n- 🟢 **Claude Code:** codex-cli 0.159.2 · latest unknown\n" in run(e, "doctor")[1]
     assert "next: run" not in run(e, "doctor", "--update")[1]                # a guard, green on the base too (Sol design r1 F4)
 
 

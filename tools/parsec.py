@@ -1008,7 +1008,8 @@ def freshness(good, ver, url):
     def fetch():                                 # Sol design r1 F1: urlopen's timeout covers each socket call, not redirects or a slow body; Sol diff r1 F3: the read, the parse and the check all run here, inside the deadline
         try:
             with urllib.request.urlopen(url, timeout=5) as r:
-                text = r.read(1 << 20).decode("utf-8", "replace").strip()   # Sol diff r1 F3: at most 1 MiB; a longer answer is cut, and a cut answer is no version
+                body = r.read((1 << 20) + 1)             # Sol diff r2 F4: one byte past the cap shows that the answer is longer than 1 MiB
+            text = body.decode("utf-8", "replace").strip() if len(body) <= 1 << 20 else ""   # Sol diff r1 F3: at most 1 MiB; a longer answer is no version, never its first MiB
             new = json.loads(text)["version"] if text.startswith("{") else text   # npm and muse answer JSON, kimi a bare version
             if re.fullmatch(VERSION, new):       # Sol design r1 F2: {"version": "error 404"} and 2.2.0</html> are no version
                 box.append(new)
