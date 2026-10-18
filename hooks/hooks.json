@@ -1,5 +1,5 @@
 {
-  "description": "parsec: after a compaction, the driver rules and the ledger template again; a parsec agent dispatch that sets model is denied",
+  "description": "parsec: after a compaction, the driver rules and the ledger template again; a parsec agent dispatch that sets model is denied; a turn that ends with a printed block unposted goes back once",
   "hooks": {
     "SessionStart": [
       {
@@ -14,6 +14,13 @@
         "matcher": "Agent|Task",
         "hooks": [
           {"type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/tools/hooks.py\" agent; exit 0", "timeout": 30}
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {"type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/tools/hooks.py\" stop; exit 0", "timeout": 30}
         ]
       }
     ]
