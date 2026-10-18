@@ -2,6 +2,20 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.37 (2026-10-17)
+
+This release makes the doctor table easier to read, and it shows when a CLI is out of date. Before, a CLI that answered showed green, also when a newer release was out.
+
+- The table has two groups. The Claude Code group shows the plugin install, the Claude Code CLI and the config. The config row now shows `ok` when it passes.
+- The Lane CLIs group shows one row for each CLI. Each row names every lane that the CLI serves, with its model and effort. Astra and Sol share the codex row.
+- The worktree rows come last, under the name Worktrees, when there are any.
+- The doctor now asks a source for the latest release of each CLI. A CLI that is behind gets an amber line under its row with the two versions. The table then ends with a line that tells you to run `/parsec:doctor update`.
+- A lookup stops after 5 seconds in all. An answer longer than 1 MiB counts as no version. If a lookup fails, or if its answer is not a version, the row adds `latest unknown` and keeps its colour. A failed lookup never turns a row red.
+- Each lane names its source as `latest` in `lanes.toml`. Claude Code and codex use the npm registry. Kimi and Muse use the feeds that their own updaters read. The agy CLI has no source that we can trust, so its row stays as before.
+- On 2026-10-17 the old table showed Claude Code 2.1.288 and codex-cli 0.159.2 as green. The latest releases were 2.1.302 and 0.163.0.
+- The tool budget is now 1,278 lines and the test budget is now 1,517 lines. You chose to raise them for this release and to look at them again later.
+- The help for `remove-worktree` and the README now name every worktree that it removes, not only review worktrees.
+
 ## v0.1.36 (2026-10-17)
 
 This release tells the build skill how to remove a worktree. The git command for this leaves a linked folder behind, so the worktree folder stays on disk.

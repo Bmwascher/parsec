@@ -1,33 +1,43 @@
 # Lanes the TOOL launches. Claude seats (author, backup-implementer, reviewer-opus,
 # reviewer-fable) are not here: their model and effort live in the agent files.
 # `command` is a list, so a test can substitute a fake CLI. Full model ids only:
-# what an alias resolves to was never measured (old item 81).
+# what an alias resolves to was never measured (old item 81). `latest` is where the
+# doctor reads the CLI's newest release (2026-10-17); a lane without it is not compared.
 
 [astra]                                 # the alternate, by name at any time (Brandon, 2026-09-22)
 model = "gpt-6-astra"
 effort = "high"
 command = ["codex"]
 update = ["npm", "install", "-g", "@openai/codex@latest"]
+latest = "https://registry.npmjs.org/@openai/codex/latest"   # JSON, field version; 2026-10-17: 0.159.2 read green with 0.163.0 out
 
 [sol]                                   # the default codex lane (Brandon, 2026-09-22); the config's codex_lane can name astra
 model = "gpt-6.1-sol"                   # 2026-09-30: Sol 6.1 (was gpt-6-sol, before that gpt-5.6-sol); measurements pending
 effort = "high"
 command = ["codex"]
 update = ["npm", "install", "-g", "@openai/codex@latest"]
+latest = "https://registry.npmjs.org/@openai/codex/latest"   # the same CLI as astra, so one doctor row
 
 [kimi]                                  # by name since 2026-10-12 (Muse is the backup); effort lives in the lane home's config (no CLI flag)
 model = "kimi-code/k3"
 command = ["kimi"]
 home = "C:/Users/Brandon/.kimi-code-lane"
 update = ["kimi", "update", "-y"]           # -y: the doctor has no one to answer the confirmation (kimi 0.43.0+)
+# latest: the URL kimi's own updater reads (kimiCodeCdnLatestUrl), the cdnBase of the region profile mainland-cn
+# (~/.kimi-code/region; the profile global uses https://code.kimi.ai/kimi-code); plain text. kimi rolls a release out
+# over 24 h, so the doctor can name a release up to a day before kimi update installs it (2026-10-17).
+latest = "https://code.kimi.com/kimi-code/latest"
 
 [muse]                                  # the backup when codex is unavailable (Brandon, 2026-10-12)
 model = "muse-wonder-full-1.0"          # Muse Wonder Full: the Power Usage and Maximum Usage plans only (2026-10-12)
 effort = "high"                         # muse model-profile show: default_reasoning_effort high at every tier (2026-10-12)
 command = ["muse"]
 update = ["muse", "--version"]          # 1.4.6 has no update subcommand; the doctor sets MUSE_SYNC_UPDATE=1, so the launcher updates in the foreground
+latest = "https://api.meta.ai/muse-code/channels/muse-stable"   # the launcher's own channel URL ($channel_url); JSON, field version; no token (2026-10-17)
 
 [gemini]                                # the implementer, run by `build run`; no agent around it
 model = "gemini-3.8-flash-high"
 command = ["agy"]
 update = ["agy", "update"]              # Brandon, 2026-09-22: agy's own "Update CLI" subcommand
+# No latest (2026-10-17): the updater's root says "Stable Version: 1.4.2", agy's own check path was not found, and
+# agy update said "Already on the latest version." with 1.2.16 installed (2026-10-03). No source is reliable.

@@ -218,20 +218,31 @@ Restart Claude Code afterwards so the skills load.
 /parsec:doctor
 ```
 
-The plugin install line compares the installed copy with the head of the repository the marketplace points at. If it says anything but `ok`, the plugin cache is stale; see [Releasing](#releasing). The Claude Code line is red when `claude --version` fails. `/parsec:doctor update` runs `claude update`, then each CLI's own update command once, and names every lane it serves. The session posts the output as Markdown, so a red line stands out on a phone.
+The table has two groups. **Claude Code** holds the plugin install, the Claude Code CLI and the config. The plugin install line compares the installed copy with the head of the repository the marketplace points at. If it says anything but `ok`, the plugin cache is stale; see [Releasing](#releasing). The Claude Code line is red when `claude --version` fails, and the config line is red when setup is owed. **Lane CLIs** has one row per CLI, and the row names every lane that the CLI serves, so astra and sol share the codex row. Worktree folders follow under **Worktrees** when there are any.
+
+The doctor also asks each CLI's source for its latest release: the npm registry for Claude Code, and the `latest` key of each lane in `lanes.toml`. agy has no reliable source, so its row is not compared. A CLI that is behind gets an amber line under its row with both versions, and the output ends with `next: run /parsec:doctor update`. A lookup that fails adds `latest unknown` and never turns a row red. `/parsec:doctor update` runs `claude update`, then each CLI's own update command once, and names every lane it serves. The session posts the output as Markdown, so a red line stands out on a phone.
 
 <details>
-<summary><b>What a healthy result looks like</b></summary>
+<summary><b>What a result looks like (2026-10-17, four CLIs behind)</b></summary>
 
-> ### 🟢 parsec doctor
+> ### 🟡 parsec doctor
 >
-> - 🟢 **plugin install:** 0.1.31 at <commit>: ok
+> **Claude Code**
+> - 🟢 **plugin install:** 0.1.37 at <commit>: ok
 > - 🟢 **Claude Code:** 2.1.288 (Claude Code)
-> - 🟢 **lane astra:** gpt-6-astra, effort high, codex-cli 0.159.2, Logged in using ChatGPT
-> - 🟢 **lane sol:** gpt-6.1-sol, effort high, codex-cli 0.159.2, Logged in using ChatGPT
-> - 🟢 **lane kimi:** kimi-code/k3, effort lane home, 2.1.1, credentials present in the lane home
-> - 🟢 **lane muse:** muse-wonder-full-1.0, effort high, Muse Code 1.4.6 (1.4.6-R6000.1), auth.json present
-> - 🟢 **lane gemini:** gemini-3.8-flash-high, effort the model, 1.2.5, login: the first run's log
+>   - 🟡 behind: 2.1.288 installed, 2.1.302 is out
+> - 🟢 **config:** ok
+>
+> **Lane CLIs**
+> - 🟢 codex-cli 0.159.2, Logged in using ChatGPT: astra (gpt-6-astra, high), sol (gpt-6.1-sol, high)
+>   - 🟡 behind: 0.159.2 installed, 0.163.0 is out
+> - 🟢 kimi 2.1.1, credentials present in the lane home: kimi (kimi-code/k3)
+>   - 🟡 behind: 2.1.1 installed, 2.2.0 is out
+> - 🟢 Muse Code 1.4.9 (1.4.9-R6297.1), auth.json present: muse (muse-wonder-full-1.0, high)
+>   - 🟡 behind: 1.4.9 installed, 1.4.10-R6427.1 is out
+> - 🟢 agy 1.2.16, login in the first run's log: gemini (gemini-3.8-flash-high)
+>
+> next: run /parsec:doctor update: a CLI above is behind its latest release
 
 </details>
 
@@ -449,7 +460,7 @@ checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 
 ## The tool
 
-`tools/parsec.py` is one Python file, kept at or under 1,250 lines by a test. The skills call it, so you rarely need to. Every subcommand has `--help`, and exit code `64` means a usage or setup error, such as a missing config or an unknown lane.
+`tools/parsec.py` is one Python file, kept at or under 1,278 lines by a test. The skills call it, so you rarely need to. Every subcommand has `--help`, and exit code `64` means a usage or setup error, such as a missing config or an unknown lane.
 
 | Command | What it does |
 |---|---|
@@ -528,9 +539,9 @@ The plugin stays lean because its size limits fail the build. An addition that w
 
 | What | Limit |
 |---|---|
-| `tools/parsec.py` | 1,250 lines |
+| `tools/parsec.py` | 1,278 lines |
 | `tools/hooks.py` | 80 lines |
-| All tests | 1,530 lines |
+| All tests | 1,547 lines |
 | The frozen checkers | 522 lines |
 | All skill, template, agent and model prose | 12,000 words |
 | Any one skill | 1,600 words |

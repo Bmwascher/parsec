@@ -73,6 +73,7 @@ def env(tmp_path, monkeypatch):
     (tmp_path / "kimi-home" / "config.toml").write_text('[models."kimi-code/k3"]\ndefault_effort = "high"\n', encoding="utf-8")
     monkeypatch.setattr(parsec, "LANES_FILE", lanes)
     monkeypatch.setattr(parsec, "CLAUDE", [sys.executable, str(FAKE)])   # never the real claude, whose update would install
+    monkeypatch.setattr(parsec, "CLAUDE_LATEST", None, raising=False)    # no lookup for Claude Code; raising=False lets the new doctor test run red on the base tool, and line 485's exact row catches a renamed constant
     monkeypatch.setattr(parsec, "POLL_SECONDS", 0.05)
     log = tmp_path / "calls.jsonl"
     monkeypatch.setenv("FAKE_LOG", str(log))
@@ -506,12 +507,15 @@ def test_doctor_stale_install(env):
     out = run(e, "doctor")[1]                                       # 2026-09-23: three phases ran 0.1.6 after 0.1.7; 2026-09-25: a re-invoked skill kept 0.1.13
     assert out.endswith("\nstale: this tool is parsec 0.0.9, but 0.1.0 is installed: this session's skills and templates stay at 0.0.9 until a new session, "   # field audit 4: a first line that grep -v "^warning" hid
                         f"so start one; the new tool is {e.tmp / 'c010' / 'tools' / 'parsec.py'}\n") and "warning: this tool" not in out
+    e.mp.setenv("FAKE_VERSION", "codex-cli 0.159.2")                 # 2026-10-17: codex-cli 0.159.2 read green with 0.163.0 out
+    (new := e.tmp / "latest.json").write_text('{"version": "0.163.0"}', encoding="utf-8")
+    (e.tmp / "bad.json").write_text('{"version": "error 404"}', encoding="utf-8")   # Sol design r1 F2: no version token, so latest unknown and never version 404
     cmd = json.dumps([sys.executable, str(FAKE)])
     upd = json.dumps([sys.executable, str(FAKE), "update"])
-    (e.tmp / "lanes.toml").write_text(f'[astra]\nmodel = "a"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n'
-                                      f'[sol]\nmodel = "s"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n'
-                                      f'[gemini]\nmodel = "g"\ncommand = {cmd}\nupdate = {upd[:-1]}, "agy"]\n'
-                                      f'[muse]\nmodel = "m"\neffort = "high"\ncommand = {cmd}\nupdate = {upd[:-1]}, "muse"]\n', encoding="utf-8")
+    (e.tmp / "lanes.toml").write_text(f'[astra]\nmodel = "a"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\nlatest = "{new.as_uri()}"\n'
+                                      f'[sol]\nmodel = "s"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\nlatest = "{new.as_uri()}"\n'
+                                      f'[gemini]\nmodel = "g"\ncommand = {cmd}\nupdate = {upd[:-1]}, "agy"]\nlatest = "{(e.tmp / "none.json").as_uri()}"\n'
+                                      f'[muse]\nmodel = "m"\neffort = "high"\ncommand = {cmd}\nupdate = {upd[:-1]}, "muse"]\nlatest = "{(e.tmp / "bad.json").as_uri()}"\n', encoding="utf-8")
     e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
     code, out = run(e, "doctor", "--update")
     assert code == 0 and [c for c in e.calls() if c[:1] == ["update"]] == [["update"], ["update"], ["update", "agy"], ["update", "muse"]]   # 2026-09-22 review: codex updated twice; Claude Code first
@@ -519,6 +523,19 @@ def test_doctor_stale_install(env):
     assert dump["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and dump["MUSE_SYNC_UPDATE"] == "1" and "- **update Claude Code:** exit 0" in out   # 2026-10-12: muse has no update subcommand; its launcher updates in the foreground
     e.mp.setattr(parsec, "CLAUDE", ["parsec-no-such-claude"])        # Brandon, 2026-10-16: "it should check and update the Claude code cli"
     assert "\n- 🔴 **Claude Code:** parsec-no-such-claude not found on PATH\n" in run(e, "doctor")[1]
+    (e.home / ".config" / "muse").mkdir(parents=True); (e.home / ".config" / "muse" / "auth.json").write_text("{}", encoding="utf-8"); (e.wt / "t1").mkdir()
+    e.mp.setattr(parsec, "CLAUDE_LATEST", new.as_uri())                # a red row makes no lookup, so its row gets no tail
+    out = run(e, "doctor")[1]                                       # 2026-10-17: one row per CLI (Brandon); a CLI behind its latest release read green
+    assert "\n- 🟢 codex-cli 0.159.2, Logged in using ChatGPT: astra (a, high), sol (s, high)\n  - 🟡 behind: 0.159.2 installed, 0.163.0 is out\n" in out and "\n- 🟢 codex-cli 0.159.2, login in the first run's log: gemini (g) · latest unknown\n" in out and "\n- 🟢 codex-cli 0.159.2, auth.json present: muse (m, high) · latest unknown\n" in out and "\n- 🔴 **Claude Code:** parsec-no-such-claude not found on PATH\n- 🟢 **config:** ok\n\n**Lane CLIs**\n" in out and "\n\nnext: run /parsec:doctor update: a CLI above is behind its latest release\nstale: this tool is parsec 0.0.9" in out, out
+    (same := e.tmp / "same.json").write_text('{"version": "0.159.2-R2"}', encoding="utf-8")   # current: only a build suffix differs, as a muse -R release
+    e.mp.setattr(parsec, "CLAUDE", [sys.executable, str(FAKE)]); e.mp.setattr(parsec, "CLAUDE_LATEST", same.as_uri())
+    out = run(e, "doctor")[1]
+    assert out.startswith("### 🟡 parsec doctor\n\n**Claude Code**\n- 🟢 **plugin install:** ") and "\n- 🟢 **Claude Code:** codex-cli 0.159.2\n- 🟢 **config:** ok\n" in out and "\n\n**Worktrees**\n- **worktrees:** t1, 0 d old\n" in out, out
+    (big := e.tmp / "big.json").write_text('{"version": "9.9.9", "pad": "' + "x" * (1 << 20) + '"}', encoding="utf-8"); e.mp.setattr(parsec, "CLAUDE_LATEST", big.as_uri())   # Sol diff r1 F3: an answer over 1 MiB is cut, so it is no version
+    assert "\n- 🟢 **Claude Code:** codex-cli 0.159.2 · latest unknown\n" in run(e, "doctor")[1]
+    (cut := e.tmp / "cut.txt").write_bytes(b"9.9.9" + b" " * ((1 << 20) - 5) + b"</html>"); e.mp.setattr(parsec, "CLAUDE_LATEST", cut.as_uri())   # Sol diff r2 F4: its first MiB strips to 9.9.9, but the whole answer is no version
+    assert "\n- 🟢 **Claude Code:** codex-cli 0.159.2 · latest unknown\n" in run(e, "doctor")[1]
+    assert "next: run" not in run(e, "doctor", "--update")[1]                # a guard, green on the base too (Sol design r1 F4)
 
 
 # row 14: inputs, the pre-flight, the in-session package (old item 100; the 2026-09-21 dry run and Kimi login; "in this directory")
@@ -531,7 +548,7 @@ def test_inputs_and_preflight(env):
     assert code == 64 and "not under the docs root" in out      # 2026-09-22 review: --feature could climb out of the docs root
     (e.repo / ".claude" / "parsec.toml").rename(e.repo / ".claude" / "off.toml")
     assert (r := run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x"))[0] == 64 and "run setup first" in r[1]
-    assert run(e, "doctor")[0] == 64                            # 2026-09-22 review: the table printed "config:" and exited 0
+    assert (r := run(e, "doctor"))[0] == 64 and r[1].startswith("### 🔴 parsec doctor\n\n**Claude Code**\n") and "\n- 🔴 **config:** " in r[1]   # 2026-09-22 review: the table printed "config:" and exited 0
     (e.repo / ".claude" / "off.toml").rename(e.repo / ".claude" / "parsec.toml")
     (e.repo / "AGENTS.md").rename(e.repo / "A.md")
     assert (r := run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x"))[0] == 64 and "rubric file not found" in r[1]   # 2026-09-22 review: a missing rubric file only warned
@@ -799,15 +816,15 @@ def test_muse_preflight_and_doctor(env):
     assert code == 64 and out.startswith("### 🔴 Pre-flight: Muse · design debate · FAILED") and "- **CLI:** fake-cli 1.0, auth.json MISSING" in out, out
     child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
     assert child["MUSE_NO_AUTO_UPDATE"] == "1" and "META_API_KEY" not in child   # 2026-10-12: a version call starts the launcher's update check
-    row = [l for l in run(e, "doctor")[1].splitlines() if "**lane muse:**" in l]
-    assert row == ["- 🔴 **lane muse:** muse-wonder-full-1.0, effort high, fake-cli 1.0, auth.json MISSING"], row
+    row = [l for l in run(e, "doctor")[1].splitlines() if l.endswith(": muse (muse-wonder-full-1.0, high)")]
+    assert row == ["- 🔴 fake-cli 1.0, auth.json MISSING: muse (muse-wonder-full-1.0, high)"], row
     child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))   # the table's last call is muse's version call
     assert child["MUSE_NO_AUTO_UPDATE"] == "1" and "META_API_KEY" not in child
     (e.home / ".config" / "muse").mkdir(parents=True)
     (e.home / ".config" / "muse" / "auth.json").write_text("{}", encoding="utf-8")
     code, out = run(e, "doctor", "--lane", "muse", "--kind", "design", "--feature", "09-22-x")
     assert code == 0 and "- **CLI:** fake-cli 1.0, auth.json present\n- **Model:** muse-wonder-full-1.0, effort high (lanes.toml), contributor mode off" in out, out
-    assert "- 🟢 **lane muse:** muse-wonder-full-1.0, effort high, fake-cli 1.0, auth.json present" in run(e, "doctor")[1]
+    assert "\n- 🟢 fake-cli 1.0, auth.json present: muse (muse-wonder-full-1.0, high)\n" in run(e, "doctor")[1]
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
