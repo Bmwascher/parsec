@@ -19,12 +19,14 @@ import sys
 import threading
 import time
 import tomllib
+import urllib.request
 import uuid
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parent.parent
 LANES_FILE = PLUGIN / "lanes.toml"             # a test points this at a file that names a fake CLI
 CLAUDE = ["claude"]                            # Brandon, 2026-10-16: the doctor checks and updates Claude Code; a test points this at the fake
+CLAUDE_LATEST = "https://registry.npmjs.org/@anthropic-ai/claude-code/latest"   # 2026-10-17: the doctor's source for Claude Code, which is no lane; a test points this at a file
 POLL_SECONDS = 30                              # the watcher's period; a test overrides it
 CAP_SECONDS = 28 * 60                          # Brandon's cap, no config key; a test overrides it
 STILL_MINUTES = (10, 15, 20, 25)
@@ -54,6 +56,8 @@ ROUTE_LINES = ("Print mode: starting", "Propagating selected model override", "a
 SOFT_DENY = "soft-denying tool confirmation"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 MUSE_AUTH = lambda: Path.home() / ".config" / "muse" / "auth.json"   # 2026-10-12: muse has no login status command; presence only, never opened
+vkey = lambda v: tuple(int(x) for x in re.search(r"\d+(?:\.\d+)*", v)[0].split("."))   # the first run of digits and dots: "codex-cli 0.159.2", "Muse Code 1.4.9 (1.4.9-R6297.1)"
+VERSION = r"\d+(?:\.\d+)+(?:[-+][\w.]+)?"     # one whole version token ("2.2.0", "1.4.10-R6427.1"); a value from outside the tool must match it before vkey (Sol design r1 F2)
 
 
 class Exit(Exception):
@@ -169,9 +173,8 @@ def behind():
     try:
         entry = installed_entry()[1]
         mine, inst = read_json(PLUGIN / ".claude-plugin" / "plugin.json")["version"], entry.get("version")
-        key = lambda v: tuple(int(x) for x in v.split("."))
         return (f"this tool is parsec {mine}, but {inst} is installed: this session's skills and templates stay at {mine} until a new session, "   # 2026-09-25 audit: a re-invoked skill kept its old path (fld-7, fld-13)
-                f"so start one; the new tool is {Path(p) / 'tools' / 'parsec.py' if (p := entry.get('installPath')) else '?'}") if inst and key(inst) > key(mine) else None   # pre-review F6: a null path hid it
+                f"so start one; the new tool is {Path(p) / 'tools' / 'parsec.py' if (p := entry.get('installPath')) else '?'}") if inst and re.fullmatch(VERSION, str(inst)) and vkey(inst) > vkey(mine) else None   # pre-review F6: a null path hid it
     except Exception:                            # a warning never stops a command (2026-09-23 pre-review)
         return None
 
@@ -997,6 +1000,27 @@ def probe(argv, env=None, timeout=10, stdin_text=None):
         return None, "timed out after 10 s"
 
 
+def freshness(good, ver, url):
+    """A row's tail: the amber line under a CLI older than its latest release, or " · latest unknown" (2026-10-17: 2.1.288 and 0.159.2 read green with 2.1.302 and 0.163.0 out)."""
+    if not good or not url:                      # a red row, or no reliable source (gemini): no lookup
+        return ""
+    box = []
+    def fetch():                                 # Sol design r1 F1: urlopen's timeout covers each socket call, not redirects or a slow body
+        try:
+            with urllib.request.urlopen(url, timeout=5) as r:
+                box.append(r.read())
+        except Exception:                        # caught here, so a thread never prints a traceback; an empty box reads as latest unknown
+            pass
+    try:                                         # Sol design r2 F7: the thread's start is inside, so a RuntimeError reads as latest unknown and the table still prints
+        t = threading.Thread(target=fetch, daemon=True)
+        t.start(); t.join(5)                     # the deadline of the whole lookup
+        text = box[0].decode("utf-8", "replace").strip()   # IndexError: no whole answer within 5 s
+        new = json.loads(text)["version"] if text.startswith("{") else text   # npm and muse answer JSON, kimi a bare version
+        return " · latest unknown" if not re.fullmatch(VERSION, new) else f"\n  - 🟡 behind: {'.'.join(map(str, vkey(ver)))} installed, {new} is out" if vkey(new) > vkey(ver) else ""   # Sol design r1 F2: {"version": "error 404"} and 2.2.0</html> are no version
+    except Exception:                            # offline, a 404, a missing file, a JSON answer without version, a ver with no digits: information only, never red
+        return " · latest unknown"
+
+
 def codex_quota(cmd):
     """The free quota read (codex app-server, account/rateLimits/read), information only: never fails a pre-flight."""
     p, found = None, []
@@ -1106,14 +1130,14 @@ def preflight(args):
 def doctor(args):
     if args.lane:
         return preflight(args)
-    rows, review, wt, bad, out = lanes(), None, None, False, []
+    rows, review, wt, conf = lanes(), None, None, "🟢 **config:** ok"
     try:
         primary = primary_of(args.repo)
         cfg = load_config(primary)
         wt = resolve_under(primary, cfg["worktrees"])
         review = wt / "_review"
     except Exit as e:
-        out.append(f"- 🔴 **config:** {e}"); bad = True   # the table still prints, the exit says setup is owed (2026-09-22 review)
+        conf = f"🔴 **config:** {e}"            # the table still prints, the exit says setup is owed (2026-09-22 review)
     mkt, entry = installed_entry()
     known = Path.home() / ".claude" / "plugins" / "known_marketplaces.json"   # 2026-09-23: the cached copy is no git checkout, so /parsec:doctor always said STALE
     try:
@@ -1123,22 +1147,26 @@ def doctor(args):
     head = git(["rev-parse", "HEAD"], src if src.is_dir() else PLUGIN).stdout.strip() or "unknown"
     sha = entry.get("gitCommitSha") if isinstance(entry.get("gitCommitSha"), str) else ""   # a null commit crashed the doctor (2026-09-23, Astra r2)
     ok = sha == head
-    out.insert(0, f"- {'🟢' if ok else '🔴'} **plugin install:** " + (f"{entry.get('version')} at {sha[:8]}: " + ("ok" if ok else f"STALE (repo head {head[:8]}; the cache is keyed by version: bump it, then claude plugin update)") if entry else "not installed"))   # old item 65; 2026-09-22 17:16
+    out = ["**Claude Code**", f"- {'🟢' if ok else '🔴'} **plugin install:** " + (f"{entry.get('version')} at {sha[:8]}: " + ("ok" if ok else f"STALE (repo head {head[:8]}; the cache is keyed by version: bump it, then claude plugin update)") if entry else "not installed")]   # old item 65; 2026-09-22 17:16
     code, ver = probe(CLAUDE + ["--version"])
-    out.append(f"- {'🟢' if code == 0 else '🔴'} **Claude Code:** {ver}")
-    for name, row in rows.items():
+    out += [f"- {'🟢' if code == 0 else '🔴'} **Claude Code:** {ver}" + freshness(code == 0, ver, CLAUDE_LATEST), f"- {conf}", "", "**Lane CLIs**"]   # two groups (Brandon, 2026-10-17: "Q1-A Lane CLIs")
+    groups = {}                                  # one row per CLI (Brandon, 2026-10-17): its lanes share the command the row runs and the update its amber line points to
+    for name, row in rows.items(): groups.setdefault((tuple(row["command"]), tuple(row.get("update") or [name])), []).append(name)
+    for names in groups.values():
+        name, row = names[0], rows[names[0]]
         code, ver = probe(row["command"] + ["--version"], env=child_env())   # the whole command, as the pre-flight runs it; 2026-10-12: no muse update starts here
-        lcode, login = probe(row["command"] + ["login", "status"], env=child_env()) if name in ("astra", "sol") else (0, "login: the first run's log") \
+        lcode, login = probe(row["command"] + ["login", "status"], env=child_env()) if name in ("astra", "sol") else (0, "login in the first run's log") \
             if name == "gemini" else (0, f"auth.json {'present' if MUSE_AUTH().is_file() else 'MISSING'}") if name == "muse" \
             else (0, f"credentials {'present' if (resolve_under(PLUGIN, row['home']) / 'credentials').exists() else 'MISSING'} in the lane home")
         good = code == 0 and lcode == 0 and "not logged in" not in login.lower() and "MISSING" not in login   # the login's own exit too (2026-09-23 pre-review)
-        out.append(f"- {'🟢' if good else '🔴'} **lane {name}:** {row['model']}, effort {row.get('effort', 'lane home' if name == 'kimi' else 'the model')}, {ver}, {login}")
-    for folder, label in ((wt, "worktrees"), (review, "_review")):
-        if folder and folder.is_dir():
-            for p in sorted(folder.iterdir()):
-                if p.is_dir() and not p.name.startswith("_"):
-                    out.append(f"- **{label}:** {p.name}, {int((time.time() - p.stat().st_mtime) / 86400)} d old")
-    print(f"### {'🔴' if any('🔴' in l for l in out) else '🟢'} parsec doctor\n\n" + "\n".join(out))   # Markdown, posted as is (Brandon, 2026-09-23)
+        who = ", ".join(f"{n} ({rows[n]['model']}" + (f", {rows[n]['effort']})" if "effort" in rows[n] else ")") for n in names)
+        out.append(f"- {'🟢' if good else '🔴'} {Path(row['command'][0]).stem + ' ' + ver if ver[:1].isdigit() else ver}, {login}: {who}" + freshness(good, ver, row.get("latest")))
+    trees = [f"- **{label}:** {p.name}, {int((time.time() - p.stat().st_mtime) / 86400)} d old" for folder, label in ((wt, "worktrees"), (review, "_review"))
+             if folder and folder.is_dir() for p in sorted(folder.iterdir()) if p.is_dir() and not p.name.startswith("_")]
+    out += ["", "**Worktrees**", *trees] if trees else []
+    print(f"### {'🔴' if any('🔴' in l for l in out) else '🟡' if any('🟡' in l for l in out) else '🟢'} parsec doctor\n\n" + "\n".join(out))   # Markdown, posted as is (Brandon, 2026-09-23)
+    if any("🟡" in l for l in out) and not args.update:
+        print("\nnext: run /parsec:doctor update: a CLI above is behind its latest release")
     if args.update:
         print("\nwarning: a debate may be open in another chat; its lane's update lands mid-debate\n")
         code, msg = probe(CLAUDE + ["update"], timeout=600)
@@ -1146,7 +1174,7 @@ def doctor(args):
         for upd, name in {tuple(r["update"]): ", ".join(m for m, s in rows.items() if s.get("update") == r["update"]) for r in rows.values() if r.get("update")}.items():   # one update per CLI, every lane named (2026-09-22 review, r3)
             code, msg = probe(list(upd), timeout=600, env=dict(os.environ, AGY_CLI_DISABLE_AUTO_UPDATE="true", MUSE_SYNC_UPDATE="1"))   # 2026-10-12: muse has no update subcommand; its launcher updates in the foreground
             print(f"- **update {name}:** exit {code}, {msg}")
-    return 64 if bad else 0
+    return 64 if conf.startswith("🔴") else 0
 
 
 # ---------------------------------------------------------------- argparse and the one exit
