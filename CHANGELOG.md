@@ -2,6 +2,16 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.42 (2026-10-18)
+
+Claude no longer ends every reply with the first line of an old block. Only the turn that posts a block ends with that line.
+
+- In 0.1.39, the debate skill told Claude to end a turn with the first line of the newest block that the turn posted. On 2026-10-18, one session read this as the newest block of the session. After the hook sent a turn back once, 12 replies in later turns ended with the first line of the same Fable last look. No turn after it printed a new block.
+- The debate skill now applies the rule only to the turn that posted the block. If the newest block of a turn came before a tool call, the last reply of that turn ends with its first line. Later turns never repeat that line, because one saved copy of it lets the hook pass.
+- The README row of the hook says the same.
+- To keep the skill text in its word limit, we removed three phrases that the text near them already says. No rule changed, and no limit changed.
+- We did not add a test. A test cannot see the words that Claude writes in a reply. A hook can only send a turn back, and that adds one more reply.
+
 ## v0.1.41 (2026-10-18)
 
 The build skill no longer uses a stash. A red run and a redispatch now copy the files aside, so the session has no stash to drop.
