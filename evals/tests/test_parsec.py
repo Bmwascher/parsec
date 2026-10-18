@@ -590,6 +590,9 @@ def test_inputs_and_preflight(env):
     pid = (e.tmp / "quota.pid").read_text()
     assert not WIN or pid not in subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True).stdout   # r3 (Sol): the .CMD's child outlived the probe
     e.mp.delenv("FAKE_CHILD_PID_FILE")
+    p = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])   # 0.1.40 Sol diff r1 F1: a taskkill that could not start raised out of kill_tree and left the child alive
+    with pytest.MonkeyPatch.context() as m: m.setattr(parsec.subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(OSError("no taskkill"))); parsec.kill_tree(p)
+    assert p.poll() is not None
     for used, mark in (("85", "🟡"), ("96", "🔴")):                # G-Q2 (Brandon, 2026-10-16); field audit 4: "week 4% left" read green, then Sol died after 575 s
         e.mp.setenv("FAKE_USED", used)
         code, out = run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")

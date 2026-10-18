@@ -457,12 +457,16 @@ def last_write_age(paths):
 
 
 def kill_tree(p):
-    """Old item 71: end the child FIRST while alive, so cmd.exe, node and the CLI do not outlive it."""
-    if os.name == "nt":
-        subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True, creationflags=NO_WINDOW)
-    else:
-        p.kill()
-    p.wait()
+    """Old item 71: end the child FIRST while alive, so cmd.exe, node and the CLI do not outlive it; it never raises, and each wait ends after 10 s (0.1.40 Sol diff r1 F1)."""
+    try:
+        if os.name == "nt" and subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True, creationflags=NO_WINDOW, timeout=10).returncode == 0:
+            return p.wait(10)                    # the tree is gone
+    except Exception:                            # taskkill could not start or ran past 10 s, or the child outlived it: the child alone, below
+        pass
+    try:
+        p.kill(); p.wait(10)                     # no tree kill, or it failed: at least the child, and never a wait without end
+    except Exception:                            # already gone, or still alive after 10 s: the caller goes on
+        pass
 
 
 def run_child(argv, cwd, env, stdin, out_path, err_path, watch):
@@ -1005,7 +1009,7 @@ def freshness(good, ver, url, after=None):
             pass
     try:                                         # Sol design r2 F7: the thread's start is inside, so a RuntimeError reads as latest unknown and the table still prints
         t, end = threading.Thread(target=fetch, daemon=True), time.monotonic() + 5
-        t.start(); t.join(5); got = [b for b in box if b[2] <= end]   # the deadline of all the lookup's work: the download, the parse, the check and the comparison; only work stamped by it counts
+        t.start(); t.join(max(0, end - time.monotonic())); got = [b for b in box if b[2] <= end]   # the deadline of all the lookup's work: the download, the parse, the check and the comparison; only work stamped by it counts, and the join waits only for the time left (0.1.40 Sol diff r1 F2)
         return f"\n  - 🟡 behind: {re.search(VRUN, ver)[0]} installed, {got[0][0]} is out" if got[0][1] else ""   # IndexError: no checked version within 5 s; the installed version as the CLI printed it (Q2-A: a key prints no version)
     except Exception:                            # offline, a 404, a missing file, an answer that is no version, a ver with no digits: information only, never red
         return " · latest unknown"
@@ -1035,7 +1039,7 @@ def codex_quota(cmd):
         p.stdin.write(req.encode("utf-8"))
         p.stdin.flush()                          # stdin stays OPEN: the server exits when it closes
         t, end = threading.Thread(target=read, daemon=True), time.monotonic() + 10
-        t.start(); t.join(10)                    # 2026-09-22 review: a readline on a silent server had no deadline at all; the parse runs inside it too
+        t.start(); t.join(max(0, end - time.monotonic()))   # 2026-09-22 review: a readline on a silent server had no deadline at all; the parse runs inside it too; the join waits only for the time left (0.1.40 Sol diff r1 F2)
         out = found[0][0] if found and found[0][1] <= end else out   # Sol design r1 F1, r2 F1 of 0.1.40: read once, before the kill, and only work stamped by the deadline counts
     except Exception:                            # Q5-A: a codex or a thread that cannot start, a broken pipe: unavailable, never a crash
         pass
