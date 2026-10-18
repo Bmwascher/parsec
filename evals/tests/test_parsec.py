@@ -527,6 +527,8 @@ def test_doctor_stale_install(env):
     (cut := e.tmp / "cut.txt").write_bytes(b"9.9.9" + b" " * ((1 << 20) - 5) + b"</html>"); e.mp.setattr(parsec, "CLAUDE_LATEST", cut.as_uri())   # Sol diff r2 F4: its first MiB strips to 9.9.9, but the whole answer is no version
     assert "\n- 🟢 **Claude Code:** codex-cli 0.159.2 · latest unknown\n" in run(e, "doctor")[1]
     assert "next: run" not in run(e, "doctor", "--update")[1]                # a guard, green on the base too (Sol design r1 F4)
+    look = lambda ver, body, after="": (e.mp.setenv("FAKE_VERSION", ver), (e.tmp / "l.txt").write_text(body, encoding="utf-8"), (e.tmp / "lanes.toml").write_text(f'[gemini]\nmodel = "g"\ncommand = {cmd}\nlatest = "{(e.tmp / "l.txt").as_uri()}"\nlatest_after = "{after}"\n', encoding="utf-8"), run(e, "doctor")[1].split("gemini (g)", 1)[1])[3]   # the text after the one lane row
+    assert [look("0.164.0-alpha.2", "0.164.0").startswith("\n  - 🟡 behind: 0.164.0-alpha.2 installed, 0.164.0 is out\n"), look("2.2", "2.2.0").startswith("\n\n**Worktrees**\n"), look("1.2.3+b", "1.2.4").startswith("\n  - 🟡 behind: 1.2.3+b installed, 1.2.4 is out\n")] == [True, True, True]   # item 2, Q2-A (Brandon, 2026-10-17): a pre-release read current, and 2.2 read behind 2.2.0; Sol design r1 F4 of 0.1.40: the installed version printed whole
 
 
 # row 14: inputs, the pre-flight, the in-session package (old item 100; the 2026-09-21 dry run and Kimi login; "in this directory")

@@ -43,7 +43,8 @@ ROUTE_LINES = ("Print mode: starting", "Propagating selected model override", "a
 SOFT_DENY = "soft-denying tool confirmation"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 MUSE_AUTH = lambda: Path.home() / ".config" / "muse" / "auth.json"   # 2026-10-12: muse has no login status command; presence only, never opened
-vkey = lambda v: tuple(int(x) for x in re.search(r"\d+(?:\.\d+)*", v)[0].split("."))   # the first run of digits and dots: "codex-cli 0.159.2", "Muse Code 1.4.9 (1.4.9-R6297.1)"
+VRUN = r"(\d+(?:\.\d+)*)(-[\w.]+)?(?:\+[\w.]+)?"   # the version run vkey reads and the amber line prints whole (Sol design r1 F4 of 0.1.40): "codex-cli 0.159.2", "Muse Code 1.4.9 (1.4.9-R6297.1)", "0.164.0-alpha.2", "1.2.3+b"
+vkey = lambda v: (lambda m: (tuple(map(int, re.sub(r"^(0+\.)+", "", m[1][::-1])[::-1].split("."))), not m[2]))(re.search(VRUN, v))   # Q2-A (Brandon, 2026-10-17): trailing zero parts dropped, so 2.2 is 2.2.0 at any length (Sol design r1 F5 of 0.1.40), by an anchored pattern on the reversed run, so the work is linear (r2 F6); then a "-" suffix is before its release, so 0.164.0-alpha.2 is behind 0.164.0; "+" build data is no pre-release
 VERSION = r"\d+(?:\.\d+)+(?:[-+][\w.]+)?"     # one whole version token ("2.2.0", "1.4.10-R6427.1"); a value from outside the tool must match it before vkey (Sol design r1 F2)
 
 
@@ -1005,7 +1006,7 @@ def freshness(good, ver, url):
     try:                                         # Sol design r2 F7: the thread's start is inside, so a RuntimeError reads as latest unknown and the table still prints
         t = threading.Thread(target=fetch, daemon=True)
         t.start(); t.join(5)                     # the deadline of all the lookup's work: the download, the parse and the check
-        return f"\n  - 🟡 behind: {'.'.join(map(str, vkey(ver)))} installed, {box[0]} is out" if vkey(box[0]) > vkey(ver) else ""   # IndexError: no checked version within 5 s
+        return f"\n  - 🟡 behind: {re.search(VRUN, ver)[0]} installed, {box[0]} is out" if vkey(box[0]) > vkey(ver) else ""   # IndexError: no checked version within 5 s; the installed version as the CLI printed it (Q2-A: a key prints no version)
     except Exception:                            # offline, a 404, a missing file, an answer that is no version, a ver with no digits: information only, never red
         return " · latest unknown"
 
