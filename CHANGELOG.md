@@ -2,6 +2,22 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.40 (2026-10-18)
+
+The doctor now compares agy with its latest release. It also orders versions correctly, and a bad quota answer no longer stops the pre-flight.
+
+- The doctor reads the latest agy release from the banner of the agy updater. In `lanes.toml`, the new key `latest_after` names the text right before the version. For agy, this text is `Stable Version: `.
+- If the answer does not hold that text, the row adds `latest unknown`. The doctor never takes some other number from the page as the release.
+- An agy that is older than the banner version gets the amber line, as the other CLIs do. On 2026-10-17, `agy update` took agy from 1.2.16 to 1.4.2, the version that the banner showed. The note in 0.1.37 that agy had no source that we can trust was wrong.
+- Version parts that are not there count as 0, so 2.2 and 2.2.0 are the same release. Before, the doctor showed 2.2 as behind 2.2.0.
+- A version with a `-` part, such as `0.164.0-alpha.2`, now comes before the same release without it. Before, the doctor showed it as current. The amber line now shows the version as the CLI prints it.
+- The quota read of the pre-flight now reads the answer, parses it and makes its text inside its 10-second limit. An answer line longer than 1 MiB counts as no answer.
+- If the quota answer is bad, late or too long, the quota line shows `unavailable`, and the pre-flight goes on. Before, an answer with the wrong shape stopped the pre-flight with an error.
+- When the tool stops a CLI that it started, an error no longer stops the tool, and each wait ends after 10 seconds. This also applies to a round or a build that runs past its time limit.
+- The latest-release lookup and the quota read now end at their deadline, also when their reader starts late.
+- We merged the import lines of the tool and of two test files to make room. No budget changed.
+- We made each new test fail once on the mistake that it answers.
+
 ## v0.1.39 (2026-10-18)
 
 The Stop hook no longer makes Claude post a block twice. Claude now repeats the first line of a block at the end of the turn.
