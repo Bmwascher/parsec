@@ -532,6 +532,12 @@ def test_doctor_stale_install(env):
     assert [look("1.2.16", "Antigravity CLI auto updater is running! Stable Version: 1.4.2. Rolled out to 100%", "Stable Version: ").startswith("\n  - 🟡 behind: 1.2.16 installed, 1.4.2 is out\n"), look("1.2.16", "9.9.9", "Stable Version: ").startswith(" · latest unknown\n")] == [True, True]   # item 1 (Brandon, 2026-10-17): agy's banner as probe C1 read it; a lane with latest_after never falls back to a bare version
 
 
+@pytest.mark.parametrize("ans, pad", [('{"id": 2, "result": "rateLimits"}', 0), ('{"id": 2, "result": {"rateLimits": "x"}}', 0), ('{"id": 2, "result": {"rateLimits": {}}}', 1 << 20), ('{"id": 2, "result": {"rateLimits": {"primary": false}}}', 0), ('{"id": 2, "error": {"message": "rateLimits"}}', 0)])
+def test_quota_bad_answer_reads_unavailable(env, ans, pad):   # probe C3, 2026-10-17: a result that is no object crashed the pre-flight; Q5-A (Brandon): an answer line over 1 MiB is no answer; Sol design r1 F2, F3 of 0.1.40: a window that is no object, and an answer without result
+    (env.tmp / "q.json").write_text(ans + " " * pad, encoding="utf-8"); env.mp.setenv("FAKE_QUOTA", str(env.tmp / "q.json"))
+    assert "**Quota:** unavailable" in run(env, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")[1]
+
+
 # row 14: inputs, the pre-flight, the in-session package (old item 100; the 2026-09-21 dry run and Kimi login; "in this directory")
 def test_inputs_and_preflight(env):
     e = env

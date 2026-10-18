@@ -1000,20 +1000,32 @@ def freshness(good, ver, url, after=None):
             text = body.decode("utf-8", "replace").strip() if len(body) <= 1 << 20 else ""   # Sol diff r1 F3: at most 1 MiB; a longer answer is no version, never its first MiB
             new = text.split(after, 1)[1].split()[0].removesuffix(".") if after else json.loads(text)["version"] if text.startswith("{") else text   # item 1 (Brandon, 2026-10-17): after is the text right before the version, as agy's "Stable Version: 1.4.2."; without it, IndexError reads as latest unknown; npm and muse answer JSON, kimi a bare version
             if re.fullmatch(VERSION, new):       # Sol design r1 F2: {"version": "error 404"} and 2.2.0</html> are no version
-                box.append(new)
+                box.append((new, vkey(new) > vkey(ver), time.monotonic()))   # Sol design r2 F1, F6 of 0.1.40: the comparison runs here too, and the result is stamped when its work is done
         except Exception:                        # caught here, so a thread never prints a traceback; an empty box reads as latest unknown
             pass
     try:                                         # Sol design r2 F7: the thread's start is inside, so a RuntimeError reads as latest unknown and the table still prints
-        t = threading.Thread(target=fetch, daemon=True)
-        t.start(); t.join(5)                     # the deadline of all the lookup's work: the download, the parse and the check
-        return f"\n  - 🟡 behind: {re.search(VRUN, ver)[0]} installed, {box[0]} is out" if vkey(box[0]) > vkey(ver) else ""   # IndexError: no checked version within 5 s; the installed version as the CLI printed it (Q2-A: a key prints no version)
+        t, end = threading.Thread(target=fetch, daemon=True), time.monotonic() + 5
+        t.start(); t.join(5); got = [b for b in box if b[2] <= end]   # the deadline of all the lookup's work: the download, the parse, the check and the comparison; only work stamped by it counts
+        return f"\n  - 🟡 behind: {re.search(VRUN, ver)[0]} installed, {got[0][0]} is out" if got[0][1] else ""   # IndexError: no checked version within 5 s; the installed version as the CLI printed it (Q2-A: a key prints no version)
     except Exception:                            # offline, a 404, a missing file, an answer that is no version, a ver with no digits: information only, never red
         return " · latest unknown"
 
 
 def codex_quota(cmd):
     """The free quota read (codex app-server, account/rateLimits/read), information only: never fails a pre-flight."""
-    p, found = None, []
+    p, found, out = None, [], "unavailable"
+    def read():                                  # Q5-A (Brandon, 2026-10-17): the read, the parse and the text all run here, inside the deadline, as in freshness
+        try:
+            for l in iter(lambda: p.stdout.readline((1 << 20) + 1), b""):   # C4: at most 1 MiB + 1 bytes a call, so a longer line shows by its length
+                if len(l) > 1 << 20:             # an answer line over 1 MiB is no answer, never its first MiB (Sol diff r2 F4 of 0.1.37)
+                    return
+                if b"rateLimits" in l:
+                    lim = json.loads(l)["result"]["rateLimits"]   # Sol design r1 F3 of 0.1.40: by key, so an error answer that names rateLimits is no answer
+                    parts = [f"{'5 h' if (w.get('windowDurationMins') or 0) <= 300 else 'week'} {100 - w.get('usedPercent', 0)}% left"
+                             for w in (lim.get("primary"), lim.get("secondary")) if w not in (None, {})]   # Sol design r1 F2 of 0.1.40: only null or {} is no window; false, 0 or "" raises
+                    return found.append((", ".join(parts) if parts else "no windows in the answer", time.monotonic()))   # stamped when its work is done
+        except Exception:                        # probe C3, 2026-10-17: a result that is no object raised AttributeError out of the pre-flight; caught here, so nothing reaches stderr
+            pass
     try:
         req = json.dumps({"id": 1, "method": "initialize", "params": {"clientInfo": {"name": "parsec-doctor", "version": "0"},
                           "capabilities": {"experimentalApi": True}}}) + "\n" + \
@@ -1022,19 +1034,15 @@ def codex_quota(cmd):
                              stderr=subprocess.DEVNULL, env=child_env(), creationflags=NO_WINDOW)
         p.stdin.write(req.encode("utf-8"))
         p.stdin.flush()                          # stdin stays OPEN: the server exits when it closes
-        t = threading.Thread(target=lambda: found.append(next((l for l in iter(p.stdout.readline, b"") if b"rateLimits" in l), b"")), daemon=True)
-        t.start(); t.join(10)                    # 2026-09-22 review: a readline on a silent server had no deadline at all
-        if found and found[0]:
-            lim = json.loads(found[0]).get("result", {}).get("rateLimits", {})
-            parts = [f"{'5 h' if (w.get('windowDurationMins') or 0) <= 300 else 'week'} {100 - w.get('usedPercent', 0)}% left"
-                     for w in (lim.get("primary"), lim.get("secondary")) if w]
-            return ", ".join(parts) if parts else "no windows in the answer"
-    except (ValueError, OSError):
+        t, end = threading.Thread(target=read, daemon=True), time.monotonic() + 10
+        t.start(); t.join(10)                    # 2026-09-22 review: a readline on a silent server had no deadline at all; the parse runs inside it too
+        out = found[0][0] if found and found[0][1] <= end else out   # Sol design r1 F1, r2 F1 of 0.1.40: read once, before the kill, and only work stamped by the deadline counts
+    except Exception:                            # Q5-A: a codex or a thread that cannot start, a broken pipe: unavailable, never a crash
         pass
     finally:
         if p:
             kill_tree(p)                         # on every path, a broken pipe included; the tree, since codex is a .CMD (2026-09-22 review, r2)
-    return "unavailable"
+    return out
 
 
 def preflight(args):
