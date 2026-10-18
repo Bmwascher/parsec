@@ -2,6 +2,17 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.41 (2026-10-18)
+
+The build skill no longer uses a stash. A red run and a redispatch now copy the files aside, so the session has no stash to drop.
+
+- In a red run, the session copies each file of the task to the feature folder under its repository path. It records a hash of each file first.
+- The session then writes the version of the head over each file, with `git cat-file --filters`, or removes a file that the task created. This command keeps the line endings of the checkout.
+- After the checks, a `finally` copies the files back. The session stops if a hash is not the same as before.
+- Before a redispatch, the session copies the files of the task that `git status` names, unstages them, and writes back the version of the head. Files that are not in the task stay as they are.
+- The finish no longer drops stashes, and the README no longer lists them.
+- We tested each step in a scratch repository, with CRLF and with LF checkouts.
+
 ## v0.1.40 (2026-10-18)
 
 The doctor now compares agy with its latest release. It also orders versions correctly, and a bad quota answer no longer stops the pre-flight.
