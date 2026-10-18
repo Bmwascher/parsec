@@ -988,9 +988,9 @@ def probe(argv, env=None, timeout=10, stdin_text=None):
         return None, "timed out after 10 s"
 
 
-def freshness(good, ver, url):
+def freshness(good, ver, url, after=None):
     """A row's tail: the amber line under a CLI older than its latest release, or " · latest unknown" (2026-10-17: 2.1.288 and 0.159.2 read green with 2.1.302 and 0.163.0 out)."""
-    if not good or not url:                      # a red row, or no reliable source (gemini): no lookup
+    if not good or not url:                      # a red row, or a lane with no latest: no lookup
         return ""
     box = []
     def fetch():                                 # Sol design r1 F1: urlopen's timeout covers each socket call, not redirects or a slow body; Sol diff r1 F3: the read, the parse and the check all run here, inside the deadline
@@ -998,7 +998,7 @@ def freshness(good, ver, url):
             with urllib.request.urlopen(url, timeout=5) as r:
                 body = r.read((1 << 20) + 1)             # Sol diff r2 F4: one byte past the cap shows that the answer is longer than 1 MiB
             text = body.decode("utf-8", "replace").strip() if len(body) <= 1 << 20 else ""   # Sol diff r1 F3: at most 1 MiB; a longer answer is no version, never its first MiB
-            new = json.loads(text)["version"] if text.startswith("{") else text   # npm and muse answer JSON, kimi a bare version
+            new = text.split(after, 1)[1].split()[0].removesuffix(".") if after else json.loads(text)["version"] if text.startswith("{") else text   # item 1 (Brandon, 2026-10-17): after is the text right before the version, as agy's "Stable Version: 1.4.2."; without it, IndexError reads as latest unknown; npm and muse answer JSON, kimi a bare version
             if re.fullmatch(VERSION, new):       # Sol design r1 F2: {"version": "error 404"} and 2.2.0</html> are no version
                 box.append(new)
         except Exception:                        # caught here, so a thread never prints a traceback; an empty box reads as latest unknown
@@ -1150,7 +1150,7 @@ def doctor(args):
             else (0, f"credentials {'present' if (resolve_under(PLUGIN, row['home']) / 'credentials').exists() else 'MISSING'} in the lane home")
         good = code == 0 and lcode == 0 and "not logged in" not in login.lower() and "MISSING" not in login   # the login's own exit too (2026-09-23 pre-review)
         who = ", ".join(f"{n} ({rows[n]['model']}" + (f", {rows[n]['effort']})" if "effort" in rows[n] else ")") for n in names)
-        out.append(f"- {'🟢' if good else '🔴'} {Path(row['command'][0]).stem + ' ' + ver if ver[:1].isdigit() else ver}, {login}: {who}" + freshness(good, ver, row.get("latest")))
+        out.append(f"- {'🟢' if good else '🔴'} {Path(row['command'][0]).stem + ' ' + ver if ver[:1].isdigit() else ver}, {login}: {who}" + freshness(good, ver, row.get("latest"), row.get("latest_after")))
     trees = [f"- **{label}:** {p.name}, {int((time.time() - p.stat().st_mtime) / 86400)} d old" for folder, label in ((wt, "worktrees"), (review, "_review"))
              if folder and folder.is_dir() for p in sorted(folder.iterdir()) if p.is_dir() and not p.name.startswith("_")]
     out += ["", "**Worktrees**", *trees] if trees else []

@@ -220,10 +220,10 @@ Restart Claude Code afterwards so the skills load.
 
 The table has two groups. **Claude Code** holds the plugin install, the Claude Code CLI and the config. The plugin install line compares the installed copy with the head of the repository the marketplace points at. If it says anything but `ok`, the plugin cache is stale; see [Releasing](#releasing). The Claude Code line is red when `claude --version` fails, and the config line is red when setup is owed. **Lane CLIs** has one row per CLI, and the row names every lane that the CLI serves, so astra and sol share the codex row. Worktree folders follow under **Worktrees** when there are any.
 
-The doctor also asks each CLI's source for its latest release: the npm registry for Claude Code, and the `latest` key of each lane in `lanes.toml`. agy has no reliable source, so its row is not compared. A CLI that is behind gets an amber line under its row with both versions, and the output ends with `next: run /parsec:doctor update`. A lookup that fails adds `latest unknown` and never turns a row red. `/parsec:doctor update` runs `claude update`, then each CLI's own update command once, and names every lane it serves. The session posts the output as Markdown, so a red line stands out on a phone.
+The doctor also asks each CLI's source for its latest release: the npm registry for Claude Code, and the `latest` key of each lane in `lanes.toml`. For agy, the lane's `latest_after` names the text right before the version, so the doctor reads the version that the banner of agy's updater names after `Stable Version: `. A CLI that is behind gets an amber line under its row with both versions, and the output ends with `next: run /parsec:doctor update`. A lookup that fails adds `latest unknown` and never turns a row red. `/parsec:doctor update` runs `claude update`, then each CLI's own update command once, and names every lane it serves. The session posts the output as Markdown, so a red line stands out on a phone.
 
 <details>
-<summary><b>What a result looks like (2026-10-17, four CLIs behind)</b></summary>
+<summary><b>What a result looks like (2026-10-17, five CLIs behind)</b></summary>
 
 > ### 🟡 parsec doctor
 >
@@ -241,6 +241,7 @@ The doctor also asks each CLI's source for its latest release: the npm registry 
 > - 🟢 Muse Code 1.4.9 (1.4.9-R6297.1), auth.json present: muse (muse-wonder-full-1.0, high)
 >   - 🟡 behind: 1.4.9 installed, 1.4.10-R6427.1 is out
 > - 🟢 agy 1.2.16, login in the first run's log: gemini (gemini-3.8-flash-high)
+>   - 🟡 behind: 1.2.16 installed, 1.4.2 is out
 >
 > next: run /parsec:doctor update: a CLI above is behind its latest release
 

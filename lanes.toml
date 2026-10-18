@@ -3,6 +3,7 @@
 # `command` is a list, so a test can substitute a fake CLI. Full model ids only:
 # what an alias resolves to was never measured (old item 81). `latest` is where the
 # doctor reads the CLI's newest release (2026-10-17); a lane without it is not compared.
+# `latest_after` names the text right before the version in a plain-text answer (agy's banner).
 
 [astra]                                 # the alternate, by name at any time (Brandon, 2026-09-22)
 model = "gpt-6-astra"
@@ -39,5 +40,9 @@ latest = "https://api.meta.ai/muse-code/channels/muse-stable"   # the launcher's
 model = "gemini-3.8-flash-high"
 command = ["agy"]
 update = ["agy", "update"]              # Brandon, 2026-09-22: agy's own "Update CLI" subcommand
-# No latest (2026-10-17): the updater's root says "Stable Version: 1.4.2", agy's own check path was not found, and
-# agy update said "Already on the latest version." with 1.2.16 installed (2026-10-03). No source is reliable.
+# latest: the root of agy's updater is a plain-text banner, "Antigravity CLI auto updater is running! Stable Version: 1.4.2.
+# Rolled out to 100%" (2026-10-17). That day agy update took 1.2.16 to 1.4.2, the version the banner named, so the
+# earlier note here (the banner could not be trusted) was wrong (corrected 2026-10-17). The banner names a rollout
+# percentage, so, as with kimi, the doctor can name a release before agy update installs it.
+latest = "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app"
+latest_after = "Stable Version: "
