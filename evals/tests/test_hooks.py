@@ -19,7 +19,7 @@ HEAD = "### 🔴 Sol R1 Design Round: FIX (4 min, fresh)"   # the 2026-10-17 blo
 BLOCK = f"Sol R1 Design Round\nverdict: FIX\n{HEAD}\nCritical 0 · Important 3 · Minor 3\n→ **Answer:** pending\nnext: post the block above in chat now, as is, outside a code block, before any other step"
 NOTE = json.dumps({"type": "user", "message": {"role": "user", "content": f"<task-notification>\n<task-id>b8wxu9aeh</task-id>\n<status>completed</status>\n<event>{BLOCK}</event>\n</task-notification>"}}, ensure_ascii=False, separators=(",", ":"))
 POSTED = json.dumps({"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": f"{HEAD}\n\nCritical 0 · Important 3 · Minor 3"}]}}, ensure_ascii=False, separators=(",", ":"))
-DECISION = json.dumps({"decision": "block", "reason": f'parsec: the block that starts "{HEAD}" was printed for you to post and is not in chat. Post it now, as is and outside a code block, with the additions the debate skill names, then end the turn.'}).encode("utf-8")
+DECISION = json.dumps({"decision": "block", "reason": f'parsec: the block that starts "{HEAD}" was printed for you to post, and no reply in the transcript holds that line. If you posted it in this turn, reply with its heading line only, then end the turn. Otherwise post it now, as is and outside a code block, with the additions the debate skill names, then end the turn.'}).encode("utf-8")
 OFF = {"stop_hook_active": False}
 
 

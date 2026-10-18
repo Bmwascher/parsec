@@ -2,7 +2,7 @@
 """parsec's three hooks, named by hooks/hooks.json as ${CLAUDE_PLUGIN_ROOT}/tools/hooks.py <compact|agent|stop>. Fail open (D4): any error prints nothing and exits 0. Bytes in and out: a Windows text pipe re-encodes ledger.md.
 compact: after a compaction in a session that launched a parsec skill, print the driver rule 3 line, then templates/driver-rules.md and templates/ledger.md (field audit 4, 2026-10-15: the reread held 2 of 31 times).
 agent: deny a parsec: agent dispatch that sets model (Moving Day phase 10 tasks 16, 19 and 23 built on Sonnet).
-stop: send the turn back once while the newest block the tool printed for posting is not in chat (2026-10-04 Afterparty phases 2 to 4: 4 of 18 posted)."""
+stop: send the turn back once while no reply in the transcript holds the newest block the tool printed for posting (2026-10-04 Afterparty phases 2 to 4: 4 of 18 posted)."""
 import json
 import sys
 from pathlib import Path
@@ -66,7 +66,7 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
                             owed[head] = True
     if event["stop_hook_active"] or not owed.get(head) or head in (event.get("last_assistant_message") or ""):   # never on any Stop hook's continuation, ours or another plugin's (one shared flag); the transcript may lag the last reply, a field the CLI marks optional
         return b""
-    return json.dumps({"decision": "block", "reason": f'parsec: the block that starts "{head}" was printed for you to post and is not in chat. Post it now, as is and outside a code block, with the additions the debate skill names, then end the turn.'}).encode("utf-8")
+    return json.dumps({"decision": "block", "reason": f'parsec: the block that starts "{head}" was printed for you to post, and no reply in the transcript holds that line. If you posted it in this turn, reply with its heading line only, then end the turn. Otherwise post it now, as is and outside a code block, with the additions the debate skill names, then end the turn.'}).encode("utf-8")   # 2026-10-17: 4 of 9 posts made before a tool call were not saved, so the block was posted twice; a reply of its heading line clears it (the last_assistant_message check above)
 
 
 def main(argv):
