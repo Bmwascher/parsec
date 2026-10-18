@@ -2,6 +2,18 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.38 (2026-10-17)
+
+A new hook makes Claude post the round summary or the pre-flight block before the turn ends. The tool prints these blocks for you, and sessions often did not post them.
+
+- At the end of each turn, the new Stop hook reads the transcript. It finds the newest block that the tool printed above a line that starts with `next: post the block above`.
+- If no later reply from Claude holds the first line of that block, the hook sends Claude back once. The reason names that line and tells Claude to post the block as it is.
+- Text that Claude only thinks, or sends to an agent, does not count as a post.
+- The hook sends a turn back only once, so it cannot loop. If it hits any error, it prints nothing and the turn ends as before.
+- On 2026-10-17 a session sent the Sol round 1 block to the author and did not post it. On 2026-10-04 sessions posted only 4 of 18 summaries.
+- We removed extra lines first. Then we raised the budget of the hooks script to 80 lines. The tests budget rose by 30 lines, to 1,547.
+- `evals/tests/test_hooks.py` holds the new tests. We made each test fail once on the mistake that it answers.
+
 ## v0.1.37 (2026-10-17)
 
 This release makes the doctor table easier to read, and it shows when a CLI is out of date. Before, a CLI that answered showed green, also when a newer release was out.
