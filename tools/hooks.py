@@ -38,7 +38,7 @@ def agent(event):
 def texts(line):                                     # one record's (sources, replies): a task-notification or tool results; an assistant record's text blocks
     try:
         record = json.loads(line)
-        content = record["message"]["content"]
+        content = record["attachment"]["prompt"] if record["type"] == "attachment" else record["message"]["content"]   # a task-notification that arrives mid-turn is a queued_command attachment with no message (Opus pre-review r1 F1; evidence/queued-command-shape.txt)
         if isinstance(content, str):                 # a task-notification is a source; a typed prompt never is
             return ([content] if content.startswith("<task-notification>") else []), []
         items = [content] if record["type"] == "assistant" else [block["content"] for block in content if block["type"] == "tool_result"]   # an assistant's blocks, or each tool result: a string (Bash) or text items (Read)
@@ -59,7 +59,7 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
                     heading = None                   # each source finds its own heading; a block split across records is missed (R1, Brandon SR-A)
                     for row in text.splitlines():
                         row = row.partition("\t")[2] if row.partition("\t")[0].isdigit() else row.removeprefix("<event>").removesuffix("</event>")   # a Read result numbers each line; a Monitor event wraps its text (design r2, Sol F2)
-                        if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is ever quoted in the reason (tools/parsec.py:34, :792, :1090); any other "### " line is no heading
+                        if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is ever quoted in the reason (tools/parsec.py: MARKERS, the round heading and the pre-flight heading); any other "### " line is no heading
                             heading = row.rstrip()
                         elif row.startswith(PHRASE) and heading and heading not in owed:   # every block in order (design r2, Sol F1); a line start, so a read of the tool's source has none
                             head = heading           # the newest block, the one the end checks; a heading seen before changes nothing

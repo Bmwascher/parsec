@@ -1,4 +1,4 @@
-"""Tests for tools/hooks.py and hooks/hooks.json (specs: dev/reviews/10-16-hooks and 10-17-stop-hook-unposted-block). Field audit 4, 2026-10-15:
+"""Tests for tools/hooks.py and hooks/hooks.json (specs: dev/reviews/10-16-hooks in this repo; 10-17-stop-hook-unposted-block in the parsec docs folder, outside it). Field audit 4, 2026-10-15:
 the reread after a compaction held 2 of 31 times; Moving Day phase 10 tasks 16, 19 and 23 built on Sonnet because a parsec dispatch set model;
 on 2026-10-17 a round block went to the author unposted. Each test runs the command that hooks/hooks.json names, so the wiring is under test."""
 import json
@@ -119,7 +119,7 @@ def test_missing_template_prints_nothing(tmp_path):
                                     rec("result", [{"type": "text", "text": '{"success":true}'}]), rec("assistant", [{"type": "text", "text": "The author is answering Sol's six findings."}])),   # 2026-10-17
                                    (rec("result", BLOCK.replace("R1", "R0")), rec("assistant", [{"type": "text", "text": HEAD.replace("R1", "R0")}]), rec("result", BLOCK + "; 1 warning(s) above the block\n" + BLOCK.replace("R1", "R0"))),   # a Bash result: a new block, then a posted one again, in one result (Sol r2 F1)
                                    (rec("result", [{"type": "text", "text": "\n".join(f"{n}\t{r}" for n, r in enumerate(BLOCK.splitlines(), 1) if (n < 4) == first)} for first in (True, False)]),), (NOTE.replace("<event>Sol R1 Design Round\\nverdict: FIX\\n", "<event>"),),   # a Read result, each line numbered, split across two text items (Sol F1); an event that opens with the heading (Sol r2 F2)
-                                   (NOTE, rec("assistant", [{"type": "text", "text": "Sol round 2 runs next."}]), rec("user", "go on"), rec("assistant", [{"type": "text", "text": "Done."}])),   # an earlier turn's block is still owed
+                                   (NOTE, rec("assistant", [{"type": "text", "text": "Sol round 2 runs next."}]), rec("user", "go on"), rec("assistant", [{"type": "text", "text": "Done."}])), (json.dumps({"type": "attachment", "attachment": {"type": "queued_command", "prompt": json.loads(NOTE)["message"]["content"], "commandMode": "task-notification"}}, ensure_ascii=False, separators=(",", ":")),),   # an earlier turn's block is still owed; a block delivered mid-turn, a queued_command attachment with no message (Opus pre-review r1 F1; evidence/queued-command-shape.txt)
                                    ('{"message":"next: post the block above', "[" * 5000 + "next: post the block above", rec("result", BLOCK.replace("R1", "R0")), rec("assistant", [{"type": "text", "text": None}, {"type": "text", "text": "### a note"}]), NOTE)])   # bad records, a null text among them (Sol F2), never hide a later block
 def test_unposted_block_is_sent_back(tmp_path, lines):
     assert hook("Stop", session(tmp_path, *lines, **OFF, last_assistant_message="Done.")) == (0, DECISION, b"")
