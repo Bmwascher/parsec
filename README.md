@@ -505,8 +505,9 @@ Each rail exists because its failure happened at least once. The dates live in t
 |---|---|
 | After a compaction in a session that launched a parsec skill, a hook puts the driver rules and the ledger template back in Claude's context, under a line that says to reread the skill, the ledger and the notes | The reread after a compaction held in 2 of 31 phase chats; the misses cost a fresh author, a dropped diff round and about 45 ledger lines with wrong times |
 | A hook denies a `parsec:` agent dispatch that sets `model`, and tells Claude to dispatch again without it | Three backup builds ran on Sonnet because the dispatch named a model |
+| At the end of a turn, a hook checks that the newest block the tool printed for posting, a round summary or a pre-flight, is in chat, and sends Claude back once to post it | Sessions skipped the summary: 4 of 18 posted in Afterparty phases 2 to 4; on 2026-10-17 the Sol round 1 block went to the author unposted |
 
-Both hooks are in `hooks/hooks.json` and run `tools/hooks.py`. If a hook hits any error, it prints nothing to Claude, exits 0 and Claude Code carries on; a missing script still leaves Python's error on stderr. `"disableAllHooks": true` in your settings turns them off, along with every other hook.
+The three hooks are in `hooks/hooks.json` and run `tools/hooks.py`. If a hook hits any error, it prints nothing to Claude, exits 0 and Claude Code carries on; a missing script still leaves Python's error on stderr. `"disableAllHooks": true` in your settings turns them off, along with every other hook.
 
 ---
 
@@ -528,8 +529,8 @@ The plugin stays lean because its size limits fail the build. An addition that w
 | What | Limit |
 |---|---|
 | `tools/parsec.py` | 1,250 lines |
-| `tools/hooks.py` | 60 lines |
-| All tests | 1,500 lines |
+| `tools/hooks.py` | 80 lines |
+| All tests | 1,530 lines |
 | The frozen checkers | 522 lines |
 | All skill, template, agent and model prose | 12,000 words |
 | Any one skill | 1,600 words |
@@ -567,12 +568,12 @@ parsec/
 ├── .github/            CI, the release workflow, README images
 ├── agents/             the four Claude seats: author, backup-implementer, reviewer-opus, reviewer-fable
 ├── commands/           /parsec:doctor
-├── hooks/              hooks.json: the compaction re-inject and the model refusal
+├── hooks/              hooks.json: the compaction re-inject, the model refusal and the post check
 ├── skills/             brainstorm, build, debate, panel, setup
 ├── templates/          spec, task list, ledger, briefs, driver rules, the backup implementer's contract
 ├── models/             dated notes on each model and CLI
 ├── lanes/              the Kimi reviewer's agent file
-├── tools/              parsec.py, the one tool; hooks.py, the script the two hooks run
+├── tools/              parsec.py, the one tool; hooks.py, the script the three hooks run
 ├── evals/              tests, the fake CLI, the STE and changelog checkers
 ├── lanes.toml          the CLI lanes: model, effort, command, update
 ├── CHANGELOG.md
