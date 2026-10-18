@@ -59,7 +59,7 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
                     heading = None                   # each source finds its own heading; a block split across records is missed (R1, Brandon SR-A)
                     for row in text.splitlines():
                         row = row.partition("\t")[2] if row.partition("\t")[0].isdigit() else row.removeprefix("<event>").removesuffix("</event>")   # a Read result numbers each line; a Monitor event wraps its text (design r2, Sol F2)
-                        if row.startswith("### "):
+                        if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is ever quoted in the reason (tools/parsec.py:34, :792, :1090); any other "### " line is no heading
                             heading = row.rstrip()
                         elif row.startswith(PHRASE) and heading and heading not in owed:   # every block in order (design r2, Sol F1); a line start, so a read of the tool's source has none
                             head = heading           # the newest block, the one the end checks; a heading seen before changes nothing
