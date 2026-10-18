@@ -38,7 +38,7 @@ Dispatch `agents/backup-implementer.md` in the background, with the brief path, 
 - a task whose Gemini run failed the success test once, or whose diff did not match its code (below);
 - every task when the pre-flight finds no agy.
 
-Run `build archive --feature <folder> --task N` before ANY redispatch of a task that already has a report, so no attempt's evidence is overwritten. Before ANY redispatch, copy each path `git status --porcelain` names, under its repository path, to `build\task-NN-attempt-k\` with that list; then write the head's version over each path the head has, a deleted one included, and remove each it lacks, as step 4 does (2026-09-24). The `backup-implementer` reports blocked itself.
+Run `build archive --feature <folder> --task N` before ANY redispatch of a task that already has a report, so no attempt's evidence is overwritten. Before ANY redispatch, copy each of the task's **Files** that `git status --porcelain` names, under its repository path, to `build\task-NN-attempt-k\` with that list; unstage them (`git reset -q -- <paths>`); then write the head's version over each path the head has and remove each it lacks, as step 4 does (2026-09-24). The `backup-implementer` reports blocked itself.
 
 ## A failing task
 
