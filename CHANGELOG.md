@@ -6,7 +6,7 @@ Newest first. Each section opens with plain words for the user; the detail follo
 
 The build skill no longer uses a stash. A red run and a redispatch now copy the files aside, so the session has no stash to drop.
 
-- In a red run, the session copies each file of the task, except the tests, to the feature folder under its repository path. It records a hash of each file first. The script stops on any error, so a failed copy stops it before the session writes over a file.
+- In a red run, the session copies each file of the task, except the tests, to the feature folder under its repository path. It records a hash of each file first. The script stops on any error, so a failed copy stops it before the session writes over a file. Only a failure of the checks does not stop the script, because the red run expects that failure.
 - The session then writes the version of the head over each file, with `git cat-file --filters`, or removes a file that the task created. This command keeps the line endings of the checkout.
 - After the checks, a `finally` copies the files back. The session stops if a hash is not the same as before.
 - Before a redispatch, the session copies the files of the task that `git status` names, unstages them, and writes back the version of the head. Files that are not in the task stay as they are.
