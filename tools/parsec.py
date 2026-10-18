@@ -1005,19 +1005,20 @@ def freshness(good, ver, url):
     if not good or not url:                      # a red row, or no reliable source (gemini): no lookup
         return ""
     box = []
-    def fetch():                                 # Sol design r1 F1: urlopen's timeout covers each socket call, not redirects or a slow body
+    def fetch():                                 # Sol design r1 F1: urlopen's timeout covers each socket call, not redirects or a slow body; Sol diff r1 F3: the read, the parse and the check all run here, inside the deadline
         try:
             with urllib.request.urlopen(url, timeout=5) as r:
-                box.append(r.read())
+                text = r.read(1 << 20).decode("utf-8", "replace").strip()   # Sol diff r1 F3: at most 1 MiB; a longer answer is cut, and a cut answer is no version
+            new = json.loads(text)["version"] if text.startswith("{") else text   # npm and muse answer JSON, kimi a bare version
+            if re.fullmatch(VERSION, new):       # Sol design r1 F2: {"version": "error 404"} and 2.2.0</html> are no version
+                box.append(new)
         except Exception:                        # caught here, so a thread never prints a traceback; an empty box reads as latest unknown
             pass
     try:                                         # Sol design r2 F7: the thread's start is inside, so a RuntimeError reads as latest unknown and the table still prints
         t = threading.Thread(target=fetch, daemon=True)
-        t.start(); t.join(5)                     # the deadline of the whole lookup
-        text = box[0].decode("utf-8", "replace").strip()   # IndexError: no whole answer within 5 s
-        new = json.loads(text)["version"] if text.startswith("{") else text   # npm and muse answer JSON, kimi a bare version
-        return " · latest unknown" if not re.fullmatch(VERSION, new) else f"\n  - 🟡 behind: {'.'.join(map(str, vkey(ver)))} installed, {new} is out" if vkey(new) > vkey(ver) else ""   # Sol design r1 F2: {"version": "error 404"} and 2.2.0</html> are no version
-    except Exception:                            # offline, a 404, a missing file, a JSON answer without version, a ver with no digits: information only, never red
+        t.start(); t.join(5)                     # the deadline of all the lookup's work: the download, the parse and the check
+        return f"\n  - 🟡 behind: {'.'.join(map(str, vkey(ver)))} installed, {box[0]} is out" if vkey(box[0]) > vkey(ver) else ""   # IndexError: no checked version within 5 s
+    except Exception:                            # offline, a 404, a missing file, an answer that is no version, a ver with no digits: information only, never red
         return " · latest unknown"
 
 
