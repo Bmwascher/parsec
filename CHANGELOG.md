@@ -2,6 +2,17 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.44 (2026-10-21)
+
+The block of an Opus or Fable round can now show how long the agent ran. Before, it showed the minutes since Claude prepared the round.
+
+- `round collect` has a new option, `--ran-ms`. Its value is the `duration_ms` from the notification of the agent. With it, the block shows the run minutes, and the record keeps the run seconds. Without it, the block shows the minutes since prepare, as before.
+- The debate skill tells Claude to pass the `duration_ms` of the notification that brought the reply of the round.
+- We did not see the notification of a resumed agent. So we do not know if its `duration_ms` counts only the resumed run.
+- The tool does not refuse a value below zero. Claude copies the value from the notification, and the tool has no lines left in its limit.
+- To stay in its line limit, the tool adds `--degraded` and `--close-minor` on one line. These options did not change.
+- A new step in a test checks the label and the seconds in the record. It failed before the change.
+
 ## v0.1.43 (2026-10-21)
 
 Claude no longer ends replies with the first line of an old block. The debate skill no longer asks for that line. Only the Stop hook asks for it, after Claude Code loses a post.
