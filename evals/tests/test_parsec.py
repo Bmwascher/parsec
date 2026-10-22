@@ -708,9 +708,10 @@ def test_agent_resume(env):
     assert pend["resumed"] is True and pend["session"] == "a-1"
     reply = "CONTINUITY: FIX, F1 the ledger point\n\nVERDICT: PASS\n"
     assert coll("design", 2, reply, "--agent-id", "a-2")[0] == 64 and (e.feat / "rounds" / "design-r2-fable" / "pending.json").is_file()   # not the agent prepare named
-    assert coll("design", 2, reply)[0] == 0
+    code, out = coll("design", 2, reply, "--ran-ms", "459129")                 # Brandon Q2 A, 2026-10-21: the notification's duration_ms is the run, not the wait since prepare
+    assert code == 0 and blk(out).endswith("### 🟢 Fable R2 Design Round: PASS (8 min, resumed)\n")
     r = e.record("design", 2, "fable")
-    assert r["session"] == "a-1" and r["continuity"] == "FIX, F1 the ledger point" and "design r2 fable: PASS, continuity answered" in e.ledger().splitlines()[-1]
+    assert r["session"] == "a-1" and r["continuity"] == "FIX, F1 the ledger point" and "design r2 fable: PASS, continuity answered" in e.ledger().splitlines()[-1] and r["seconds"] == 459
     assert prep("design", 3)[0] == 0 and json.loads((e.feat / "rounds" / "design-r3-fable" / "pending.json").read_text(encoding="utf-8"))["resumed"] is False   # design r1 F1: no --resume, no resume
     assert prep("lastlook", 1)[0] == 0 and coll("lastlook", 1, "VERDICT: FIX\n")[0] == 0   # collected without the id: session unknown, as before
     assert e.record("lastlook", 1, "fable")["session"] == "unknown" and prep("lastlook", 2, "--resume", "z-9")[0] == 0   # so this one resume goes unchecked

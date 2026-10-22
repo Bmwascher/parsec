@@ -690,7 +690,7 @@ def run_round(args, primary, fdir, folder, pending, tree):
                    run={"cli_exit": code, "seconds": secs, "timeout": code is None})
 
 
-def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=None, agent_id=None):
+def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=None, agent_id=None, ran_ms=None):
     primary = primary_of(repo)
     cfg = load_config(primary)
     fdir, _ = feature_dir(cfg, primary, feature)
@@ -748,7 +748,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
         else:
             warnings.append(f"tier read-back {read} differs from the requested {tier}")
             tier, check = read, "unrequested"
-    run = run or {"cli_exit": None, "seconds": None, "timeout": False}
+    run = run or {"cli_exit": None, "seconds": None if ran_ms is None else round(ran_ms / 1000), "timeout": False}   # Brandon Q2 A, 2026-10-21: an agent's run time from its notification
     if run["timeout"]:
         verdict = "NONE"
         warnings.append("TIMEOUT: the cap ended the round")
@@ -774,7 +774,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     code = 67 if run["timeout"] else 66 if verdict == "WROTE-FILES" else 65 if verdict == "NONE" else (run["cli_exit"] or 0)
     if code and transcript:
         print("transcript tail:\n" + "\n".join(transcript.splitlines()[-5:]))
-    took = round((end - dt.datetime.fromisoformat(pend.get("start") or stamp(end))).total_seconds() / 60)   # 2026-09-23 phase 6: a prose summary
+    took = round((end - dt.datetime.fromisoformat(pend.get("start") or stamp(end))).total_seconds() / 60) if ran_ms is None else round(ran_ms / 60000)   # 2026-09-23 phase 6: a prose summary
     ok, bullets = summary_bullets(text, counts, f"rounds\\{folder.name}\\reply.md")
     if bullets and not ok:
         print("warning: the reply's finding lines do not match its counts line: fill each ? from the reply")
@@ -784,7 +784,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
         pf.unlink(missing_ok=True)
     except OSError as e:                         # pre-review F3: past the record, a read error must not cost the block
         print(f"warning: the pre-flight line was not read: {e}")
-    block = (f"### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min{' since prepare' * (lane in AGENT_OF)}, {'resumed' if pend.get('resumed') else 'fresh'})"
+    block = (f"### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min{' since prepare' * (lane in AGENT_OF and ran_ms is None)}, {'resumed' if pend.get('resumed') else 'fresh'})"
              + ("\n\nCritical {} · Important {} · Minor {}".format(*counts) if counts else "") + pre + "".join(f"\n\n{b}" for b in bullets))
     try:                                         # 2026-09-28 audit: 68 of 153 blocks posted and none reached a delegator; the finish report carries this file
         with open(fdir / "summaries.md", "a", encoding="utf-8", newline="\n") as f:
@@ -1212,9 +1212,9 @@ def parser():
     for a in ("--feature", "--kind", "--lane"):
         q.add_argument(a, required=True)
     q.add_argument("--round", required=True, type=int)
-    q.add_argument("--degraded", metavar="REASON", type=reason)
-    q.add_argument("--close-minor", metavar="REASON", type=reason)
+    for a in ("--degraded", "--close-minor"): q.add_argument(a, metavar="REASON", type=reason)
     q.add_argument("--agent-id", metavar="AGENT_ID", help="opus or fable: the agent that answered, recorded as the round's session")
+    q.add_argument("--ran-ms", type=int, metavar="MS", help="opus or fable: duration_ms from the agent's notification; without it the minutes count since prepare")
     q = rnd.add_parser("close", help="remove the feature's review worktrees")
     q.add_argument("--feature", required=True)
     q.add_argument("--kind", choices=("panel",))  # 2026-09-22 r2 (Sol): a free string reached the name pattern; field audit 4: --kind lastlook left the diff tree
@@ -1253,7 +1253,7 @@ def main(argv=None):
         if args.cmd == "round" and args.sub in ("run", "prepare"):
             return prepare(args, launch=args.sub == "run")
         if args.cmd == "round" and args.sub == "collect":
-            return collect(args.repo, args.feature, args.kind, args.round, args.lane, args.degraded, args.close_minor, agent_id=args.agent_id)
+            return collect(args.repo, args.feature, args.kind, args.round, args.lane, args.degraded, args.close_minor, agent_id=args.agent_id, ran_ms=args.ran_ms)
         if args.cmd == "round":
             return close_rounds(args)
         if args.cmd == "verify":
