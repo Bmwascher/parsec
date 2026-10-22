@@ -2,6 +2,16 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.43 (2026-10-21)
+
+Claude no longer ends replies with the first line of an old block. The debate skill no longer asks for that line. Only the Stop hook asks for it, after Claude Code loses a post.
+
+- In 0.1.42, the debate skill told Claude to end a turn with the first line of a block. This applied when the turn posted the block before a tool call. Later turns were not to repeat that line. On 2026-10-21, one session under 0.1.42 still repeated the first line of one Fable last look. It ended 11 replies in 11 later turns with that line. It repeated the first lines of earlier blocks in the same way.
+- We removed the rule from the debate skill. The README row of the hook no longer describes it.
+- The hook did not change. When Claude Code does not save a post, the hook sends the turn back once. Claude then replies with the first line of the block only. On 2026-10-17, Claude Code did not save 4 of 9 posts made before a tool call.
+- One rare case can now post a block two times. Another plugin's Stop hook sends the turn back, Claude posts a block in that turn, and Claude Code does not save the post. We did not change the hook for this case.
+- We did not add a test, because the skill has no rule left to check.
+
 ## v0.1.42 (2026-10-18)
 
 Claude no longer ends every reply with the first line of an old block. Only the turn that posts a block ends with that line.
