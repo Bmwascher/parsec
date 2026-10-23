@@ -946,7 +946,7 @@ def build_run(args):
     err.unlink(missing_ok=True)
     log_text = read_text(log) if log.is_file() else ""
     message = read_text(report).strip()
-    crlf = [p for p, w in eol_map().items() if eol_before.get(p) == "w/crlf" and w in ("w/lf", "w/mixed") and not (rel and p.startswith(rel + "/"))]
+    crlf = [p for p, w in eol_map().items() if eol_before.get(p) == "w/crlf" and w in ("w/lf", "w/mixed") and not (rel and p.startswith(rel + "/")) and not (checkout / p).is_symlink()]
     for p in crlf:                               # 2026-10-23 KitnEssentials docs-reorg: agy 1.4.4 wrote LF into CRLF files on 6 of 6 tasks (1.2.10 kept CRLF); version-check task 04 was restored by hand
         (checkout / p).write_bytes(re.sub(rb"(?<!\r)\n", b"\r\n", (checkout / p).read_bytes()))
     status = "\n".join(dirt())
