@@ -2,6 +2,18 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.47 (2026-10-23)
+
+The Kimi lane now runs Kimi K3.1 Pro. Before, it ran Kimi K3.
+
+- `lanes.toml` names the model alias `kimi-code/k3.1-pro` for the Kimi lane. The lane runs only when you name it.
+- kimi 2.3.1 does not list K3.1 Pro in its models. So Claude wrote the alias in the `config.toml` of the lane home by hand, from the K3 alias. It gives a context of 1M, as K3 has.
+- One test prompt on `k3.1-pro` got an answer. The server refused `k3.1`, `k3-1-pro`, `k3.1pro` and `k3-pro`.
+- We did not measure the real context of K3.1 Pro or a full review round on it. We also do not know if the model gets the effort from `default_effort`.
+- The note on the model is now `models/kimi-k3.1-pro.md`. It says that we measured K3, not K3.1 Pro. The note on the kimi CLI names version 2.3.1.
+- The check before a Kimi round finds `default_effort` in any block of the file, not only in the block of the model. This did not change. The block of K3.1 Pro has the key.
+- The tool and the tests did not change.
+
 ## v0.1.46 (2026-10-23)
 
 A Gemini task that wrote LF into a CRLF file now passes the check of line endings. Before, the task failed, and the backup implementer did the task again.
