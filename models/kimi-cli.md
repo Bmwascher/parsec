@@ -1,6 +1,6 @@
 # Kimi CLI
 
-Version in use: kimi-code 2.1.1 (2026-09-24). Written on 0.43.1 (2026-09-21); a fact marked 2.1.1 was measured again on 2026-09-24.
+Version in use: kimi 2.3.1 (2026-10-23); 2.1.1 checked 2026-09-24. Written on 0.43.1 (2026-09-21); a fact marked 2.1.1 was measured again on 2026-09-24.
 
 - **The lane home.** The lane runs with `KIMI_CODE_HOME` set to the folder named in `lanes.toml` (`home`), because the normal home's login was dead on 2026-09-21. The lane home's `config.toml` carries the model alias `lanes.toml` names (`kimi-code/k3.1-pro` since 2026-10-23, written by hand: `kimi-k3.1-pro.md`) and its `default_effort`; the pre-flight checks both are present. The `credentials` folder is never opened; diagnostics print presence only. 2.1.1: `kimi doctor config` passes the lane home's file and a round runs on it.
 - **`--plan` refuses `-p`** (`Cannot combine --prompt with --plan`, 2026-09-21), so a round never passes `--plan`.
