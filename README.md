@@ -436,7 +436,7 @@ The **ledger** is the feature's memory. Its head records the base commit once. T
 │   ├── briefs/           each brief as written
 │   └── evidence/         saved output a brief cites
 └── panels/
-    └── 09-22-split-module/    panels about no feature
+    └── 09-22-split-module/    panels and polls about no feature
 ```
 
 </details>
