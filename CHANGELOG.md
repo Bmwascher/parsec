@@ -2,6 +2,19 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.46 (2026-10-23)
+
+A Gemini task that wrote LF into a CRLF file now passes the check of line endings. Before, the task failed, and the backup implementer did the task again.
+
+- After agy runs, `build run` finds each tracked file that had only CRLF endings before the run and has LF or mixed endings after it. The tool changes each LF in that file to CRLF. Then it checks the line endings, as before.
+- The report of the task names each file that the tool changed, in a line `restored CRLF in <path>`.
+- The tool does not change a file under the docs root. It also does not change a file whose real path is outside the checkout or in the docs root. A junction above a tracked file can lead outside the checkout, and git still shows that file as clean.
+- Any other change of line endings still fails the task, for example CRLF written into an LF file.
+- Since 2026-10-21, agy 1.4.4 writes LF into CRLF files. On 2026-10-22 and 23, all 6 Gemini tasks of the docs-reorg build of KitnEssentials failed for this reason. agy 1.2.10 kept CRLF.
+- If the tool cannot read or write a file in this step, `build run` stops with an error. It does not write the end of the report. The tool has one line left in its limit.
+- The build skill, the agy note and the README now tell of this step. To stay in its line limit, the tool now reads the line endings in `build_run` itself.
+- The test of `build run` now checks a whole file and a file with mixed endings. Each case failed before the change.
+
 ## v0.1.45 (2026-10-23)
 
 A poll about no feature now gets its own folder in the panels folder. Before, its brief was a loose file there, beside the panel folders.
