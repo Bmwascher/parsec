@@ -1,6 +1,6 @@
 # agy (the Antigravity CLI): the implementer lane's CLI
 
-Runs Gemini 3.8 Flash (`gemini-3.8-flash-high`) in print mode for `build run`. Version in use: 1.2.10 (checked 2026-09-28); first written on 1.2.5 (2026-09-22). The guards themselves (the route lines, the success test, the updater variable) live in the tool; this file holds the dated facts behind them.
+Runs Gemini 3.8 Flash (`gemini-3.8-flash-high`) in print mode for `build run`. Version in use: 1.4.4 (checked 2026-10-23); first written on 1.2.5 (2026-09-22). The guards themselves (the route lines, the success test, the updater variable) live in the tool; this file holds the dated facts behind them.
 
 - **The trust list is not an authorization control** (2026-09-17): nothing mechanical refuses an `--add-dir` outside it. The checkout is the child's working folder and its first `--add-dir`.
 - **The updater** (measured 2026-09-17 on 1.2.4): the throttled auto-updater opened a console that took the foreground; `AGY_CLI_DISABLE_AUTO_UPDATE=true`, the literal `true`, disables it (at `1` it still ran). A deliberate update is `agy update` ("Update CLI", checked 2026-09-22), run by `doctor --update`.
@@ -9,6 +9,7 @@ Runs Gemini 3.8 Flash (`gemini-3.8-flash-high`) in print mode for `build run`. V
 - **It never reports blocked** (2026-09-22): on a checkout one commit too early it read two errors on the missing dependency, edited on and reported success. The diagnosis order is in `build`.
 - **`--add-dir` needs an absolute path** (field phase 5b, 2026-09-23): given `.`, agy logged `failed to resolve --add-dir path "."`, dropped the workspace and soft-denied its reads.
 - **A file in the primary checkout needs its own `--add-dir`** (KitnEssentials gk-10 task 4, gk-12 tasks 16 and 17, 2026-09-27): each brief has a step in the local smoke file, in the primary's docs root. Read through the worktree's `dev/docs` junction, it worked (tasks 18, 19); by the primary's path, `ViewFile` was soft-denied. `build run` adds the docs root when it lies outside the checkout; on 1.2.10 (2026-09-28) a read and an edit there worked only with it. A `%TEMP%` file needs none, so a probe there tests nothing. agy's transcript (`~/.gemini/antigravity-cli/brain/<conversation>/`) or its `conversations/<conversation>.db` names the path; its log does not. In a worktree build it also read the primary's copy of the code file it was editing, which was denied (ap-17, ap-18 task 10, 2026-10-05), so the prompt names the checkout.
+- **1.4.4 writes LF into CRLF files** (2026-10-23; not 1.2.10); `build run` restores CRLF.
 - **New-file writes work** (`WriteToFile`, 2026-09-22); a first probe wandered to the workspace's parent when the workspace was nested under the working folder.
 - **Gemini's tokens are recorded nowhere** the tool can read; a task's cost on this lane is time only (63 s on Task 2 of the 2026-09-22 comparison).
 - **`--mode accept-edits`**: without it the edit was soft-denied (1.2.0, 2026-09-12).

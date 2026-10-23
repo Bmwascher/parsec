@@ -916,7 +916,8 @@ def build_run(args):
     named = {q for t in toks if re.fullmatch(r"(?:[A-Za-z]:[\\/])?[\w./\\-]+\.\w+", t) for q in (resolve_under(checkout, t), resolve_under(primary, t)) if q.is_relative_to(docs)}
     docs_state = lambda: {q: sha256(q) if q.is_file() else None for q in named}   # the task's own files, never the whole docs root, where the report and log land
     docs_before = docs_state()
-    eol_before = eol_map(checkout)
+    eol_map = lambda: {e.split("\t", 1)[1]: e.split()[1] for e in git_out(["ls-files", "--eol", "-z"], checkout).split("\0") if "\t" in e}   # 2026-09-22 02:06: LF written into CRLF files, tests green, diff unreadable; r3: through git_out, so a failed call never passes the check; the w/ token before vs after (18:20: the HEAD blob misreads autocrlf)
+    eol_before = eol_map()
     if report.is_file():
         if not args.again:
             raise Exit(64, f"{report} exists: --again archives it first")
@@ -945,27 +946,25 @@ def build_run(args):
     err.unlink(missing_ok=True)
     log_text = read_text(log) if log.is_file() else ""
     message = read_text(report).strip()
+    crlf = [p for p, w in eol_map().items() if eol_before.get(p) == "w/crlf" and w in ("w/lf", "w/mixed") and not (rel and p.startswith(rel + "/"))]
+    for p in crlf:                               # 2026-10-23 KitnEssentials docs-reorg: agy 1.4.4 wrote LF into CRLF files on 6 of 6 tasks (1.2.10 kept CRLF); version-check task 04 was restored by hand
+        (checkout / p).write_bytes(re.sub(rb"(?<!\r)\n", b"\r\n", (checkout / p).read_bytes()))
     status = "\n".join(dirt())
     checks = [(f"route line present: {r}", r in log_text) for r in ROUTE_LINES]
     checks += [("no soft-denied step", SOFT_DENY not in log_text), ("final message non-empty", bool(message)),
                ("every docs-root file the task's Files field names changed, and git status is non-empty when it names none (an empty diff is never done)",   # field audit 4: code alone passed phase 10 tasks 27 and 29
                 (bool(status) or bool(named)) and all(v != docs_before[q] for q, v in docs_state().items())),
-               ("line endings kept on every modified file", all(eol_before.get(p, w) in (w, "w/none", "w/") or w in ("w/none", "w/") for p, w in eol_map(checkout).items() if not (rel and p.startswith(rel + "/")))),   # r2 (Sol): no ending yet, or a file gone, is nothing to flip; r4: nor the docs root
+               ("line endings kept on every modified file", all(eol_before.get(p, w) in (w, "w/none", "w/") or w in ("w/none", "w/") for p, w in eol_map().items() if not (rel and p.startswith(rel + "/")))),   # r2 (Sol): no ending yet, or a file gone, is nothing to flip; r4: nor the docs root
                ("finished within the cap", code is not None)]   # 2026-09-22 review: a capped run failed with no named reason
     ok = all(c for _, c in checks)
     lines = ["", "---", f"parsec build run: task {args.task:02d}, lane gemini, model {row['model']}, {secs} s, "
              f"agy exit {code} (recorded, never trusted)"] + [f"- {'ok' if c else 'FAILED'}: {n}" for n, c in checks]
-    lines += [f"- result: {'ok' if ok else 'failed'}"] + ([f"- agy stderr tail: {err_text.strip().splitlines()[-1][:200]}"] if err_text.strip() else [])
+    lines += [f"- restored CRLF in {p}, which agy wrote with LF" for p in crlf] + [f"- result: {'ok' if ok else 'failed'}"] + ([f"- agy stderr tail: {err_text.strip().splitlines()[-1][:200]}"] if err_text.strip() else [])
     with open(report, "a", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
     ledger_line(fdir, f"build task {args.task:02d} gemini: {'ok' if ok else 'failed'}, build\\{report.name}", warnings)
     print(f"Task {args.task} Implement\n" + "\n".join(lines[2:]) + "".join(f"\nwarning: {w}" for w in warnings))
     return 0 if ok else 65
-
-
-def eol_map(checkout):                            # 2026-09-22 02:06: LF written into CRLF files, tests green, diff unreadable; the
-    out = git_out(["ls-files", "--eol", "-z"], checkout)   # r3: through git_out, so a failed call never passes the check
-    return {e.split("\t", 1)[1]: e.split()[1] for e in out.split("\0") if "\t" in e}   # w/ token before vs after (18:20: the HEAD blob misreads autocrlf)
 
 
 def build_archive(args):

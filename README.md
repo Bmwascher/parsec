@@ -498,7 +498,7 @@ Each rail exists because its failure happened at least once. The dates live in t
 | The rail | The failure it prevents |
 |---|---|
 | `build run` refuses any other checkout, a checkout with uncommitted changes, and a base that isn't the expected commit | A run once transcribed its edits exactly, onto a checkout one commit too early |
-| A task that flipped a file's line endings fails | A whole-file change that hides the real edit in the diff |
+| `build run` turns LF that Gemini wrote into a CRLF file back into CRLF; a task with any other line-ending flip fails | A whole-file change that hides the real edit in the diff (agy 1.4.4 writes LF even into CRLF files) |
 | The tool reads the task's success test, never Gemini's exit code | Gemini has reported success on runs that failed |
 | The success test needs every docs-root file in the task's Files field to change | Two tasks passed on their code edits alone, with their smoke-file steps skipped |
 | Deletes, renames, moves and binary files go straight to the backup implementer | Gemini's print mode has no delete tool and runs no command |

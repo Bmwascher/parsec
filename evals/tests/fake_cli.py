@@ -24,7 +24,7 @@ if argv[:1] == ["app-server"]:                           # codex app-server: one
 if env.get("FAKE_DELETE"):                               # a lane that deletes a tracked file
     Path(env["FAKE_DELETE"]).unlink()
 if env.get("FAKE_WRITE"):                                # a reviewer that writes into the tree
-    Path(env["FAKE_WRITE"]).write_bytes(b"written by the reviewer\r\n" if "FAKE_CRLF" in env.get("FAKE_AGY_LOG", "") else b"written by the reviewer\n")   # bytes: write_text made CRLF on Windows (2026-09-22 review)
+    Path(env["FAKE_WRITE"]).write_bytes(b"written by the reviewer\r\n" if "FAKE_CRLF" in env.get("FAKE_AGY_LOG", "") else b"written\r\nby the reviewer\n" if "FAKE_MIXED" in env.get("FAKE_AGY_LOG", "") else b"written by the reviewer\n")   # bytes: write_text made CRLF on Windows (2026-09-22 review)
 if "--log-file" in argv:                                 # agy: the log the success test reads
     Path(argv[argv.index("--log-file") + 1]).write_text(env.get("FAKE_AGY_LOG", ""), encoding="utf-8")
 time.sleep(float(env.get("FAKE_SLEEP", "0")))

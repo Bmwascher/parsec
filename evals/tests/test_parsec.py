@@ -914,11 +914,12 @@ def test_build_run_success_test(env):
     (co / "crlf.txt").write_bytes(b"one\r\ntwo\r\n")
     git("add", "crlf.txt", cwd=co)
     git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "crlf", cwd=co)
-    e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG)
-    e.mp.setenv("FAKE_WRITE", str(co / "crlf.txt"))                 # the fake writes LF into the CRLF file
-    code, out = b2()
-    assert code == 65 and "FAILED: line endings kept" in out     # 2026-09-22 02:06: LF written into CRLF files, tests green
-    clean()
+    e.mp.setenv("FAKE_WRITE", str(co / "crlf.txt"))                 # the fake writes LF into the CRLF file, whole or mixed
+    for log, made in ((GOOD_LOG.replace("silent", "FAKE_MIXED silent"), b"written\r\nby the reviewer\r\n"), (GOOD_LOG, b"written by the reviewer\r\n")):
+        e.mp.setenv("FAKE_AGY_LOG", log)                            # 2026-10-23: agy 1.4.4 wrote LF into CRLF files, so the tool restores CRLF
+        code, out = b2()
+        assert code == 0 and "ok: line endings kept" in out and "restored CRLF in crlf.txt" in out and (co / "crlf.txt").read_bytes() == made, out
+        clean()
     (co / ".gitignore").write_text(".claude/\nignored.txt\n", encoding="utf-8")   # a docs root git does not ignore, as setup allows
     conf = e.repo / ".claude" / "parsec.toml"
     conf.write_text(conf.read_text(encoding="utf-8").replace('docs_root = "docs"', f'docs_root = "{(e.repo / "docs").as_posix()}"'), encoding="utf-8")   # r3 (Sol): absolute too
@@ -958,7 +959,7 @@ def test_build_run_success_test(env):
     assert code == 0 and "result: ok" in out, out                  # the feature's own ledger and spec are not dirt either
     assert e.calls()[-1].count("--add-dir") == 1                   # a docs root inside the checkout is not added again
     code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead23" in out and not (e.feat / "build" / "task-01-report.md").exists()
+    assert code == 0 and ".dead24" in out and not (e.feat / "build" / "task-01-report.md").exists()
 
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)
