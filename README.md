@@ -165,7 +165,7 @@ These are the reviewers from other companies. They run the design debate before 
 | **Primary** | `sol` | ![GPT-6.1 Sol](https://img.shields.io/badge/GPT--6.1_Sol-via_codex-10a37f?style=flat-square) | Every debate, unless you name another lane |
 | **Secondary** | `astra` | ![GPT-6 Astra](https://img.shields.io/badge/GPT--6_Astra-via_codex-10a37f?style=flat-square) | When you say "use Astra", or when the project's config makes it the default |
 | **Backup** | `muse` | ![Muse Wonder Full](https://img.shields.io/badge/Muse_Wonder_Full-via_muse-0866ff?style=flat-square) | Only when codex is unavailable and you approve, or the config approves it in advance |
-| **By name** | `kimi` | ![Kimi K3](https://img.shields.io/badge/Kimi_K3-via_kimi-5f3dc4?style=flat-square) | When you name it |
+| **By name** | `kimi` | ![Kimi K3.1 Pro](https://img.shields.io/badge/Kimi_K3.1_Pro-via_kimi-5f3dc4?style=flat-square) | When you name it |
 
 #### Last look
 

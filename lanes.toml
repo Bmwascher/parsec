@@ -20,7 +20,7 @@ update = ["npm", "install", "-g", "@openai/codex@latest"]
 latest = "https://registry.npmjs.org/@openai/codex/latest"   # the same CLI as astra, so one doctor row
 
 [kimi]                                  # by name since 2026-10-12 (Muse is the backup); effort lives in the lane home's config (no CLI flag)
-model = "kimi-code/k3"
+model = "kimi-code/k3.1-pro"           # 2026-10-23: K3.1 Pro (was kimi-code/k3); the lane home holds the alias, 1M context assumed from K3
 command = ["kimi"]
 home = "C:/Users/Brandon/.kimi-code-lane"
 update = ["kimi", "update", "-y"]           # -y: the doctor has no one to answer the confirmation (kimi 0.43.0+)

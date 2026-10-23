@@ -1,6 +1,13 @@
-# Kimi K3 (`kimi-code/k3`, 1M context)
+# Kimi K3.1 Pro (`kimi-code/k3.1-pro`, 1M context assumed)
 
 The review lane run by name, on the Kimi CLI, read-only through `lanes/kimi-reviewer.md` (the agent file is the lane's only read-only control; its own name still says `parallax` and the file is frozen).
+
+## The switch from K3 (2026-10-23, Brandon)
+
+- The lane ran K3 (`kimi-code/k3`) until 2026-10-23. Every measurement below was made on K3, not on K3.1 Pro.
+- kimi 2.3.1's managed list (`kimi provider list`) offers K2.7 Coding, K2.7 Coding Highspeed, K3 and K3-256k only. The lane home holds a hand-written `kimi-code/k3.1-pro` alias (model `k3.1-pro`), copied from the K3 alias.
+- One probe of each id, the same day: `k3.1-pro` answered; `k3.1`, `k3-1-pro`, `k3.1pro` and `k3-pro` were refused with `400 Your model id does not exist ... Please set model id as k3`.
+- UNVERIFIED: the context size (the 1M in the alias is K3's), whether `default_effort` reaches the model, and a review round on K3.1 Pro.
 
 ## Effort
 
