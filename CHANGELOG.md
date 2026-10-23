@@ -2,6 +2,16 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.45 (2026-10-23)
+
+A poll about no feature now gets its own folder in the panels folder. Before, its brief was a loose file there, beside the panel folders.
+
+- The panel skill tells Claude to write the brief of the poll in `briefs\` of a new `panels\<MM-DD>-<topic>\` folder. When a feature is open, the brief goes in `briefs\` of that feature, as before.
+- The setup skill and the folder tree in the README say that `panels\` holds panels and polls about no feature, and folders only.
+- On 2026-10-22, the `panels\` folder of KitnEssentials had 10 loose files beside 13 panel folders.
+- If a panel round later uses the folder of a poll, the tool does not write the `# Panel` head of the ledger. The tool writes that head only when it makes the folder. Nothing reads the head, and the tool has no lines left in its limit.
+- The tool did not change. We did not add a test, because the change is to prose only.
+
 ## v0.1.44 (2026-10-21)
 
 The block of an Opus or Fable round can now show how long the agent ran. Before, it showed the minutes since Claude prepared the round.
