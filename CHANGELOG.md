@@ -4,7 +4,7 @@ Newest first. Each section opens with plain words for the user; the detail follo
 
 ## v0.1.48 (2026-11-08)
 
-The driver now collects an Opus or Fable round when the reviewer's report arrives. Before, it could wait for a notice that did not come, and the round stayed open until someone told the session to continue.
+The driver now collects an Opus or Fable round when the reviewer's report arrives. Before, it could wait for a notice that did not start a turn, and the round stayed open until someone told the session to continue.
 
 - The harness gives the report of an agent to the session as a message. It puts the task notification of the agent in the queue after that message.
 - The debate skill told the driver to collect the round with the run time from the notification. So the driver stopped its turn to wait for the notification. The notification did not start a new turn.
