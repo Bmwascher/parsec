@@ -11,7 +11,7 @@ The driver now collects an Opus or Fable round when the reviewer's report arrive
 - This occurred in 6 rounds of the Brass Polish program of KitnEssentials on 2026-11-07 and 2026-11-08.
 - Now the skill tells the driver to collect the round when the report arrives, and never to wait for the notification.
 - Driver rule 5 now says that a turn can stop while a Monitor or a background agent still runs. Before, it said "will notify", and a driver could read that as permission to wait for the notification.
-- If the notification is already in the conversation when the report arrives, the driver gives its run time with `--ran-ms`. If not, the block shows the minutes since `round prepare`, as before.
+- If the notification is already in the conversation when the driver collects the round, the driver gives its run time with `--ran-ms`. If not, the block shows the minutes since `round prepare`, as before.
 - The prose was at its limit of 12,000 words. To make space, that line of the debate skill now names driver rule 1 for the round names. It also lost a few words that added nothing.
 - The tool, the hooks and the tests did not change.
 
