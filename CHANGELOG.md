@@ -2,6 +2,18 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.48 (2026-11-08)
+
+The driver now collects an Opus or Fable round when the reviewer's report arrives. Before, it could wait for a notice that did not come, and the round stayed open until someone told the session to continue.
+
+- The harness gives the report of an agent to the session as a message. It puts the task notification of the agent in the queue after that message.
+- The debate skill told the driver to collect the round with the run time from the notification. So the driver stopped its turn to wait for the notification. The notification did not start a new turn.
+- This occurred in 6 rounds of the Brass Polish program of KitnEssentials on 2026-11-07 and 2026-11-08.
+- Now the skill tells the driver to collect the round when the report arrives, and never to wait for the notification.
+- Driver rule 5 now says that a turn can stop while a Monitor or a background agent still runs. Before, it said "will notify", and a driver could read that as permission to wait for the notification.
+- If the driver does not give `--ran-ms`, the block shows the minutes since `round prepare`, as before. The tool still accepts `--ran-ms`.
+- The tool, the hooks and the tests did not change.
+
 ## v0.1.47 (2026-10-23)
 
 The Kimi lane now runs Kimi K3.1 Pro. Before, it ran Kimi K3.
