@@ -1,10 +1,10 @@
 # Claude Fable 5.2 (`claude-fable-5-2`)
 
-The `reviewer-fable` seat: the design look and the last look, a panel lane, an adjudication and a poll.
+The `reviewer-fable` seat: the design and last looks, a panel lane, an adjudication and a poll.
 
 ## The guide says, so the plugin does
 
-Fable 5.2 guide (claude-api skill), read 2026-11-09: start at effort `high`; raise only where a gain is measured. The 5.1 guide's warning that higher efforts draft a long deliverable twice is UNMEASURED here.
+Fable 5.2 guide (claude-api skill, cached 2026-11-03): start at effort `high`; raise only on a measured gain. The 5.1 guide's warning that higher efforts draft a long deliverable twice is UNMEASURED here.
 
 ## Measured on 5.1
 
@@ -13,4 +13,4 @@ Fable 5.2 guide (claude-api skill), read 2026-11-09: start at effort `high`; rai
 
 ## Unmeasured
 
-- Effort `medium` on either seat.
+- Any 5.2 review; effort `medium` on either seat.
