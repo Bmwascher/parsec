@@ -2,6 +2,18 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.49 (2026-11-09)
+
+The Fable seat now runs Claude Fable 5.2. Before, it ran Claude Fable 5.1. The seat gives the design look, the last look, a panel lane, an adjudication and a poll.
+
+- `agents/reviewer-fable.md` names the model `claude-fable-5-2`. The effort stays `high`.
+- The guide for Fable 5.2 tells you to start at `high` and to go higher only when you measure a gain. So the effort did not change.
+- One test prompt to `claude-fable-5-2` through `claude -p` got an answer. Claude Code 2.1.319 gave the warning `unrecognized_model`, but it sent the request.
+- No review ran on Fable 5.2 before this release. The last look of this release ran on the installed agent of 0.1.48, which used Fable 5.1.
+- `models/fable.md` names the new model and the guide for Fable 5.2. Its measurements were on Fable 5.1, and the title of that section now says so. The note also lists any review on Fable 5.2 as not measured.
+- The README badge names Fable 5.2.
+- The tool, the hooks and the tests did not change.
+
 ## v0.1.48 (2026-11-08)
 
 The driver now collects an Opus or Fable round when the reviewer's report arrives. Before, it could wait for a notice that did not start a turn, and the round stayed open until someone told the session to continue.
