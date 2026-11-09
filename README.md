@@ -170,7 +170,7 @@ These are the reviewers from other companies. They run the design debate before 
 #### Last look
 
 ![Seat](https://img.shields.io/badge/seat-reviewer--fable-7048e8?style=flat-square)
-![Model](https://img.shields.io/badge/Claude_Fable_5.1-high_effort-d97757?style=flat-square)
+![Model](https://img.shields.io/badge/Claude_Fable_5.2-high_effort-d97757?style=flat-square)
 
 A fresh agent that reads the final head once every other review has passed. Its PASS names the exact commit that ships. Before the build, it gives the spec and task list the same fresh look once the design debate has passed. The same seat also sits on panels, answers polls and gives advice when two positions need an outside view.
 
