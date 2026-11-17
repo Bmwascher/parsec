@@ -7,7 +7,7 @@ Vendor guides: OpenAI's Astra guide of 2026-09-05 (URL not recorded); its GPT-6.
 ## Settings
 
 - Effort `high`, pinned per call in `lanes.toml` (2026-09-22). The 6.2 guide starts new integrations at `medium`; the lane stays at `high`, where its GPT-6 rounds were measured.
-- Fast tier: the catalog names one tier, `priority`, "2x speed" on Astra, "increased usage"; reasoning effort unchanged (read 2026-09-22). Pinned off by the tool; on only with `--fast` (`debate`).
+- Fast tier: the catalog named one tier, `priority`, "2x speed" on GPT-6 Astra, "increased usage"; reasoning effort unchanged (read 2026-09-22). Pinned off by the tool; on only with `--fast` (`debate`).
 
 ## The guides say, so the brief carries
 
