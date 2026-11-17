@@ -2,6 +2,19 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.50 (2026-11-17)
+
+The Sol lane now runs GPT-6.2 Sol, and the Astra lane runs GPT-6.2 Astra. Before, Sol ran GPT-6.1 Sol and Astra ran GPT-6 Astra. Sol is the default reviewer from other companies.
+
+- `lanes.toml` names `gpt-6.2-sol` and `gpt-6.2-astra`. The effort stays `high` on both lanes.
+- Both ids work on codex-cli 0.169.0. One test prompt to each model got an answer.
+- On the same test prompt, GPT-6.2 Sol used about 27,000 tokens. GPT-6.1 Sol used about 10,000 and GPT-6.2 Astra about 10,000. We did not measure the cost of a full review round on GPT-6.2 Sol.
+- OpenAI has one guide for both models. It gives no advice for Sol alone. It tells you to start a new integration at `medium` effort. The lanes stay at `high`, because the measurements of the lanes were at `high`.
+- The guide for Astra 6.2 does not repeat the old warning about instructions in files such as `AGENTS.md`. The brief keeps its rules for that warning.
+- The notes on the two models name the new ids and the guide. The measurements on GPT-6 stay in the notes, marked as not measured on GPT-6.2.
+- The note on the codex CLI names version 0.169.0. The README badges name the new models.
+- The tool, the hooks and the tests did not change.
+
 ## v0.1.49 (2026-11-09)
 
 The Fable seat now runs Claude Fable 5.2. Before, it ran Claude Fable 5.1. The seat gives the design look, the last look, a panel lane, an adjudication and a poll.
