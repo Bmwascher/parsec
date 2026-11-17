@@ -1,6 +1,6 @@
 # codex CLI
 
-Version in use: codex-cli 0.159.2 (2026-09-30).
+Version in use: codex-cli 0.169.0 (2026-11-17).
 
 ## The lost-rollout error is never transient
 

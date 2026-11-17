@@ -6,14 +6,14 @@
 # `latest_after` names the text right before the version in a plain-text answer (agy's banner).
 
 [astra]                                 # the alternate, by name at any time (Brandon, 2026-09-22)
-model = "gpt-6-astra"
+model = "gpt-6.2-astra"                 # 2026-11-17: Astra 6.2 (was gpt-6-astra); measurements pending
 effort = "high"
 command = ["codex"]
 update = ["npm", "install", "-g", "@openai/codex@latest"]
 latest = "https://registry.npmjs.org/@openai/codex/latest"   # JSON, field version; 2026-10-17: 0.159.2 read green with 0.163.0 out
 
 [sol]                                   # the default codex lane (Brandon, 2026-09-22); the config's codex_lane can name astra
-model = "gpt-6.1-sol"                   # 2026-09-30: Sol 6.1 (was gpt-6-sol, before that gpt-5.6-sol); measurements pending
+model = "gpt-6.2-sol"                   # 2026-11-17: Sol 6.2 (was gpt-6.1-sol, before that gpt-6-sol); measurements pending
 effort = "high"
 command = ["codex"]
 update = ["npm", "install", "-g", "@openai/codex@latest"]
