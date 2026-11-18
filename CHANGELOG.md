@@ -2,6 +2,17 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.51 (2026-11-17)
+
+The notes on the Sol and Astra models now cite the guide from OpenAI for prompts to GPT-6.2 in Codex. The lanes did not change.
+
+- The guide applies to Astra and Sol. It gives no default effort. It tells you to use `medium` for a quick survey, `high` to find one cause across systems, and `xhigh` when several causes can interact.
+- The two lanes stay at `high`, because the measurements of the lanes were at `high`. We did not measure a review round at `xhigh`.
+- The guide says nothing about instructions in files such as `AGENTS.md`. The note on Astra now says that neither guide for GPT-6.2 repeats the old warning.
+- The note on Sol points to the note on Astra for the addresses of the two guides.
+- To stay in the limit of 12,000 words, the two notes lost a few words that the other lines already said.
+- The tool, the hooks, `lanes.toml` and the tests did not change.
+
 ## v0.1.50 (2026-11-17)
 
 The Sol lane now runs GPT-6.2 Sol, and the Astra lane runs GPT-6.2 Astra. Before, Sol ran GPT-6.1 Sol and Astra ran GPT-6 Astra. Sol is the default reviewer from other companies.
