@@ -4,9 +4,8 @@ The default codex lane from 2026-09-22 (Brandon's word); GPT-6.2 from 2026-11-17
 
 ## Dated facts
 
-- The id answers on codex 0.169.0 (2026-11-17).
-- Probe at effort `high`, one prompt: `ready GPT-6`, 27,877 and 26,862 tokens; GPT-6.1 Sol 9,976 (2026-11-17). Cache: default effort `low`, efforts `low` to `ultra`; effort as Astra's (Settings).
-- Vendor guide: OpenAI's GPT-6.2 guide (developers.openai.com/api/docs/guides/latest-model, fetched 2026-11-17) covers both models, nothing for Sol alone.
+- Probe at effort `high` on codex 0.169.0, one prompt: `ready GPT-6`, 27,877 and 26,862 tokens; GPT-6.1 Sol 9,976 (2026-11-17). Cache: default effort `low`, efforts `low` to `ultra`; effort as Astra's (Settings).
+- Vendor guides: the Astra note's two GPT-6.2 guides cover Sol; none for Sol alone.
 
 ## Carried from GPT-6 Sol, UNMEASURED on GPT-6.2
 
