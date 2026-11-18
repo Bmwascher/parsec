@@ -10,7 +10,7 @@ The notes on the Sol and Astra models now cite the guide from OpenAI for prompts
 - The two lanes stay at `high`, because the measurements of the lanes were at `high`. We did not measure a review round at `xhigh`.
 - The guide says nothing about instructions in files such as `AGENTS.md`. The note on Astra now says that neither guide for GPT-6.2 repeats the old warning.
 - The note on Sol points to the note on Astra for the addresses of the two guides.
-- To stay in the limit of 12,000 words, the two notes lost a few words that the other lines already said.
+- To stay in the limit of 12,000 words, the notes lost two facts. The note on Astra no longer says that the guide for the API starts a new integration at `medium` effort. The note on Sol no longer gives the address of the general guide for the API. The address of the page for Astra in that guide stays in the note on Astra.
 - The tool, the hooks, `lanes.toml` and the tests did not change.
 
 ## v0.1.50 (2026-11-17)
