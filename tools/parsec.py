@@ -312,7 +312,8 @@ def context_lines(cfg, primary, reference):
         role = c.get("role", "rubric")
         if role == "reference-code":
             if reference:
-                lines.append(f"- reference code (a port or a module with a reference): {path / reference}"); paths.append((path / reference).resolve())   # the reference folder's Neon read rule
+                if not (ref := (path / reference).resolve()).is_relative_to(path): raise Exit(64, f"--reference {reference} resolves outside the reference-code folder {path}")   # Brandon, Q5-A (2026-11-20): every lane; a Neon read rule on a folder opens all below it (Sol F4, Astra F4)
+                lines.append(f"- reference code (a port or a module with a reference): {ref}"); paths.append(ref)   # resolved once: the package line and the read rule name the same path (Sol R2 F3, Astra F18)
             continue
         if role == "lookup":
             lines.append(f"- look up and cite only: {path}"); paths.append(path)
@@ -353,14 +354,14 @@ def assemble(brief, kind, lane, resume, warnings):
     return text[:at] + add + text[at:]
 
 
-def write_package(root, args, cfg, primary, fdir, kind):
+def write_package(root, args, primary, fdir, kind, ctx):   # ctx: prepare's one context_lines result, so no config here (Sol R3 F2, Astra F26)
     """The package folder .parsec\\ at root; returns the subject hashes, the warnings and the paths context.md names."""
     pkg = root / ".parsec"
     if pkg.exists():
         shutil.rmtree(pkg)
     pkg.mkdir(parents=True)
     shutil.copyfile(args.brief, pkg / "brief.md")                          # the same bytes
-    lines, warnings, _, _, read = context_lines(cfg, primary, args.reference)
+    lines, warnings, _, _, read = ctx                   # prepare's one context_lines result
     lines.insert(0, f"- your lane, {args.lane.capitalize()}: {SHELL_READS if args.lane in ('astra', 'sol') else FILE_READS}")
     ev = [(pkg / "evidence" / f"{k}-{src.name}", src) for k, src in enumerate([Path(f).resolve() for f in args.file or []], 1)]   # checked in prepare
     lines += [f"- evidence: .parsec/evidence/{dst.name} is a copy of {src.name}" for dst, src in ev]   # 2026-09-23: a reviewer looked for notes.md by its own name; never the path, which can name a lane
@@ -582,9 +583,9 @@ def pretty_name(lane, kind, n):
 def prepare(args, launch):
     primary = primary_of(args.repo)
     cfg = load_config(primary)
-    args.lane = args.lane or cfg.get("reviewer", {}).get("codex_lane", "sol")   # the config's lane when none is named (2026-09-22 review)
-    if args.lane not in (CLI_LANES if launch else tuple(AGENT_OF)):
-        raise Exit(64, f"lane {args.lane} (from the config's codex_lane) is not a lane")   # r3, r4: before anything is written, a panel folder included
+    named, args.lane = args.lane, args.lane or cfg.get("reviewer", {}).get("codex_lane", "sol")   # the config's lane when none is named (2026-09-22 review)
+    if args.lane not in (CLI_LANES if launch else tuple(AGENT_OF)) or (args.lane == "neon" and not named):   # Brandon, Q4-A (2026-11-20): Neon runs only with --lane neon, never as the config's default
+        raise Exit(64, f"lane {args.lane} (from the config's codex_lane) " + ("runs only by name: pass --lane neon" if args.lane == "neon" else "is not a lane"))   # r3, r4: before anything is written, a panel folder included
     fdir, frel = feature_dir(cfg, primary, args.feature, args.round if args.kind == "panel" else None)   # 0.1.9 last look F1: a diff round 1 made a panel folder
     if args.kind in ("prereview", "diff", "lastlook") and not args.base:
         raise Exit(64, f"--base is required for {args.kind}")
@@ -598,6 +599,7 @@ def prepare(args, launch):
     files = [Path(f).resolve() for f in args.file or []]   # inside the round folder, the rerun's rename would move it away mid-round (2026-09-23, Sol)
     if len(set(files)) < len(files) or not all(f.is_file() and not f.is_relative_to(folder) for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind)
         raise Exit(64, f"--file {' '.join(args.file)}: missing, given twice, or inside {folder.name}")
+    ctx = context_lines(cfg, primary, args.reference)   # Q5-A: an outside reference is refused here, before anything is written; context.md and the read rules share this one result (Sol R2 F3, Astra F18)
     args.base, args.head = [c and git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary).strip() for c in (args.base, args.head)]   # full ids: "HEAD" in a reused review worktree named its old commit (2026-09-23, Astra)
     if args.kind == "design" and not all((fdir / n).is_file() for n in ("spec.md", "tasks.md")):
         raise Exit(64, f"design round without spec.md and tasks.md in {fdir}")
@@ -652,13 +654,13 @@ def prepare(args, launch):
     warnings += [f"packed {n} from the feature folder as evidence (the brief named it)" for n in loose]
     if cli:
         model, effort, agent = row["model"], row.get("effort", "lane home"), None
-        subject, w, read = write_package(tree, args, cfg, primary, fdir, args.kind)   # one config read for context.md and the Neon read rules (Sol F3, Astra F3)
+        subject, w, read = write_package(tree, args, primary, fdir, args.kind, ctx)   # one config read for context.md and the Neon read rules (Sol F3, Astra F3)
         if args.kind == "design":
             for name in ("spec.md", "tasks.md"):
                 shutil.copyfile(fdir / name, folder / name)
     else:
         model, effort, agent = agent_seat(args.lane)
-        subject, w, _ = write_package(folder, args, cfg, primary, fdir, args.kind)
+        subject, w, _ = write_package(folder, args, primary, fdir, args.kind, ctx)
     warnings += w
     root = tree if cli else folder               # 2026-09-28 audit: gk-9's Sol R1 searched all of KitnDev for a canvas file (617 s)
     warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
