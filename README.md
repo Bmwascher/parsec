@@ -140,8 +140,8 @@ Builds every task by typing its code exactly as written. It decides nothing, so 
 
 Takes the tasks Gemini can't:
 
-- a task that deletes, renames or moves a file, since Gemini's print mode has no delete tool;
-- a task that copies or writes a binary file, such as an image, since accept-edits ran no command (agy 1.2.x, 2026-09-22);
+- a task that deletes, renames or moves a file, since Gemini's print mode had no delete tool under accept-edits (agy 1.2.x; unmeasured on 1.5.13);
+- a task that copies or writes a binary file, such as an image, since accept-edits ran no command (agy 1.2.x, 2026-09-22; unmeasured on 1.5.13);
 - a task Gemini got wrong once;
 - every task, when `agy` isn't installed.
 
@@ -503,7 +503,7 @@ Each rail exists because its failure happened at least once. The dates live in t
 | `build run` turns LF that Gemini wrote into a CRLF file back into CRLF; a task with any other line-ending flip fails | A whole-file change that hides the real edit in the diff (agy 1.4.4 writes LF even into CRLF files) |
 | The tool reads the task's success test, never Gemini's exit code | Gemini has reported success on runs that failed |
 | The success test needs every docs-root file in the task's Files field to change | Two tasks passed on their code edits alone, with their smoke-file steps skipped |
-| Deletes, renames, moves and binary files go straight to the backup implementer | Under accept-edits, Gemini has no delete tool and ran no command (agy 1.2.x, 2026-09-22) |
+| Deletes, renames, moves and binary files go straight to the backup implementer | Under accept-edits, Gemini had no delete tool and ran no command (agy 1.2.x, 2026-09-22; unmeasured on 1.5.13) |
 | A second failed attempt at the same task, for any reason, goes to you | A retry loop that burns quota on a task that's wrong |
 
 ![Worktrees](https://img.shields.io/badge/worktrees-f08c00?style=for-the-badge)

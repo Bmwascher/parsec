@@ -7,7 +7,7 @@ No shell parses a prompt: every CLI starts from an argument list, the brief reac
 codex on standard input as bytes, and the tool finds lanes.toml and lanes/ from __file__.
 Every dated comment names the failure the line prevents; the design is step 4 of the
 rethink notes (2026-09-22)."""
-import argparse, datetime as dt, hashlib, json, os, re, shutil, subprocess, sys, threading, time, tomllib, urllib.request, uuid
+import argparse, contextlib, datetime as dt, hashlib, json, os, re, shutil, subprocess, sys, threading, time, tomllib, urllib.request, uuid
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parent.parent
@@ -542,12 +542,12 @@ def muse_session_file(session):
 
 
 def agy_reply(folder, capped=False):   # (conversation id or None, warnings); 2026-11-20 P5: a clean run's response becomes reply.md; C4: a cut run has none; capped: the tool's cap ended it (Sol R2 F4)
-    try:
-        j = json.loads((folder / "agy.json").read_text(encoding="utf-8", errors="replace"))
-    except (OSError, ValueError): j = None
+    try: j = json.loads((folder / "agy.json").read_text(encoding="utf-8"))   # Sol diff r1 F1: strict UTF-8; errors="replace" turned bytes that are not UTF-8 inside the response into a clean object and its verdict
+    except (OSError, ValueError): j = None       # UnicodeDecodeError is a ValueError: the status NONE path
+    with contextlib.suppress(OSError): log = ""; log = read_text(folder / "agy.log")   # Sol diff r1 F2: a log missing or held open is no evidence of the deny rules, never a raise that leaves the round pending
     j = j if isinstance(j, dict) else {"status": "NONE", "error": "agy.json is missing or not one JSON object"}
     w = ([f"agy status {j.get('status')}: {str(j.get('error') or '')[:200]}"] if j.get("status") != "SUCCESS" else []) + ([f"agy finished_reason: {j['finished_reason']}"] if "finished_reason" in j else []) + (["a soft-denied step ended the run (denied_actions in agy.json)"] if "denied_actions" in j else []) + (["agy response is blank or missing"] if j.get("status") == "SUCCESS" and not (isinstance(j.get("response"), str) and j["response"].strip()) else [])   # P3, C7; Fable F2: the one no-reply path that named no cause
-    w += [] if (m := re.search(r"CLI settings initialized: permissions=&\{.*?Deny:\[([^\]]*)\]", read_text(folder / "agy.log") if (folder / "agy.log").is_file() else "")) and set(AGY_DENY) <= set(m[1].split()) else ["agy.log shows no deny rules, or not all of AGY_DENY: the read-only settings may not have applied"]   # P8: agy logs the settings it applied; Fable F4: a later agy that drops them would run the reviewer with a shell
+    w += [] if (m := re.search(r"CLI settings initialized: permissions=&\{.*?Deny:\[([^\]]*)\]", log)) and set(AGY_DENY) <= set(m[1].split()) else ["agy.log shows no deny rules, or not all of AGY_DENY: the read-only settings may not have applied"]   # P8: agy logs the settings it applied; Fable F4: a later agy that drops them would run the reviewer with a shell
     (folder / "reply.md").unlink(missing_ok=True)   # Sol F6, Astra F8: never a stale reply, nor the partial text of a run that warned
     if not w and not capped and isinstance(j.get("response"), str) and j["response"].strip(): (folder / "reply.md").write_text(j["response"], encoding="utf-8", newline="\n")
     return (j.get("conversation_id") if isinstance(j.get("conversation_id"), str) else None), w
