@@ -21,7 +21,12 @@ jobs:
       - name: Changelog and STE
         run: python evals/tools/check_changelog.py
 
+      # Almost all test time is child processes (git and the fake CLI), so
+      # the tests run in parallel, one worker per CPU. The order is shuffled
+      # so a test that only passes after another one fails; the log's header
+      # prints the seed (-q would hide it), and --randomly-seed=<n> reruns
+      # that order.
       - name: Tests
         run: |
-          python -m pip install --quiet pytest
-          python -m pytest evals/tests -q
+          python -m pip install --quiet pytest pytest-xdist==3.8.0 pytest-randomly==5.1.0
+          python -m pytest evals/tests -n auto
