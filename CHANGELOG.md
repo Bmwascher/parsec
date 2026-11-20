@@ -21,7 +21,7 @@ A new review lane runs Gemini 4 Neon through agy. It runs only when you ask for 
 - Gemini 4 Carbon is not in this release. agy does not list it for a Google login.
 - Neon never runs as the default lane of a project. A config that names it as the default stops the round. Brandon chose this.
 - For every lane, the tool now refuses a `--reference` outside the folder for reference code. Brandon chose this too.
-- A Neon round stops when the reviewed commit has `.agents` at its root, in capital or small letters, such as `.Agents`. In our tests, agy ran the hooks in that folder, and the deny rules did not stop them.
+- A Neon round stops when the reviewed commit has `.agents`, `.agent`, `_agents` or `_agent` at its root, in capital or small letters. The skill `agy-customizations` in agy lists these four names. In our tests, agy ran the hooks in each of them, and the deny rules did not stop them.
 - The limit for `tools/parsec.py` is now 1,309 lines, and the limit for the tests is 1,596 lines. Brandon set the limits to the new sizes.
 - The new note `models/neon.md` counts in the limit for prose. The skills for debate and panel, the README and the model notes name the new lane.
 
