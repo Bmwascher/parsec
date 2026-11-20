@@ -528,11 +528,12 @@ The three hooks are in `hooks/hooks.json` and run `tools/hooks.py`. If a hook hi
 ### Run the checks
 
 ```powershell
-python -m pytest evals/tests -q
+python -m pip install pytest pytest-xdist==3.8.0 pytest-randomly==5.1.0
+python -m pytest evals/tests -n auto
 python evals/tools/check_changelog.py
 ```
 
-CI runs both on every push, on Windows, because the tool's junction, process-kill and path rules are Windows rules.
+CI runs both checks on every push, on Windows, because the tool's junction, process-kill and path rules are Windows rules. The tests run in parallel and in a new random order each time; the header prints the seed, and `-p no:xdist --randomly-seed=<n>` reruns a failure serially in that order.
 
 ### Budgets are tests
 
