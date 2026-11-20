@@ -1,6 +1,6 @@
 # agy (the Antigravity CLI): the implementer lane's CLI
 
-Runs Gemini 3.8 Flash (`gemini-3.8-flash-high`) in print mode for `build run`. Version in use: 1.4.4 (checked 2026-10-23); first written on 1.2.5 (2026-09-22). The guards themselves (the route lines, the success test, the updater variable) live in the tool; this file holds the dated facts behind them.
+Runs Gemini 4 Hydrogen (`gemini-4-hydrogen-high`) in print mode for `build run`. Version in use: 1.5.13 (checked 2026-11-20); first written on 1.2.5 (2026-09-22). The guards themselves (the route lines, the success test, the updater variable) live in the tool; this file holds the dated facts behind them.
 
 - **The trust list is not an authorization control** (2026-09-17): nothing mechanical refuses an `--add-dir` outside it. The checkout is the child's working folder and its first `--add-dir`.
 - **The updater** (measured 2026-09-17 on 1.2.4): the throttled auto-updater opened a console that took the foreground; `AGY_CLI_DISABLE_AUTO_UPDATE=true`, the literal `true`, disables it (at `1` it still ran). A deliberate update is `agy update` ("Update CLI", checked 2026-09-22), run by `doctor --update`.
@@ -14,4 +14,5 @@ Runs Gemini 3.8 Flash (`gemini-3.8-flash-high`) in print mode for `build run`. V
 - **Gemini's tokens are recorded nowhere** the tool can read; a task's cost on this lane is time only (63 s on Task 2 of the 2026-09-22 comparison).
 - **`--mode accept-edits`**: without it the edit was soft-denied (1.2.0, 2026-09-12).
 - **Auth is a silent refresh** (2026-09-22) seen only in the log's `silent auth succeeded` line; the `not logged into Antigravity` lines are in every log (2026-09-24); the first run's log is the login check.
-- **In the field** (2026-09-23 to 28): print mode stops at 5 minutes; 106 of the 111 Groundhog Key runs passed first time; in all 234 field runs it tried `RunCommand` four times, each a `Select-String` search, the first two on the widest tasks (since 0.1.18 the prompt names `grep_search`; in three probe runs on 2026-09-28, agy 1.2.10, it paged with `ViewFile` instead, and tried no command); it miscopied a value yet reported success; it adds stray blank lines.
+- **In the field** (2026-09-23 to 28): print mode stops at 5 minutes; 106 of the 111 Groundhog Key runs passed first time; in all 234 field runs it tried `RunCommand` four times, each a `Select-String` search (since 0.1.18 the prompt names `grep_search`); it miscopied a value yet reported success; it adds stray blank lines.
+- **Hydrogen replaced 3.8 Flash** (2026-11-20, 1.5.13, one task, the `build run` prompt): 10 of 10 passed, median 38 s; 3.8 Flash took 276 s and over, near the 5-minute stop. Without the prompt's last sentence, 5 of 9 runs ended with no edits; the one logged had tried a command. Model behaviour dated earlier is 3.8 Flash's.

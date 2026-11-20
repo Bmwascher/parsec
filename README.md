@@ -129,7 +129,7 @@ The implementers build the tasks the author wrote. Whichever one builds a task, 
 #### Primary: the Gemini lane
 
 ![Lane](https://img.shields.io/badge/lane-gemini-2f9e44?style=flat-square)
-![Model](https://img.shields.io/badge/Gemini_3.8_Flash-via_agy-4285f4?style=flat-square)
+![Model](https://img.shields.io/badge/Gemini_4_Hydrogen-via_agy-4285f4?style=flat-square)
 
 Builds every task by typing its code exactly as written. It decides nothing, so a wrong task shows up as a failed test, never as a quiet workaround.
 
@@ -544,7 +544,7 @@ The plugin stays lean because its size limits fail the build. An addition that w
 | `tools/hooks.py` | 80 lines |
 | All tests | 1,547 lines |
 | The frozen checkers | 522 lines |
-| All skill, template, agent and model prose | 12,000 words |
+| All skill, template, agent and model prose | 15,000 words |
 | Any one skill | 1,600 words |
 
 The notes for the Muse and Kimi lanes are not counted, because a session reads them only when that lane runs: Muse as the backup, Kimi by name.
