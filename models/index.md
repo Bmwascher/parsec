@@ -15,6 +15,7 @@ One file per CLI and per model, holding only what a driver acts on, each fact da
 | Astra lane (alternate, by name) | `codex-cli.md`, `astra.md` | `lanes.toml`, row `astra` |
 | Muse lane (backup) | `muse-cli.md`, `muse-wonder-full.md` | `lanes.toml`, row `muse` |
 | Kimi lane (by name) | `kimi-cli.md`, `kimi-k3.1-pro.md` | `lanes.toml`, row `kimi`; effort in the lane home |
+| Neon lane (by name) | `agy-cli.md`, `neon.md` | `lanes.toml`, row `neon` |
 | Driver | `opus.md` on Opus | the session's own model; not pinned by the plugin |
 
 ## Seat-invariant rules

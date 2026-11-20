@@ -2,6 +2,29 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.53 (2026-11-20)
+
+A new review lane runs Gemini 4 Neon through agy. It runs only when you ask for Gemini or Google. Sol stays the default reviewer.
+
+- The lane is `neon` in `lanes.toml`, with the model `gemini-4-neon-high`. Run it with `round run --lane neon`.
+- agy gets rules through `--settings`. The rules stop writes, commands, web fetches and MCP calls. In our tests the model got a refusal for a write or a command and went on with the review. We did not test a fetch or an MCP call.
+- In our tests, agy stopped a read in the main checkout and ended the run with no review. So the settings also let Neon read each rubric file, lookup path and reference folder that `context.md` names. A reference outside its folder gets no rule.
+- The tool writes the `response` field of the JSON from agy to `reply.md` only after a clean run. The `conversation_id` field is the session, and round 2 resumes it with `--conversation`.
+- The tool shows a warning when the status is not `SUCCESS`, when the JSON has `finished_reason`, or when the JSON has `denied_actions`. Such a run gives no reply, so its partial text never gives a verdict.
+- The tool also gives a warning and no reply when the response is empty or the agy log lacks a deny rule.
+- `doctor --lane neon` checks that `agy models` lists the model. It cannot check the login. We had no way to test a run with no login.
+- The doctor shows one row for agy, with the two lanes.
+- The tool no longer gives `GEMINI_API_KEY` to a program that it starts. This also applies to `build run` and to git. The updates of `doctor --update` keep the old environment.
+- We tested the lane on agy 1.5.13 with a real package from this repository. It found the same Minor as Opus, in 203 seconds.
+- On agy 1.5.13, print mode has no stop at 5 minutes. A test run took 752 seconds and ended with `SUCCESS`. The note on agy now says this in two places, with the date.
+- With no mode, print mode on agy 1.5.13 wrote a file and ran a command. The note on agy now says this, with the date.
+- Gemini 4 Carbon is not in this release. agy does not list it for a Google login.
+- Neon never runs as the default lane of a project. A config that names it as the default stops the round. Brandon chose this.
+- For every lane, the tool now refuses a `--reference` outside the folder for reference code. Brandon chose this too.
+- A Neon round stops when the reviewed commit has `.agents`, `.agent`, `_agents` or `_agent` at its root, in capital or small letters. The skill `agy-customizations` in agy lists these four names. In our tests, agy ran the hooks in each of them, and the deny rules did not stop them.
+- The limit for `tools/parsec.py` is now 1,309 lines, and the limit for the tests is 1,596 lines. Brandon set the limits to the new sizes.
+- The new note `models/neon.md` counts in the limit for prose. The skills for debate and panel, the README and the model notes name the new lane.
+
 ## v0.1.52 (2026-11-20)
 
 The Gemini lane now runs Gemini 4 Hydrogen. Before, it ran Gemini 3.8 Flash. The Gemini lane is the implementer that builds each task through agy. The limit for prose is now 15,000 words.

@@ -10,7 +10,7 @@ with open(env["FAKE_LOG"], "a", encoding="utf-8") as f:
 if env.get("FAKE_ENV_DUMP"):
     Path(env["FAKE_ENV_DUMP"]).write_text(json.dumps(dict(env)), encoding="utf-8")
 if argv[:1] == ["--version"]:
-    print(env.get("FAKE_VERSION", "fake-cli 1.0")); sys.exit(0)
+    print(env.get("FAKE_VERSION", "fake-cli 1.0")); sys.exit(int(env.get("FAKE_VERSION_EXIT", "0")))   # a failed version call (Sol R4 F2, Astra F28)
 if argv[:2] == ["login", "status"]:
     print(env.get("FAKE_LOGIN", "Logged in using ChatGPT")); sys.exit(0)
 if env.get("FAKE_STDIN_COPY"):

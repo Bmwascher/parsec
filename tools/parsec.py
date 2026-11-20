@@ -7,7 +7,7 @@ No shell parses a prompt: every CLI starts from an argument list, the brief reac
 codex on standard input as bytes, and the tool finds lanes.toml and lanes/ from __file__.
 Every dated comment names the failure the line prevents; the design is step 4 of the
 rethink notes (2026-09-22)."""
-import argparse, datetime as dt, hashlib, json, os, re, shutil, subprocess, sys, threading, time, tomllib, urllib.request, uuid
+import argparse, contextlib, datetime as dt, hashlib, json, os, re, shutil, subprocess, sys, threading, time, tomllib, urllib.request, uuid
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parent.parent
@@ -18,7 +18,7 @@ POLL_SECONDS = 30                              # the watcher's period; a test ov
 CAP_SECONDS = 28 * 60                          # Brandon's cap, no config key; a test overrides it
 STILL_MINUTES = (10, 15, 20, 25)
 KINDS = ("design", "prereview", "diff", "lastlook", "panel")
-CLI_LANES = ("astra", "sol", "kimi", "muse")
+CLI_LANES = ("astra", "sol", "kimi", "muse", "neon")
 AGENT_OF = {"opus": "reviewer-opus", "fable": "reviewer-fable"}
 MARKERS = {"FIX": "🔴", "PASS": "🟢", "ESCALATE": "🟡", "BLIND": "🟡"}   # the debate skill's summary shape; NONE and WROTE-FILES are white
 VERDICTS = ("PASS", "FIX", "ESCALATE", "BLIND")
@@ -33,7 +33,8 @@ MUSE_FLAGS = ["exec", "--contributor-mode", "off",                  # 2026-10-12
               "--disable-reminders",                                # P1: four reminder agents, each a Wonder Full call
               "--no-foreign-personal-context",                      # P3: without it, ~/.claude/CLAUDE.md reached the model
               "--sandbox-network", "restricted"]                    # D2, unmeasured with the shell off; never --trust-workspace: it loads the project's rules and skills (P1, P4)
-PROMPT = "Read the file .parsec/brief.md and follow it exactly."   # kimi and muse; nothing a driver typed reaches an argument list
+AGY_DENY = ["write_file(*)", "command(*)", "read_url(*)", "execute_url(*)", "mcp(*)"]   # 2026-11-20: agy's default mode wrote a file and ran git log (P2); writes and commands came back as tool errors and the review went on (P4, P8, C2); fetch and MCP refusal unprobed
+PROMPT = "Read the file .parsec/brief.md and follow it exactly."   # kimi, muse and neon; nothing a driver typed reaches an argument list
 CLOSING = ("Do not run commands or attempt verification: the test steps, the commit step and "
            "everything after the file edits are not yours; your only job is the file edits. "
            "To find text in a file, use your grep_search tool, never a command.")   # 2026-09-28 poll: four field denials, all Select-String
@@ -79,7 +80,7 @@ def read_json(path):
 
 
 def git(args, cwd):
-    return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True,
+    return subprocess.run(["git", *args], cwd=str(cwd), env=child_env(), capture_output=True, text=True,   # 2026-11-20: GEMINI_API_KEY reaches no child (Sol F1, Astra F1)
                           encoding="utf-8", errors="replace", creationflags=NO_WINDOW)
 
 
@@ -138,9 +139,10 @@ def agent_seat(lane):
 
 
 def child_env():
-    env = {k: v for k, v in os.environ.items() if k not in ("CODEX_HOME", "META_API_KEY")}   # 2026-07-24: a redirected home read "Not logged in"; 2026-10-12: META_API_KEY outranks the Muse login and bills pay-as-you-go
+    env = {k: v for k, v in os.environ.items() if k not in ("CODEX_HOME", "META_API_KEY", "GEMINI_API_KEY")}   # 2026-07-24: a redirected home read "Not logged in"; 2026-10-12: META_API_KEY outranks the Muse login and bills pay-as-you-go; 2026-11-20: GEMINI_API_KEY is a working key of unknown source and billing (Brandon, C1: never used)
     env["NO_COLOR"] = "1"
     env["MUSE_NO_AUTO_UPDATE"] = "1"             # 2026-10-12: the muse launcher's background update must not land mid-debate
+    env["AGY_CLI_DISABLE_AUTO_UPDATE"] = "true"  # old item 112: the literal true; agy's updater opened a console over the run (2026-09-17)
     return env
 
 
@@ -303,17 +305,18 @@ def heading_index(path):
 
 
 def context_lines(cfg, primary, reference):
-    """One function for the pre-flight and for context.md: rubric sections, lookups, the reference."""
-    lines, warnings, found, wanted = [], [], 0, 0
+    """One function for the pre-flight and for context.md: rubric sections, lookups, the reference, and the paths it names (the Neon lane's read rules)."""
+    lines, warnings, found, wanted, paths = [], [], 0, 0, []
     for c in cfg.get("context", []):
         path = resolve_under(primary, c["path"])
         role = c.get("role", "rubric")
         if role == "reference-code":
             if reference:
-                lines.append(f"- reference code (a port or a module with a reference): {path / reference}")
+                if not (ref := (path / reference).resolve()).is_relative_to(path): raise Exit(64, f"--reference {reference} resolves outside the reference-code folder {path}")   # Brandon, Q5-A (2026-11-20): every lane; a Neon read rule on a folder opens all below it (Sol F4, Astra F4)
+                lines.append(f"- reference code (a port or a module with a reference): {ref}"); paths.append(ref)   # resolved once: the package line and the read rule name the same path (Sol R2 F3, Astra F18)
             continue
         if role == "lookup":
-            lines.append(f"- look up and cite only: {path}")
+            lines.append(f"- look up and cite only: {path}"); paths.append(path)
             continue
         heads = heading_index(path) if path.is_file() else []
         secs = c.get("sections", [])
@@ -326,8 +329,8 @@ def context_lines(cfg, primary, reference):
                 found += 1
             else:
                 warnings.append(f'rubric section not found: "{s}" in {path}')
-        lines.append(f"- read first: {path}" + (f", sections: {'; '.join(secs)}" if secs else ""))
-    return lines, warnings, found, wanted
+        lines.append(f"- read first: {path}" + (f", sections: {'; '.join(secs)}" if secs else "")); paths.append(path)
+    return lines, warnings, found, wanted, paths
 
 
 INSERTS = {"design": ("design",), "prereview": ("diff",), "diff": ("diff",), "lastlook": ("diff", "lastlook")}   # a panel's brief is the host's own
@@ -351,14 +354,14 @@ def assemble(brief, kind, lane, resume, warnings):
     return text[:at] + add + text[at:]
 
 
-def write_package(root, args, cfg, primary, fdir, kind):
-    """The package folder .parsec\\ at root; returns the subject hashes and the warnings."""
+def write_package(root, args, primary, fdir, kind, ctx):   # ctx: prepare's one context_lines result, so no config here (Sol R3 F2, Astra F26)
+    """The package folder .parsec\\ at root; returns the subject hashes, the warnings and the paths context.md names."""
     pkg = root / ".parsec"
     if pkg.exists():
         shutil.rmtree(pkg)
     pkg.mkdir(parents=True)
     shutil.copyfile(args.brief, pkg / "brief.md")                          # the same bytes
-    lines, warnings, _, _ = context_lines(cfg, primary, args.reference)
+    lines, warnings, _, _, read = ctx                   # prepare's one context_lines result
     lines.insert(0, f"- your lane, {args.lane.capitalize()}: {SHELL_READS if args.lane in ('astra', 'sol') else FILE_READS}")
     ev = [(pkg / "evidence" / f"{k}-{src.name}", src) for k, src in enumerate([Path(f).resolve() for f in args.file or []], 1)]   # checked in prepare
     lines += [f"- evidence: .parsec/evidence/{dst.name} is a copy of {src.name}" for dst, src in ev]   # 2026-09-23: a reviewer looked for notes.md by its own name; never the path, which can name a lane
@@ -378,14 +381,14 @@ def write_package(root, args, cfg, primary, fdir, kind):
         rng = f"{args.base}..{args.head}"
         for name, cmd in (("commits.txt", ["log", "--oneline", rng]), ("stat.txt", ["diff", "--stat", rng]),
                           ("diff.patch", ["diff", "--no-color", "--no-ext-diff", rng])):
-            r = subprocess.run(["git", *cmd], cwd=str(primary), capture_output=True, creationflags=NO_WINDOW)
+            r = subprocess.run(["git", *cmd], cwd=str(primary), env=child_env(), capture_output=True, creationflags=NO_WINDOW)
             if r.returncode:
                 raise Exit(64, f"git {cmd[0]} {rng} failed: {r.stderr.decode('utf-8', 'replace')[-200:]}")
             (pkg / name).write_bytes(r.stdout)
     for dst, src in ev:
         dst.parent.mkdir(exist_ok=True)
         shutil.copyfile(src, dst)
-    return subject, warnings
+    return subject, warnings, read
 
 
 # ---------------------------------------------------------------- worktrees
@@ -459,7 +462,7 @@ def last_write_age(paths):
 def kill_tree(p):
     """Old item 71: end the child FIRST while alive, so cmd.exe, node and the CLI do not outlive it; it never raises, and each wait ends after 10 s (0.1.40 Sol diff r1 F1)."""
     try:
-        if os.name == "nt" and subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True, creationflags=NO_WINDOW, timeout=10).returncode == 0:
+        if os.name == "nt" and subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], env=child_env(), capture_output=True, creationflags=NO_WINDOW, timeout=10).returncode == 0:
             return p.wait(10)                    # the tree is gone
     except Exception:                            # taskkill could not start or ran past 10 s, or the child outlived it: the child alone, below
         pass
@@ -517,6 +520,11 @@ def muse_argv(row, session):
             "--session-id", session, PROMPT]     # one flag starts a new session and resumes an old one (P1, P2); the prompt is last
 
 
+def neon_argv(row, tree, log, session, read):   # no --mode: auto, held read-only by the settings (P4); the id's suffix picks the effort
+    return [program(row), *row["command"][1:], "-p", PROMPT, "--model", row["model"], "--add-dir", str(tree.resolve()), "--output-format", "json", "--log-file", str(log.resolve()),
+            "--settings", json.dumps({"permissions": {"allow": [f"read_file({p.as_posix()})" for p in read], "deny": AGY_DENY}})] + (["--conversation", session] if session else [])   # C7: a path context.md names outside the tree was soft-denied without its rule
+
+
 def codex_session_file(session):
     hits = list((Path.home() / ".codex" / "sessions").rglob(f"*{session}*.jsonl")) if session else []
     return hits[0] if hits else None
@@ -531,6 +539,18 @@ def kimi_session_file(home, tree_name):
 def muse_session_file(session):
     hits = list((Path.home() / ".local" / "share" / "muse" / "sessions").glob(f"*/*/*/{session}/session.jsonl"))
     return hits[0] if hits else None             # P4: reply.md and standard error stay still; only this file grows
+
+
+def agy_reply(folder, capped=False):   # (conversation id or None, warnings); 2026-11-20 P5: a clean run's response becomes reply.md; C4: a cut run has none; capped: the tool's cap ended it (Sol R2 F4)
+    try: j = json.loads((folder / "agy.json").read_text(encoding="utf-8"))   # Sol diff r1 F1: strict UTF-8; errors="replace" turned bytes that are not UTF-8 inside the response into a clean object and its verdict
+    except (OSError, ValueError): j = None       # UnicodeDecodeError is a ValueError: the status NONE path
+    with contextlib.suppress(OSError): log = ""; log = read_text(folder / "agy.log")   # Sol diff r1 F2: a log missing or held open is no evidence of the deny rules, never a raise that leaves the round pending
+    j = j if isinstance(j, dict) else {"status": "NONE", "error": "agy.json is missing or not one JSON object"}
+    w = ([f"agy status {j.get('status')}: {str(j.get('error') or '')[:200]}"] if j.get("status") != "SUCCESS" else []) + ([f"agy finished_reason: {j['finished_reason']}"] if "finished_reason" in j else []) + (["a soft-denied step ended the run (denied_actions in agy.json)"] if "denied_actions" in j else []) + (["agy response is blank or missing"] if j.get("status") == "SUCCESS" and not (isinstance(j.get("response"), str) and j["response"].strip()) else [])   # P3, C7; Fable F2: the one no-reply path that named no cause
+    w += [] if (m := re.search(r"CLI settings initialized: permissions=&\{.*?Deny:\[([^\]]*)\]", log)) and set(AGY_DENY) <= set(m[1].split()) else ["agy.log shows no deny rules, or not all of AGY_DENY: the read-only settings may not have applied"]   # P8: agy logs the settings it applied; Fable F4: a later agy that drops them would run the reviewer with a shell
+    (folder / "reply.md").unlink(missing_ok=True)   # Sol F6, Astra F8: never a stale reply, nor the partial text of a run that warned
+    if not w and not capped and isinstance(j.get("response"), str) and j["response"].strip(): (folder / "reply.md").write_text(j["response"], encoding="utf-8", newline="\n")
+    return (j.get("conversation_id") if isinstance(j.get("conversation_id"), str) else None), w
 
 
 def session_of(lane, transcript_text):
@@ -563,9 +583,9 @@ def pretty_name(lane, kind, n):
 def prepare(args, launch):
     primary = primary_of(args.repo)
     cfg = load_config(primary)
-    args.lane = args.lane or cfg.get("reviewer", {}).get("codex_lane", "sol")   # the config's lane when none is named (2026-09-22 review)
-    if args.lane not in (CLI_LANES if launch else tuple(AGENT_OF)):
-        raise Exit(64, f"lane {args.lane} (from the config's codex_lane) is not a lane")   # r3, r4: before anything is written, a panel folder included
+    named, args.lane = args.lane, args.lane or cfg.get("reviewer", {}).get("codex_lane", "sol")   # the config's lane when none is named (2026-09-22 review)
+    if args.lane not in (CLI_LANES if launch else tuple(AGENT_OF)) or (args.lane == "neon" and not named):   # Brandon, Q4-A (2026-11-20): Neon runs only with --lane neon, never as the config's default
+        raise Exit(64, f"lane {args.lane} (from the config's codex_lane) " + ("runs only by name: pass --lane neon" if args.lane == "neon" else "is not a lane"))   # r3, r4: before anything is written, a panel folder included
     fdir, frel = feature_dir(cfg, primary, args.feature, args.round if args.kind == "panel" else None)   # 0.1.9 last look F1: a diff round 1 made a panel folder
     if args.kind in ("prereview", "diff", "lastlook") and not args.base:
         raise Exit(64, f"--base is required for {args.kind}")
@@ -579,7 +599,10 @@ def prepare(args, launch):
     files = [Path(f).resolve() for f in args.file or []]   # inside the round folder, the rerun's rename would move it away mid-round (2026-09-23, Sol)
     if len(set(files)) < len(files) or not all(f.is_file() and not f.is_relative_to(folder) for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind)
         raise Exit(64, f"--file {' '.join(args.file)}: missing, given twice, or inside {folder.name}")
+    ctx = context_lines(cfg, primary, args.reference)   # Q5-A: an outside reference is refused here, before anything is written; context.md and the read rules share this one result (Sol R2 F3, Astra F18)
     args.base, args.head = [c and git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary).strip() for c in (args.base, args.head)]   # full ids: "HEAD" in a reused review worktree named its old commit (2026-09-23, Astra)
+    if args.lane == "neon" and (agents := [p for p in git_out(["ls-tree", "-z", "--name-only", args.head], primary).split("\0") if p.casefold() in (".agents", ".agent", "_agents", "_agent")]):   # 2026-11-20 build-time finding: agy loaded the tree's .agents/hooks.json and ran its hooks, which the deny rules do not cover; mcp_config.json unprobed; any case, as Windows ignores it, read from the root entries with -z so no path is quoted (security review); the four root folders agy's own skill agy-customizations names, each of whose hooks.json ran in the probes after Fable last look r1 F1 (Brandon: "Refuse such a tree (Recommended)"; Q7: "Refuse all four (Recommended)")
+        raise Exit(64, f"lane neon refuses head {args.head[:12]}: it tracks {', '.join(agents)}, and agy loads a root .agents/, .agent/, _agents/ or _agent/ folder (its agy-customizations skill) and runs its hooks outside the deny rules; review this head on another lane")
     if args.kind == "design" and not all((fdir / n).is_file() for n in ("spec.md", "tasks.md")):
         raise Exit(64, f"design round without spec.md and tasks.md in {fdir}")
     lines = [l.decode() for _, l in unfenced(read_text(fdir / "spec.md").encode())] if args.kind != "panel" and (fdir / "spec.md").is_file() else []   # every round that packs the spec (write_package)
@@ -633,13 +656,13 @@ def prepare(args, launch):
     warnings += [f"packed {n} from the feature folder as evidence (the brief named it)" for n in loose]
     if cli:
         model, effort, agent = row["model"], row.get("effort", "lane home"), None
-        subject, w = write_package(tree, args, cfg, primary, fdir, args.kind)
+        subject, w, read = write_package(tree, args, primary, fdir, args.kind, ctx)   # one config read for context.md and the Neon read rules (Sol F3, Astra F3)
         if args.kind == "design":
             for name in ("spec.md", "tasks.md"):
                 shutil.copyfile(fdir / name, folder / name)
     else:
         model, effort, agent = agent_seat(args.lane)
-        subject, w = write_package(folder, args, cfg, primary, fdir, args.kind)
+        subject, w, _ = write_package(folder, args, primary, fdir, args.kind, ctx)
     warnings += w
     root = tree if cli else folder               # 2026-09-28 audit: gk-9's Sol R1 searched all of KitnDev for a canvas file (617 s)
     warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
@@ -664,10 +687,10 @@ def prepare(args, launch):
             print(f"diff.patch: {n} lines (Read pages {max(100, min(2000, n * 40000 // max(1, patch.stat().st_size) // 100 * 100))} lines at a time)")
         print(f"report path: {folder / 'reply.md'}")
         return 0
-    return run_round(args, primary, fdir, folder, pending, tree)
+    return run_round(args, primary, fdir, folder, pending, tree, read)
 
 
-def run_round(args, primary, fdir, folder, pending, tree):
+def run_round(args, primary, fdir, folder, pending, tree, read):
     row = lane_row(args.lane)
     reply, transcript = folder / "reply.md", folder / "transcript.log"
     session = pending["session"]
@@ -680,6 +703,8 @@ def run_round(args, primary, fdir, folder, pending, tree):
         argv, env = muse_argv(row, session), child_env()
         out, err, stdin = reply, transcript, None
         watch = lambda: [transcript, reply, muse_session_file(session)]
+    elif args.lane == "neon":
+        argv, env, out, err, stdin, watch = neon_argv(row, tree, folder / "agy.log", session, read), child_env(), folder / "agy.json", transcript, None, lambda: [transcript, folder / "agy.json", folder / "agy.log"]
     else:
         argv = codex_argv(row, "priority" if args.fast else "default", reply.resolve(), session)
         env = child_env()
@@ -716,6 +741,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     if agent_id and pend.get("session") not in (None, agent_id):   # a resumed round's agent is the one prepare named (2026-09-23, Q2)
         raise Exit(64, f"--agent-id {agent_id}: this round was prepared to resume {pend['session']}")
     warnings += pend.get("warnings", []); said = len(warnings) if run else 0   # round run printed these at launch
+    conv, got = agy_reply(folder, bool(run and run["timeout"])) if lane == "neon" else (None, []); warnings += got   # after the count, so they print below; a hand collect has no run result, so it knows no cap (R2: Brandon, 2026-11-20, "Drop S8 (Recommended)")
     warnings += [f"{p} changed after its round was collected" for r in records(fdir)   # 2026-09-26 gk-1: the author wrote over Sol's reply unseen
                  if r.get("reply_sha256") and not ((p := Path(r["_path"]).with_name("reply.md")).is_file() and sha256(p) == r["reply_sha256"])]   # beside the record: a dead round's "reply" names its rerun's
     reply = folder / "reply.md"
@@ -727,7 +753,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     elif verdict in VERDICTS[:3] and counts is None:   # 2026-09-25 audit: fld-7's derived briefs lost the counts line unseen; a BLIND lane has none (field audit 4)
         warnings.append("the reply has no counts line: count the findings by hand")
     continuity = next((s[11:].strip(" *") for ln in reversed(text.splitlines()) if (s := strip_line(ln)).upper().startswith("CONTINUITY:")), None) if pend.get("resumed") else None   # the last line that starts with the tag, after bullets and asterisks
-    session = pend.get("session") or agent_id or session_of(lane, transcript) or "unknown"   # an agent round's id comes from --agent-id (spec review, Q3)
+    session = (conv or pend.get("session") if lane == "neon" else pend.get("session") or agent_id or session_of(lane, transcript)) or "unknown"   # an agent round's id comes from --agent-id (spec review, Q3); a neon round's only from agy.json or its pending record (Astra F8, Neon F3)
     cli_version = (re.search(r"OpenAI Codex v(\S+)", transcript) or [None, "unknown"])[1] if lane in ("astra", "sol") else "unknown"   # kimi and muse print no version on their streams (2026-10-12 P1, P4)
     clean = None
     if pend.get("worktree") and not Path(pend["worktree"]).is_dir():   # 2026-09-22 review: a removed tree left the round unfinalisable;
@@ -936,7 +962,7 @@ def build_run(args):
         argv = [prog, *row["command"][1:], "-p", prompt, "--model", row["model"], "--mode", "accept-edits",
                 "--add-dir", str(checkout), *([] if docs.is_relative_to(checkout) else ["--add-dir", str(docs)]),   # 2026-09-27 gk-10, gk-12: a read of the spec or smoke file in the primary was denied
                 "--log-file", str(log.resolve())]   # 2026-09-13: a /c/ path made no log
-        env = dict(child_env(), AGY_CLI_DISABLE_AUTO_UPDATE="true")    # old item 112: the literal true
+        env = child_env()                        # agy's updater is off there (old item 112)
         code, secs = run_child(argv, checkout, env, None, report, fdir / "build" / f"task-{args.task:02d}-agy.err", lambda: [log, report])
     finally:
         if copy.exists():
@@ -978,15 +1004,16 @@ def build_archive(args):
 
 # ---------------------------------------------------------------- doctor
 
-def probe(argv, env=None, timeout=10, stdin_text=None):
-    """One CLI call with a 10-second timeout: a version call can start an updater."""
+def probe(argv, env=None, timeout=10, stdin_text=None, whole=False):
+    """One CLI call with a 10-second timeout: a version call can start an updater. whole: all of standard output, not its first line (agy models)."""
     prog = shutil.which(argv[0])
     if not prog:
         return None, f"{argv[0]} not found on PATH"
     try:
         r = subprocess.run([prog, *argv[1:]], capture_output=True, text=True, encoding="utf-8", errors="replace",
                            timeout=timeout, env=env, input=stdin_text, creationflags=NO_WINDOW)
-        return r.returncode, (r.stdout + r.stderr).strip().splitlines()[0] if (r.stdout + r.stderr).strip() else ""
+        out = r.stdout if whole and not r.returncode else (r.stdout + r.stderr).strip()   # P11: agy models' rows are standard output, as printed; a line on standard error is no row (Sol F7, Astra F9); unstripped, so no row moves to a line start (Astra F29)
+        return r.returncode, out if whole else out.splitlines()[0] if out else ""
     except subprocess.TimeoutExpired:
         return None, "timed out after 10 s"
 
@@ -1055,7 +1082,7 @@ def preflight(args):
     row = lane_row(args.lane) if args.lane in lanes() else None
     cmd = list(row["command"]) if row else []
     if args.lane in ("astra", "sol"):
-        code, ver = probe(cmd + ["--version"])
+        code, ver = probe(cmd + ["--version"], env=child_env())
         if code != 0:
             fail.append(f"codex: {ver}")
         code, login = probe(cmd + ["login", "status"], env=child_env())
@@ -1065,7 +1092,7 @@ def preflight(args):
         lines.append(f"- **Quota:** {codex_quota(cmd) if code == 0 else 'not read'}")
         lines.append(f"- **Model:** {row['model']}, effort {row['effort']} (lanes.toml), {'fast' if args.fast else 'fast off'}")
     elif args.lane == "kimi":
-        code, ver = probe(cmd + ["--version"])
+        code, ver = probe(cmd + ["--version"], env=child_env())
         if code != 0:
             fail.append(f"kimi: {ver}")
         home = resolve_under(PLUGIN, row["home"])
@@ -1083,11 +1110,16 @@ def preflight(args):
         lines.append(f"- **CLI:** {ver}, auth.json {auth}")
         lines.append(f"- **Model:** {row['model']}, effort {row['effort']} (lanes.toml), contributor mode off")
     elif args.lane == "gemini":
-        code, ver = probe(cmd + ["--version"])
+        code, ver = probe(cmd + ["--version"], env=child_env())   # 2026-11-20: no GEMINI_API_KEY in any agy call
         if code != 0:
             fail.append(f"agy: {ver}")
         lines.append(f"- **CLI:** agy {ver} at {shutil.which(cmd[0])}")
         lines.append(f"- **Model:** {row['model']} (lanes.toml); login is read from the first run's log")
+    elif args.lane == "neon":
+        (code, ver), (mcode, models) = probe(cmd + ["--version"], env=child_env()), probe(cmd + ["models"], env=child_env(), whole=True)
+        known = mcode == 0 and re.search(rf"(?m)^{re.escape(row['model'])}[ \t]", models) is not None   # the id, then a space or tab on the same line (Astra F29); 2026-11-20 C5: "gemini-4-neon-high<TAB>Gemini 4 Neon (High)"; C6: no login check, an empty home still listed every model
+        fail += ([f"agy: {ver}"] if code != 0 else []) + ([f"agy models failed (exit {mcode}): {models.splitlines()[0][:120] if models else 'no answer'}"] if mcode != 0 else [f"model {row['model']} is not in agy models: {models.splitlines()[0][:120] if models else 'no answer'}"] if not known else [])   # Astra F37: a failed call is not a missing model
+        lines += [f"- **CLI:** agy {ver}, model {'known to agy' if known else 'NOT KNOWN to agy' if mcode == 0 else 'not checked (agy models failed)'}", f"- **Model:** {row['model']}, effort {row['effort']} (lanes.toml; the id picks the level); login not checked (C6: no logged-out run was possible)"]
     elif args.lane in AGENT_OF:
         model, effort, agent = agent_seat(args.lane)
         lines.append(f"- **Agent:** {agent}, model {model}, effort {effort} (agent file)")
@@ -1102,7 +1134,7 @@ def preflight(args):
         except Exit as e:
             fail.append(str(e))
     if args.kind != "build":
-        _, warnings, found, wanted = context_lines(cfg, primary, None)
+        _, warnings, found, wanted, _ = context_lines(cfg, primary, None)
         fail += [w for w in warnings if "not found" in w]
         files = len([c for c in cfg.get("context", []) if c.get("role", "rubric") == "rubric"])
         rub = f"rubric {files} file{"s" * (files != 1)}, {found} of {wanted} sections found" if files else "rubric none configured"   # r3: a rubric without sections is still a rubric
@@ -1149,7 +1181,7 @@ def doctor(args):
     sha = entry.get("gitCommitSha") if isinstance(entry.get("gitCommitSha"), str) else ""   # a null commit crashed the doctor (2026-09-23, Astra r2)
     ok = sha == head
     out = ["**Claude Code**", f"- {'🟢' if ok else '🔴'} **plugin install:** " + (f"{entry.get('version')} at {sha[:8]}: " + ("ok" if ok else f"STALE (repo head {head[:8]}; the cache is keyed by version: bump it, then claude plugin update)") if entry else "not installed")]   # old item 65; 2026-09-22 17:16
-    code, ver = probe(CLAUDE + ["--version"])
+    code, ver = probe(CLAUDE + ["--version"], env=child_env())
     out += [f"- {'🟢' if code == 0 else '🔴'} **Claude Code:** {ver}" + freshness(code == 0, ver, CLAUDE_LATEST), f"- {conf}", "", "**Lane CLIs**"]   # two groups (Brandon, 2026-10-17: "Q1-A Lane CLIs")
     groups = {}                                  # one row per CLI (Brandon, 2026-10-17): its lanes share the command the row runs and the update its amber line points to
     for name, row in rows.items(): groups.setdefault((tuple(row["command"]), tuple(row.get("update") or [name])), []).append(name)
@@ -1157,7 +1189,7 @@ def doctor(args):
         name, row = names[0], rows[names[0]]
         code, ver = probe(row["command"] + ["--version"], env=child_env())   # the whole command, as the pre-flight runs it; 2026-10-12: no muse update starts here
         lcode, login = probe(row["command"] + ["login", "status"], env=child_env()) if name in ("astra", "sol") else (0, "login in the first run's log") \
-            if name == "gemini" else (0, f"auth.json {'present' if MUSE_AUTH().is_file() else 'MISSING'}") if name == "muse" \
+            if name in ("gemini", "neon") else (0, f"auth.json {'present' if MUSE_AUTH().is_file() else 'MISSING'}") if name == "muse" \
             else (0, f"credentials {'present' if (resolve_under(PLUGIN, row['home']) / 'credentials').exists() else 'MISSING'} in the lane home")
         good = code == 0 and lcode == 0 and "not logged in" not in login.lower() and "MISSING" not in login   # the login's own exit too (2026-09-23 pre-review)
         who = ", ".join(f"{n} ({rows[n]['model']}" + (f", {rows[n]['effort']})" if "effort" in rows[n] else ")") for n in names)
@@ -1192,7 +1224,7 @@ def parser():
     p.add_argument("--repo", default=os.getcwd(), help="a checkout; the primary is found from it")
     sub = p.add_subparsers(dest="cmd", required=True)
     rnd = sub.add_parser("round", help="run, prepare, collect or close a review round").add_subparsers(dest="sub", required=True)
-    for name, hint in (("run", "one round on a CLI lane (astra, sol, kimi, muse)"), ("prepare", "the package for an in-session lane (opus, fable)")):
+    for name, hint in (("run", "one round on a CLI lane (astra, sol, kimi, muse, neon)"), ("prepare", "the package for an in-session lane (opus, fable)")):
         q = rnd.add_parser(name, help=hint)
         q.add_argument("--feature", required=True, help="feature folder under the docs root")
         q.add_argument("--kind", required=True, choices=KINDS)

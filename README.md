@@ -140,8 +140,8 @@ Builds every task by typing its code exactly as written. It decides nothing, so 
 
 Takes the tasks Gemini can't:
 
-- a task that deletes, renames or moves a file, since Gemini's print mode has no delete tool;
-- a task that copies or writes a binary file, such as an image, since print mode runs no command;
+- a task that deletes, renames or moves a file, since Gemini's print mode had no delete tool under accept-edits (agy 1.2.x; unmeasured on 1.5.13);
+- a task that copies or writes a binary file, such as an image, since accept-edits ran no command (agy 1.2.x, 2026-09-22; unmeasured on 1.5.13);
 - a task Gemini got wrong once;
 - every task, when `agy` isn't installed.
 
@@ -166,6 +166,7 @@ These are the reviewers from other companies. They run the design debate before 
 | **Secondary** | `astra` | ![GPT-6.2 Astra](https://img.shields.io/badge/GPT--6.2_Astra-via_codex-10a37f?style=flat-square) | When you say "use Astra", or when the project's config makes it the default |
 | **Backup** | `muse` | ![Muse Wonder Full](https://img.shields.io/badge/Muse_Wonder_Full-via_muse-0866ff?style=flat-square) | Only when codex is unavailable and you approve, or the config approves it in advance |
 | **By name** | `kimi` | ![Kimi K3.1 Pro](https://img.shields.io/badge/Kimi_K3.1_Pro-via_kimi-5f3dc4?style=flat-square) | When you name it |
+| **By name** | `neon` | ![Gemini 4 Neon](https://img.shields.io/badge/Gemini_4_Neon-via_agy-4285f4?style=flat-square) | When you say "Gemini" or "Google" |
 
 #### Last look
 
@@ -190,7 +191,7 @@ A fresh agent that reads the final head once every other review has passed. Its 
 | Git | Worktrees, diffs, commits | ✅ Yes |
 | PowerShell 7 | Every shell step (never Windows PowerShell 5.1) | ✅ Yes, on Windows |
 | `codex` CLI, logged in | The Sol and Astra lanes | ✅ Yes, for cross-vendor review |
-| `agy` CLI, logged in | The implementer (Gemini lane) | ➖ No. Without it, every task goes to the backup implementer. |
+| `agy` CLI, logged in | The implementer (Gemini lane) and the Neon lane, by name | ➖ No. Without it, every task goes to the backup implementer. |
 | `muse` CLI (Muse Code), signed in | The Muse backup lane | ➖ No |
 | `kimi` CLI, logged in | The Kimi lane, by name | ➖ No |
 
@@ -309,6 +310,7 @@ You talk to it in plain words, and the skills trigger on what you say.
 | "Run a panel on whether to split this module" | `panel`: two or more lanes answer one question blind |
 | "Poll Fable" | One Fable second opinion, answered in chat |
 | "Use Astra" | The Astra lane instead of Sol for that debate |
+| "Use Gemini" or "Use Google" | The Neon lane for that debate or panel |
 | "Use fast" | Priority service for that one debate only |
 | `/parsec:doctor` | The health table |
 
@@ -374,7 +376,7 @@ Wording-only findings never cost a round either: the reviewer grades them Minor,
 - **A debate ends** on a round with no new Critical or Important finding and no contested point left open.
 - **Five rounds is the cap,** for each lane in each phase. After that the session pauses and asks you. A spent budget never counts as a pass.
 - **A point contested twice** with evidence on both sides goes to you at once.
-- **Reviewers keep their memory.** A CLI lane (Sol, Astra, Muse or Kimi) is resumed each round and must answer a continuity question. If it can't, the next round starts fresh with its earlier replies attached as evidence. An Opus or Fable agent is resumed by its id: `round collect --agent-id` records the id, and `round prepare --resume` checks it.
+- **Reviewers keep their memory.** A CLI lane (Sol, Astra, Muse, Kimi or Neon) is resumed each round and must answer a continuity question. If it can't, the next round starts fresh with its earlier replies attached as evidence. An Opus or Fable agent is resumed by its id: `round collect --agent-id` records the id, and `round prepare --resume` checks it.
 
 ### The diff gate
 
@@ -383,7 +385,7 @@ After the build, three reviewers look at the diff in order:
 | Step | Reviewer | Its job |
 |---|---|---|
 | 1 | ![Opus](https://img.shields.io/badge/Opus-pre--review-d97757?style=flat-square) | Catches the obvious before the cross-vendor quota is spent |
-| 2 | ![Sol](https://img.shields.io/badge/Sol-cross--vendor_debate-10a37f?style=flat-square) | Debates the diff to a settled verdict; Astra or Kimi by name, Muse only with approval |
+| 2 | ![Sol](https://img.shields.io/badge/Sol-cross--vendor_debate-10a37f?style=flat-square) | Debates the diff to a settled verdict; Astra, Kimi or Neon by name, Muse only with approval |
 | 3 | ![Fable](https://img.shields.io/badge/Fable-last_look-d97757?style=flat-square) | A *fresh* agent reviews the final head. The version bump is the last commit before it, so its PASS names the exact commit that ships, or the commit of a "fix now" Minor its confirming question covers. |
 
 A blocking finding anywhere in the gate becomes a fix task, written by the author and built like any other task. Only the commit that the final PASS names is ever merged.
@@ -461,11 +463,11 @@ checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 
 ## The tool
 
-`tools/parsec.py` is one Python file, kept at or under 1,278 lines by a test. The skills call it, so you rarely need to. Every subcommand has `--help`, and exit code `64` means a usage or setup error, such as a missing config or an unknown lane.
+`tools/parsec.py` is one Python file, kept at or under 1,309 lines by a test. The skills call it, so you rarely need to. Every subcommand has `--help`, and exit code `64` means a usage or setup error, such as a missing config or an unknown lane.
 
 | Command | What it does |
 |---|---|
-| `round run` | Packages a round and runs it on a CLI lane (Sol, Astra, Muse, Kimi) in a clean review worktree |
+| `round run` | Packages a round and runs it on a CLI lane (Sol, Astra, Muse, Kimi, Neon) in a clean review worktree |
 | `round prepare` | Packages a round for an in-session seat (Opus, Fable) and prints the dispatch details |
 | `round collect` | Finishes a pending round, or marks it degraded or closed on Minor |
 | `round close` | Removes the feature's review worktrees |
@@ -501,7 +503,7 @@ Each rail exists because its failure happened at least once. The dates live in t
 | `build run` turns LF that Gemini wrote into a CRLF file back into CRLF; a task with any other line-ending flip fails | A whole-file change that hides the real edit in the diff (agy 1.4.4 writes LF even into CRLF files) |
 | The tool reads the task's success test, never Gemini's exit code | Gemini has reported success on runs that failed |
 | The success test needs every docs-root file in the task's Files field to change | Two tasks passed on their code edits alone, with their smoke-file steps skipped |
-| Deletes, renames, moves and binary files go straight to the backup implementer | Gemini's print mode has no delete tool and runs no command |
+| Deletes, renames, moves and binary files go straight to the backup implementer | Under accept-edits, Gemini had no delete tool and ran no command (agy 1.2.x, 2026-09-22; unmeasured on 1.5.13) |
 | A second failed attempt at the same task, for any reason, goes to you | A retry loop that burns quota on a task that's wrong |
 
 ![Worktrees](https://img.shields.io/badge/worktrees-f08c00?style=for-the-badge)
@@ -541,9 +543,9 @@ The plugin stays lean because its size limits fail the build. An addition that w
 
 | What | Limit |
 |---|---|
-| `tools/parsec.py` | 1,278 lines |
+| `tools/parsec.py` | 1,309 lines |
 | `tools/hooks.py` | 80 lines |
-| All tests | 1,547 lines |
+| All tests | 1,596 lines |
 | The frozen checkers | 522 lines |
 | All skill, template, agent and model prose | 15,000 words |
 | Any one skill | 1,600 words |
