@@ -24,8 +24,8 @@ jobs:
       # Almost all test time is child processes (git and the fake CLI), so
       # the tests run in parallel, one worker per CPU. The order is shuffled
       # so a test that only passes after another one fails; the log's header
-      # prints the seed (-q would hide it), and --randomly-seed=<n> reruns
-      # that order.
+      # prints the seed (-q would hide it). To reproduce a failure, rerun
+      # serially with that seed: -p no:xdist --randomly-seed=<n>.
       - name: Tests
         run: |
           python -m pip install --quiet pytest pytest-xdist==3.8.0 pytest-randomly==5.1.0
