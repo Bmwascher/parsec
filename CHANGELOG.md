@@ -2,6 +2,21 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.52 (2026-11-20)
+
+The Gemini lane now runs Gemini 4 Hydrogen. Before, it ran Gemini 3.8 Flash. The Gemini lane is the implementer that builds each task through agy. The limit for prose is now 15,000 words.
+
+- `lanes.toml` names `gemini-4-hydrogen-high`. The effort stays High.
+- We tested the models on agy 1.5.13 with the exact prompt of `build run`. The task had four edits to one file, and a script checked the edits after each run. Hydrogen passed 10 of 10 runs, with a median time of 38 seconds.
+- Gemini 3.8 Flash passed 3 of 3 runs, but each run took 276 seconds or more. That is near the stop of print mode at 5 minutes. On 2026-09-22, Gemini 3.8 Flash did a larger task in 63 seconds. We do not know if agy or the model caused this change.
+- Without the last part of the prompt, which tells Gemini not to run commands, 5 of 9 runs made no edits. Three of these runs were on Gemini 3.8 Flash and two were on Hydrogen. The one run with a log was on Gemini 3.8 Flash, and it had tried a command.
+- No real task of `build run` ran on Hydrogen before this release. The first build after this release is the real test.
+- `models/agy-cli.md` names the new model and agy 1.5.13. It says that we measured the earlier facts about the behaviour of the model on Gemini 3.8 Flash.
+- The note lost two facts. Two of the four tries of a command in the field were on the widest tasks. In three tests on agy 1.2.10, Gemini read the file page by page and tried no command.
+- The README badge names Gemini 4 Hydrogen.
+- `evals/tests/test_budget.py`, `CLAUDE.md` and the README give the new limit of 15,000 words. Brandon set it. The prose now has about 12,030 words.
+- The tool and the hooks did not change.
+
 ## v0.1.51 (2026-11-17)
 
 The notes on the Sol and Astra models now cite the guide from OpenAI for prompts to GPT-6.2 in Codex. The lanes did not change.
