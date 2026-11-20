@@ -26,18 +26,18 @@ def words(path):
     return len(path.read_text(encoding="utf-8").split())
 
 
-def test_tool_within_1307_lines():
-    assert lines(REPO / "tools" / "parsec.py") <= 1307   # Brandon, 2026-11-20: "A Raise to built counts (Recommended)", the Neon lane (was 1,278)
+def test_tool_within_1309_lines():
+    assert lines(REPO / "tools" / "parsec.py") <= 1309   # Brandon, 2026-11-20: "A Raise to built counts (Recommended)", the Neon lane (was 1,278); the .agents/ refusal, within 1,310
 
 
 def test_hooks_within_80_lines():
     assert lines(REPO / "tools" / "hooks.py") <= 80
 
 
-def test_tests_within_1594_lines():
+def test_tests_within_1596_lines():
     tests = sorted((REPO / "evals" / "tests").glob("*.py"))
     assert tests, "missing input: the test folder"
-    assert sum(lines(p) for p in tests) <= 1594   # Brandon, 2026-11-20: "A Raise to built counts (Recommended)", the Neon lane (was 1,547)
+    assert sum(lines(p) for p in tests) <= 1596   # Brandon, 2026-11-20: "A Raise to built counts (Recommended)", the Neon lane (was 1,547); "Yes, to the built count", the .agents/ refusal (at most 1,600)
 
 
 def test_frozen_checkers_do_not_grow():

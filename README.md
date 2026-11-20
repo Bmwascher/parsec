@@ -461,7 +461,7 @@ checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 
 ## The tool
 
-`tools/parsec.py` is one Python file, kept at or under 1,307 lines by a test. The skills call it, so you rarely need to. Every subcommand has `--help`, and exit code `64` means a usage or setup error, such as a missing config or an unknown lane.
+`tools/parsec.py` is one Python file, kept at or under 1,309 lines by a test. The skills call it, so you rarely need to. Every subcommand has `--help`, and exit code `64` means a usage or setup error, such as a missing config or an unknown lane.
 
 | Command | What it does |
 |---|---|
@@ -541,9 +541,9 @@ The plugin stays lean because its size limits fail the build. An addition that w
 
 | What | Limit |
 |---|---|
-| `tools/parsec.py` | 1,307 lines |
+| `tools/parsec.py` | 1,309 lines |
 | `tools/hooks.py` | 80 lines |
-| All tests | 1,594 lines |
+| All tests | 1,596 lines |
 | The frozen checkers | 522 lines |
 | All skill, template, agent and model prose | 15,000 words |
 | Any one skill | 1,600 words |
