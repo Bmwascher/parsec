@@ -601,7 +601,7 @@ def prepare(args, launch):
         raise Exit(64, f"--file {' '.join(args.file)}: missing, given twice, or inside {folder.name}")
     ctx = context_lines(cfg, primary, args.reference)   # Q5-A: an outside reference is refused here, before anything is written; context.md and the read rules share this one result (Sol R2 F3, Astra F18)
     args.base, args.head = [c and git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary).strip() for c in (args.base, args.head)]   # full ids: "HEAD" in a reused review worktree named its old commit (2026-09-23, Astra)
-    if args.lane == "neon" and (agents := git_out(["ls-tree", "-r", "--name-only", args.head, "--", ".agents"], primary).splitlines()):   # 2026-11-20 build-time finding: agy loaded the tree's .agents/hooks.json and ran its hooks, which the deny rules do not cover; mcp_config.json unprobed (Brandon: "Refuse such a tree (Recommended)")
+    if args.lane == "neon" and (agents := [p for p in git_out(["ls-tree", "-r", "--name-only", args.head], primary).splitlines() if p.split("/")[0].lower() == ".agents"]):   # 2026-11-20 build-time finding: agy loaded the tree's .agents/hooks.json and ran its hooks, which the deny rules do not cover; mcp_config.json unprobed; any case, as Windows ignores it (security review) (Brandon: "Refuse such a tree (Recommended)")
         raise Exit(64, f"lane neon refuses head {args.head[:12]}: it tracks {agents[0]}, and agy loads a tree's .agents/ folder and runs its hooks outside the deny rules; review this head on another lane")
     if args.kind == "design" and not all((fdir / n).is_file() for n in ("spec.md", "tasks.md")):
         raise Exit(64, f"design round without spec.md and tasks.md in {fdir}")
