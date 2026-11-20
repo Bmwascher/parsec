@@ -12,7 +12,7 @@ PROSE = [f"skills/{s}/SKILL.md" for s in SKILLS] + [
     "templates/implementer-contract.md", "agents/backup-implementer.md", "agents/reviewer-opus.md", "agents/reviewer-fable.md",
     "agents/author.md", "commands/doctor.md", "models/index.md", "models/codex-cli.md",
     "models/astra.md", "models/fable.md", "models/opus.md", "models/sol.md",
-    "models/agy-cli.md", "CLAUDE.md"]
+    "models/agy-cli.md", "models/neon.md", "CLAUDE.md"]
 CHECKERS = ["evals/tools/ste_lint.py", "evals/tools/ste_allow.txt", "evals/tools/check_changelog.py"]
 
 
