@@ -1002,15 +1002,16 @@ def build_archive(args):
 
 # ---------------------------------------------------------------- doctor
 
-def probe(argv, env=None, timeout=10, stdin_text=None):
-    """One CLI call with a 10-second timeout: a version call can start an updater."""
+def probe(argv, env=None, timeout=10, stdin_text=None, whole=False):
+    """One CLI call with a 10-second timeout: a version call can start an updater. whole: all of standard output, not its first line (agy models)."""
     prog = shutil.which(argv[0])
     if not prog:
         return None, f"{argv[0]} not found on PATH"
     try:
         r = subprocess.run([prog, *argv[1:]], capture_output=True, text=True, encoding="utf-8", errors="replace",
                            timeout=timeout, env=env, input=stdin_text, creationflags=NO_WINDOW)
-        return r.returncode, (r.stdout + r.stderr).strip().splitlines()[0] if (r.stdout + r.stderr).strip() else ""
+        out = r.stdout if whole and not r.returncode else (r.stdout + r.stderr).strip()   # P11: agy models' rows are standard output, as printed; a line on standard error is no row (Sol F7, Astra F9); unstripped, so no row moves to a line start (Astra F29)
+        return r.returncode, out if whole else out.splitlines()[0] if out else ""
     except subprocess.TimeoutExpired:
         return None, "timed out after 10 s"
 
@@ -1107,11 +1108,16 @@ def preflight(args):
         lines.append(f"- **CLI:** {ver}, auth.json {auth}")
         lines.append(f"- **Model:** {row['model']}, effort {row['effort']} (lanes.toml), contributor mode off")
     elif args.lane == "gemini":
-        code, ver = probe(cmd + ["--version"])
+        code, ver = probe(cmd + ["--version"], env=child_env())   # 2026-11-20: no GEMINI_API_KEY in any agy call
         if code != 0:
             fail.append(f"agy: {ver}")
         lines.append(f"- **CLI:** agy {ver} at {shutil.which(cmd[0])}")
         lines.append(f"- **Model:** {row['model']} (lanes.toml); login is read from the first run's log")
+    elif args.lane == "neon":
+        (code, ver), (mcode, models) = probe(cmd + ["--version"], env=child_env()), probe(cmd + ["models"], env=child_env(), whole=True)
+        known = mcode == 0 and re.search(rf"(?m)^{re.escape(row['model'])}[ \t]", models) is not None   # the id, then a space or tab on the same line (Astra F29); 2026-11-20 C5: "gemini-4-neon-high<TAB>Gemini 4 Neon (High)"; C6: no login check, an empty home still listed every model
+        fail += ([f"agy: {ver}"] if code != 0 else []) + ([f"agy models failed (exit {mcode}): {models.splitlines()[0][:120] if models else 'no answer'}"] if mcode != 0 else [f"model {row['model']} is not in agy models: {models.splitlines()[0][:120] if models else 'no answer'}"] if not known else [])   # Astra F37: a failed call is not a missing model
+        lines += [f"- **CLI:** agy {ver}, model {'known to agy' if known else 'NOT KNOWN to agy' if mcode == 0 else 'not checked (agy models failed)'}", f"- **Model:** {row['model']}, effort {row['effort']} (lanes.toml; the id picks the level); login not checked (C6: no logged-out run was possible)"]
     elif args.lane in AGENT_OF:
         model, effort, agent = agent_seat(args.lane)
         lines.append(f"- **Agent:** {agent}, model {model}, effort {effort} (agent file)")

@@ -71,7 +71,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_LOG", str(log))
     monkeypatch.setenv("FAKE_STDOUT", "OpenAI Codex v9.9.9\n--------\nsession id: 01a0c9a2-0000-4000-8000-000000000001\n--------\n")
     monkeypatch.setenv("FAKE_REPLY", "Summary.\n\nVERDICT: FIX\n")
-    for k in ("FAKE_EXIT", "FAKE_SLEEP", "FAKE_WRITE", "FAKE_STDERR", "FAKE_STDIN_COPY", "FAKE_ENV_DUMP", "FAKE_CHILD_PID_FILE", "CLAUDE_CODE_ENTRYPOINT"):
+    for k in ("FAKE_EXIT", "FAKE_VERSION_EXIT", "FAKE_SLEEP", "FAKE_WRITE", "FAKE_STDERR", "FAKE_STDIN_COPY", "FAKE_ENV_DUMP", "FAKE_CHILD_PID_FILE", "CLAUDE_CODE_ENTRYPOINT"):   # FAKE_VERSION_EXIT: none from the runner's environment (Sol R5 F3, Astra F35)
         monkeypatch.delenv(k, raising=False)
 
     e = type("E", (), {})()
@@ -859,6 +859,24 @@ def test_muse_preflight_and_doctor(env):
     code, out = run(e, "doctor", "--lane", "muse", "--kind", "design", "--feature", "09-22-x")
     assert code == 0 and "- **CLI:** fake-cli 1.0, auth.json present\n- **Model:** muse-wonder-full-1.0, effort high (lanes.toml), contributor mode off" in out, out
     assert "\n- 🟢 fake-cli 1.0, auth.json present: muse (muse-wonder-full-1.0, high)\n" in run(e, "doctor")[1]
+
+
+# row 14h: the Neon pre-flight, its child environment and the one agy doctor row (2026-11-20 C5: agy models names the id; C6: it lists models with no login check; design round 1)
+def test_neon_preflight_and_doctor(env):
+    e = env
+    pf, dump = lambda lane="neon": run(e, "doctor", "--lane", lane, "--kind", "design", "--feature", "09-22-x"), lambda: json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
+    for k, v in (("FAKE_STDOUT", "  gemini-4-neon-high\tindented\ngemini-4-neon-high-preview\tGemini 4 Neon preview\ngemini-4-neon-high\n"), ("FAKE_STDERR", "gemini-4-neon-high\tGemini 4 Neon (High)\n"), ("FAKE_ENV_DUMP", str(e.tmp / "env.json")), ("GEMINI_API_KEY", "stray-key")): e.mp.setenv(k, v)   # an indented row, a longer id, the id alone, or the id on standard error, is no row (Sol F7, Astra F9, F29)
+    code, out = pf(); assert code == 64 and out.startswith("### 🔴 Pre-flight: Neon · design debate · FAILED") and "model gemini-4-neon-high is not in agy models" in out and "- **CLI:** agy fake-cli 1.0, model NOT KNOWN to agy" in out, out
+    e.mp.setenv("FAKE_STDOUT", "gemini-4-hydrogen-high\tGemini 4 Hydrogen (High)\ngemini-4-neon-high\tGemini 4 Neon (High)\n"); e.mp.setenv("FAKE_EXIT", "1"); assert (r := pf())[0] == 64 and "agy models failed (exit 1)" in r[1] and "is not in agy models" not in r[1] and "model not checked (agy models failed)" in r[1], r[1]; e.mp.delenv("FAKE_EXIT")   # the row printed, then a failed exit (Astra F37)
+    code, out = pf()
+    assert code == 0 and ["models"] in e.calls() and "GEMINI_API_KEY" not in dump() and "- **CLI:** agy fake-cli 1.0, model known to agy\n- **Model:** gemini-4-neon-high, effort high (lanes.toml; the id picks the level); login not checked (C6: no logged-out run was possible)" in out, out   # the dump is agy models'; the version call's own environment is untested, accepted residual R1 (Brandon, 2026-11-20)
+    e.mp.setenv("FAKE_VERSION_EXIT", "3"); assert (r := pf())[0] == 64 and r[1].startswith("### 🔴 Pre-flight: Neon · design debate · FAILED") and "model known to agy" in r[1], r[1]; e.mp.delenv("FAKE_VERSION_EXIT")   # a failed version call fails the pre-flight with the model listed (Sol R4 F2, Astra F28)
+    assert pf("gemini")[0] == 0 and "GEMINI_API_KEY" not in dump() and dump()["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true"   # the gemini pre-flight's version call (Neon F2)
+    rows = parsec.tomllib.loads((REPO / "lanes.toml").read_text(encoding="utf-8")); assert [rows["neon"][k] for k in ("command", "update")] == [rows["gemini"][k] for k in ("command", "update")]   # the shipped rows: one doctor row, one update
+    cmd, upd = json.dumps([sys.executable, str(FAKE)]), json.dumps([sys.executable, str(FAKE), "update", "agy"])
+    (e.tmp / "lanes.toml").write_text(f'[neon]\nmodel = "gemini-4-neon-high"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n[gemini]\nmodel = "g"\ncommand = {cmd}\nupdate = {upd}\n', encoding="utf-8")
+    code, out = run(e, "doctor", "--update")
+    assert "\n- 🟢 fake-cli 1.0, login in the first run's log: neon (gemini-4-neon-high, high), gemini (g)\n" in out and [c for c in e.calls() if c[:1] == ["update"]] == [["update"], ["update", "agy"]] and "- **update neon, gemini:** exit 0" in out, out   # the row's order no longer sends agy to the Kimi credentials check
 
 
 # row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
