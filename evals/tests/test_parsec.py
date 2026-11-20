@@ -59,6 +59,7 @@ def env(tmp_path, monkeypatch):
                      f'[sol]\nmodel = "gpt-5.6-sol"\neffort = "high"\ncommand = {cmd}\n'
                      f'[kimi]\nmodel = "kimi-code/k3"\ncommand = {cmd}\nhome = "{(tmp_path / "kimi-home").as_posix()}"\n'
                      f'[gemini]\nmodel = "gemini-3.8-flash-high"\ncommand = {cmd}\n'
+                     f'[neon]\nmodel = "gemini-4-neon-high"\neffort = "high"\ncommand = {cmd}\n'
                      f'[muse]\nmodel = "muse-wonder-full-1.0"\neffort = "high"\ncommand = {cmd}\n', encoding="utf-8")
     (tmp_path / "kimi-home").mkdir()
     (tmp_path / "kimi-home" / "config.toml").write_text('[models."kimi-code/k3"]\ndefault_effort = "high"\n', encoding="utf-8")
@@ -180,6 +181,33 @@ def test_muse_arguments_session_and_env(env):
     folder.mkdir(parents=True)
     (folder / "session.jsonl").write_text("{}\n", encoding="utf-8")
     assert parsec.muse_session_file(sid) == folder / "session.jsonl" and parsec.muse_session_file(str(uuid.uuid4())) is None   # P4: the watcher's only growing file
+
+
+# row 2c: the Neon argument list, its read rules, reply, session and child environment (2026-11-20 probes P2 to P8, C1, C4, C7; design round 1)
+def test_neon_arguments_reply_and_session(env):
+    e = env
+    ok = json.dumps({"conversation_id": "aa62064a-0000-4000-8000-000000000001", "status": "SUCCESS", "response": "Summary.\n\nVERDICT: PASS\n"})
+    for k, v in (("FAKE_STDOUT", ok), ("FAKE_ENV_DUMP", str(e.tmp / "env.json")), ("GEMINI_API_KEY", "stray-key"), ("FAKE_AGY_LOG", "I1120 03:42:30.932443 1 cli_setting_manager.go:98] CLI settings initialized: permissions=&{Allow:[] Deny:[write_file(*) command(*) read_url(*) execute_url(*) mcp(*)] Ask:[]}, toolPermission=request-review\n")): e.mp.setenv(k, v)   # 2026-11-20: a working key of unknown source and billing, never used; P8: the log line of the applied settings
+    with open(e.repo / ".claude" / "parsec.toml", "a", encoding="utf-8") as f: f.write(f'[[context]]\npath = "{(e.tmp / "look").as_posix()}"\nrole = "lookup"\n[[context]]\npath = "{(e.tmp / "refs").as_posix()}"\nrole = "reference-code"\n')
+    code, out = rnd(e, 1, "neon", "design", "--reference", "mod")
+    a, tree, folder = (e.calls() or [[]])[-1], e.wt / "_review" / "proj-09-22-x-design-neon", e.feat / "rounds" / "design-r1-neon"   # no call yet on the base tool: the empty fallback lets the red run reach the exit-code assert below (Sol R2 F1, Astra F17)
+    assert code == 0 and "### 🟢 Neon R1 Design Round: PASS" in out and (folder / "agy.json").is_file() and (folder / "agy.log").is_file(), out
+    assert a[a.index("-p") + 1] == "Read the file .parsec/brief.md and follow it exactly." and a[a.index("--model") + 1] == "gemini-4-neon-high" and a[a.index("--output-format") + 1] == "json" and a[a.index("--add-dir") + 1] == str(tree.resolve()) and a[a.index("--log-file") + 1] == str((folder / "agy.log").resolve()) and "--mode" not in a and "--conversation" not in a   # P4: no mode, auto with the deny rules
+    assert (perms := json.loads(a[a.index("--settings") + 1])["permissions"])["allow"] == [f"read_file({p.resolve().as_posix()})" for p in (e.repo / "AGENTS.md", e.tmp / "look", e.tmp / "refs" / "mod")] and sorted(perms["deny"]) == ["command(*)", "execute_url(*)", "mcp(*)", "read_url(*)", "write_file(*)"], perms   # C7: a path context.md names outside the tree was soft-denied without its rule
+    assert "GEMINI_API_KEY" not in (child := json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))) and child["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and child["NO_COLOR"] == "1"
+    assert (folder / "reply.md").read_text(encoding="utf-8") == "Summary.\n\nVERDICT: PASS\n" and (rec := e.record("design", 1, "neon"))["session"] == "aa62064a-0000-4000-8000-000000000001" and rec["verdict"] == "PASS" and rec["resumed"] is False and "- your lane, Neon: read with your file tools only; you have no shell" in (tree / ".parsec" / "context.md").read_text(encoding="utf-8")
+    assert rnd(e, 2, "neon")[0] == 0 and (a := e.calls()[-1])[a.index("--conversation") + 1] == "aa62064a-0000-4000-8000-000000000001" and e.record("design", 2, "neon")["resumed"] is True and "CONTINUITY:" in (e.feat / "rounds" / "design-r2-neon" / "brief.md").read_text(encoding="utf-8") and len(json.loads(a[a.index("--settings") + 1])["permissions"]["allow"]) == 2   # no --reference, no reference rule (Sol R2 F5)
+    assert rnd(e, 3, "neon", "design", "--fresh")[0] == 0 and "--conversation" not in e.calls()[-1]
+    e.mp.setenv("FAKE_STDOUT", json.dumps({"conversation_id": "c4", "status": "ERROR", "error": "print timeout after 30s", "finished_reason": "print_timeout"})); code, out = rnd(e, 4, "neon", "design", "--fresh")   # C4: a cut run has no response
+    assert code == 65 and (r := e.record("design", 4, "neon"))["verdict"] == "NONE" and all(w in r["warnings"] and f"warning: {w}" in out for w in ("agy status ERROR: print timeout after 30s", "agy finished_reason: print_timeout")), out
+    e.mp.setenv("FAKE_STDOUT", json.dumps({"conversation_id": "c5", "status": "SUCCESS", "response": "Reading it.\n\nVERDICT: PASS\n", "denied_actions": [{"action": "read_file"}]})); code, out = rnd(e, 4, "neon", "design", "--fresh")   # P3, C7: a soft-denied step ends the run; its partial text never counts (Sol F6)
+    assert code == 65 and e.record("design", 4, "neon")["verdict"] == "NONE" and "warning: a soft-denied step ended the run" in out and not (e.feat / "rounds" / "design-r4-neon" / "reply.md").exists(), out
+    e.mp.setenv("FAKE_STDOUT", "not json"); code, out = rnd(e, 4, "neon", "design", "--fresh")
+    assert code == 65 and "warning: agy status NONE: agy.json is missing or not one JSON object" in out and not (e.feat / "rounds" / "design-r4-neon" / "reply.md").exists() and e.record("design", 4, "neon")["session"] == "unknown", out   # no id in agy.json nor the pending record (Astra F36)
+    (f4 := e.feat / "rounds" / "design-r4-neon").joinpath("pending.json").write_text(json.dumps(dict(e.record("design", 4, "neon"), session="pending-id")), encoding="utf-8"); (f4 / "record.json").unlink(); (f4 / "reply.md").write_text("VERDICT: PASS\n", encoding="utf-8"); (f4 / "agy.json").write_text(json.dumps({"status": "SUCCESS", "response": "VERDICT: PASS\n"}), encoding="utf-8")   # a stale reply, and a clean object with no conversation id from a run the cap ended (Sol R2 F4, Astra F10, F36)
+    assert parsec.collect(str(e.repo), "09-22-x", "design", 4, "neon", run={"cli_exit": None, "seconds": 1, "timeout": True}) == 67 and not (f4 / "reply.md").exists() and (r := e.record("design", 4, "neon"))["verdict"] == "NONE" and r["session"] == "pending-id"   # the run result round run passes on the cap; the session falls back to the pending one
+    e.mp.setenv("FAKE_AGY_LOG", "CLI settings initialized: permissions=&{Allow:[] Deny:[write_file(*) command(*)] Ask:[]}\n"); e.mp.setenv("FAKE_STDOUT", json.dumps({"status": "SUCCESS", "response": " "})); assert (r := rnd(e, 4, "neon", "design", "--fresh"))[0] == 65 and all(f"warning: {w}" in r[1] for w in ("agy response is blank or missing", "agy.log shows no deny rules, or not all of AGY_DENY")), r[1]   # Fable F2, F4: a blank response, and a log that lacks three deny rules
+    assert run(e, "round", "close", "--feature", "09-22-x")[0] == 0 and not tree.exists()
 
 
 # row 4: the brief reaches standard input byte for byte (2026-09-17; 2026-08-11), the kind's insert added by the tool (2026-09-25 audit: seat briefs derived by shell edit)
@@ -842,7 +870,7 @@ def test_build_run_success_test(env):
     git("worktree", "add", "--detach", str(co), e.head, cwd=e.repo)
     e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG)
     e.mp.setenv("FAKE_STDOUT", "I made the edits.\n")
-    e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
+    e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json")); e.mp.setenv("GEMINI_API_KEY", "stray-key")   # 2026-11-20: the key reaches no agy call (Sol F8)
     e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
     b = lambda *a: run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", e.head, *a)
     code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", "0" * 40)
@@ -860,7 +888,7 @@ def test_build_run_success_test(env):
     assert a[a.index("--log-file") + 1] == str((e.feat / "build" / "task-01-agy.log").resolve())
     assert [a[i + 1] for i, x in enumerate(a) if x == "--add-dir"] == [str(co.resolve()), str(e.feat.parent.resolve())]   # 2026-09-27 gk-12: a read in the primary's docs root was denied
     child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
-    assert child["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and not list(co.glob("AGY-TASK-BRIEF-*"))
+    assert child["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and "GEMINI_API_KEY" not in child and not list(co.glob("AGY-TASK-BRIEF-*"))
     report = (e.feat / "build" / "task-01-report.md").read_text(encoding="utf-8")
     assert report.startswith("I made the edits.") and "agy exit 0 (recorded, never trusted)" in report
     assert "build task 01 gemini: ok" in e.ledger()

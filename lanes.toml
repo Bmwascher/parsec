@@ -46,3 +46,11 @@ update = ["agy", "update"]              # Brandon, 2026-09-22: agy's own "Update
 # percentage, so, as with kimi, the doctor can name a release before agy update installs it.
 latest = "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app"
 latest_after = "Stable Version: "
+
+[neon]                                  # the Gemini review lane, by name only: "Gemini" or "Google" (Brandon, 2026-11-20); Sol stays the default
+model = "gemini-4-neon-high"            # Gemini 4 Neon; the id's suffix picks the thinking level, High, Google's default (2026-11-20)
+effort = "high"                         # recorded only: the lane passes no --effort (agy 1.5.13's help lists one, 2026-11-20 P12); the id's suffix picks the level
+command = ["agy"]
+update = ["agy", "update"]              # the same CLI as gemini, so one doctor row and one update
+latest = "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app"
+latest_after = "Stable Version: "
