@@ -244,7 +244,7 @@ def parsed_findings(text, counts):
     """The reply's finding lines, ID to (grade, title, note), after the Trigger: regrade (templates/brief.md, Rules): a Critical or Important
     one with no Trigger: line in its block, from a finding line of its ID to the next finding line or the end, counts as Minor. None when the
     lines exceed the counts line. Also the regraded (ID, grade) pairs, the counts after the regrade, and whether the lines match the counts line."""
-    found, held, cur = {}, set(), None               # design look r1 F1 (Brandon, Q13): where a trigger sits, a misread layout can only keep a grade (a reply layout the parser misreads as a finding line can drop one: residual R2, Q12 and Q15)
+    found, held, cur = {}, set(), None               # design look r1 F1 (Brandon, Q13): a trigger's place alone never drops a grade; a misread layout, a fence unfenced misreads included, can drop a grade under residual R2 (Q12, Q15, Q17)
     lines = [(at, ln.decode()) for at, ln in unfenced(text.encode("utf-8"))]   # a fenced line is evidence: no finding line, no trigger
     for k, (at, line) in enumerate(lines):
         quoted = bool(re.match(r"\s*(?:(?:[-*+•]|\d+[.)])\s+)*>", line))   # design r4 F22 (Brandon, Q11): a quoted line is an example: no finding line, no trigger; pre-review r1 F2: a quote inside a list item too
