@@ -226,6 +226,7 @@ WORD, TAG = r"(?!(?:Critical|Important|Minor|[Rr]ound)\b)[A-Za-z][\w-]*", r"[\w-
 ID = rf"(?:(?:{WORD} ){{1,3}}(?:(?:{TAG}|\d{{1,3}}) )?{TAG}|(?:{WORD} ){{1,3}}{TAG} \d{{1,3}}|(?:{WORD} ){{0,2}}(?=[A-Za-z]\w*-){WORD} \d{{1,3}}|{WORD} \d{{1,3}}|[A-Z][A-Za-z]{{0,3}}\d{{1,3}})"   # F1, FabF1, Opus F2, api-validator 2 (2026-10-04 to 10-06 Afterparty); Sol R3 F1, api-validator t2-7 1, r1-2, 15 M1 (field audit 4); never "There are 2" (pre-review F1) or "round-x 2" (Kimi F1)
 FINDING = re.compile(rf"^(?!(?:Critical|Important|Minor)\b)({ID}(?: ?/ ?{ID})*)\W{{1,6}}(Critical|Important|Minor)\b[^\w`]*(.*)")   # 2026-09-28 audit: \W* ate a title's opening backtick
 GRADES = ("Critical", "Important", "Minor")
+TRIGGER = re.compile(r"(?:(?:\d+[.)]|\+)\s*)?[`_*]*trigger[`_*]{0,3}:", re.I)   # 2026-11-22, atrocityUI cn-10: rounds paid for guards nothing reaches; templates/brief.md, Rules: the line, after strip_line, under a Critical or Important finding; pre-review r1 F1: after a list number or + bullet, in code, bold or underscores
 
 
 def bullet_title(t, wrapped=False):
@@ -239,20 +240,35 @@ def bullet_title(t, wrapped=False):
 PENDING = "\n\n  → **Answer:** pending"
 
 
-def summary_bullets(text, counts, reply="the reply"):
+def parsed_findings(text, counts):
+    """The reply's finding lines, ID to (grade, title, note), after the Trigger: regrade (templates/brief.md, Rules): a Critical or Important
+    one with no Trigger: line in its block, from a finding line of its ID to the next finding line or the end, counts as Minor. None when the
+    lines exceed the counts line. Also the regraded (ID, grade) pairs, the counts after the regrade, and whether the lines match the counts line."""
+    found, held, cur = {}, set(), None               # design look r1 F1 (Brandon, Q13): a trigger's place alone never drops a grade; a misread layout, a fence unfenced misreads included, can drop a grade under residual R2 (Q12, Q15, Q17)
+    lines = [(at, ln.decode()) for at, ln in unfenced(text.encode("utf-8"))]   # a fenced line is evidence: no finding line, no trigger
+    for k, (at, line) in enumerate(lines):
+        quoted = bool(re.match(r"\s*(?:(?:[-*+•]|\d+[.)])\s+)*>", line))   # design r4 F22 (Brandon, Q11): a quoted line is an example: no finding line, no trigger; pre-review r1 F2: a quote inside a list item too
+        if (m := FINDING.match(bare := strip_line(line))) and not quoted:
+            nxt = lines[k + 1][1].strip() if k + 1 < len(lines) and lines[k + 1][0] == at + len(line.encode()) + 1 else ""   # the bullet's … only: the raw next line (pre-review r1 F3: past a fence, none, as at the base) that runs on in lower case, after a line with no closing mark, is the title's rest; a Trigger: line is not (design r1 F10)
+            cur = m[1]
+            found.setdefault(cur, (m[2], bullet_title(m[3], bool(re.match(r"[a-z\d(]", nxt)) and not FINDING.match(nxt) and not TRIGGER.match(strip_line(nxt)) and not re.search(r"[.!?:;)`*]$", line.rstrip()))))
+        elif cur and not quoted and TRIGGER.match(bare):
+            held.add(cur)
+    have = tuple(sum(g == s for g, _ in found.values()) for s in GRADES)
+    if counts is None or any(h > c for h, c in zip(have, counts)):
+        return {}, [], counts, False                 # every bullet is ? and nothing is regraded, as before
+    regraded = [(i, g) for i, (g, _) in found.items() if g != "Minor" and i not in held]   # the counts line counts by the finding lines' own grades (part 7): one count moves per regraded line (design r2 F1)
+    after = tuple(c - sum(g == s for _, g in regraded) for s, c in zip(GRADES, counts[:2])) + (counts[2] + len(regraded),)
+    return {i: ("Minor", t, f" (was {g}, no Trigger line)") if (i, g) in regraded else (g, t, "") for i, (g, t) in found.items()}, regraded, after, have == counts
+
+
+def summary_bullets(found, counts, reply="the reply"):
     """2026-09-25 audit: a pasted heading alone reached about a third of rounds. One bullet per finding, by grade, its ID where
     the reply's finding lines parse, and '?' naming the reply for each the counts line has beyond them (2026-09-28 audit: a Fable
     look's carried Minors, in four shapes, blanked every bullet); all '?' when the parsed lines exceed the counts."""
-    found = {}
-    for k, line in enumerate(lines := text.splitlines()):
-        if (m := FINDING.match(strip_line(line))) and m[1] not in found:
-            nxt = lines[k + 1].strip() if k + 1 < len(lines) else ""   # a next line that runs on in lower case, after a line with no closing mark, is the title's rest
-            found[m[1]] = (m[2], bullet_title(m[3], bool(re.match(r"[a-z\d(]", nxt)) and not FINDING.match(nxt) and not re.search(r"[.!?:;)`*]$", line.rstrip())))
-    have = tuple(sum(g == s for g, _ in found.values()) for s in GRADES)
-    fits = counts is not None and all(h <= c for h, c in zip(have, counts))
-    rows = [(i, g, t) for i, (g, t) in found.items()] if fits else []
-    rows += [("?", s, f"not parsed, see {reply}") for s, h, c in zip(GRADES, have if fits else (0, 0, 0), counts or ()) for _ in range(c - h)]
-    return have == counts, [f"- **{i} · {g}:** {t}{PENDING}" for i, g, t in sorted(rows, key=lambda r: GRADES.index(r[1]))]   # 2026-10-04 Afterparty: an answer left to fill held the post until the author answered
+    have = tuple(sum(g == s for g, _, _ in found.values()) for s in GRADES)
+    rows = [(i, g, t, w) for i, (g, t, w) in found.items()] + [("?", s, f"not parsed, see {reply}", "") for s, h, c in zip(GRADES, have, counts or ()) for _ in range(c - h)]
+    return [f"- **{i} · {g}{w}:** {t}{PENDING}" for i, g, t, w in sorted(rows, key=lambda r: GRADES.index(r[1]))]   # 2026-10-04 Afterparty: an answer left to fill held the post until the author answered
 
 
 def verdict_of(text):
@@ -781,15 +797,21 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     if kind == "lastlook" and lane != "fable":    # 2026-09-23: six Opus stand-ins were recorded as a plain PASS
         degraded = degraded or f"stand-in last look on {lane}; a Fable last look on the same head supersedes it"
     end = now()
+    found, regraded, after, ok = parsed_findings(text, counts)   # before the record, which keeps the regrade, its warnings and its ledger text; after the end stamp (design r1 F3); the ? bullets, which a count alone sizes, stay after the record (design r2 F3)
+    ids = ", ".join(i for i, _ in regraded)
+    warnings += [f"{i} is graded {g} with no Trigger: line under it, so it counts as Minor (templates/brief.md, Rules)" for i, g in regraded]
+    if verdict == "FIX" and kind != "panel" and regraded and after[:2] == (0, 0):   # the verdict stays the reviewer's (verify keys on it); a panel's FIX judges options; a last look's PASS comes from its confirming question (design r1 F5)
+        warnings.append("no Critical or Important finding stands after the regrade: " + ("this FIX answers the one confirming question, and a second FIX goes to Brandon (debate, The Fable looks)" if kind == "lastlook" and pend.get("resumed") and any(r.get("verdict") in VERDICTS and (r.get("kind"), r.get("lane")) == (kind, lane) and r["round"] < n and r.get("session") in (pend.get("session"), "unknown") for r in records(fdir)) else "answer each finding, then ask the one confirming question for the PASS (debate, The Fable looks)" if kind == "lastlook" else "the FIX closes on Minor once each finding is answered (round collect --close-minor)"))   # design r3 F18: that question resumes the agent of an earlier look with a verdict; r5, r6 F25: a retry after NONE resumes its own look's agent, never an earlier look's, so it is still the first look ("unknown": a look collected without --agent-id, as prepare reads it); a record with a verdict of this kind and lane holds its round, as prepare reads it (design look r1 F4)
     rec = {**{k: v for k, v in pend.items() if k not in ("warnings",)}, "cli_version": cli_version, "session": session,
            "continuity": continuity, "end": stamp(end), "seconds": run["seconds"], "cli_exit": run["cli_exit"],
            "verdict": verdict, "clean_tree": clean, "tier": tier, "tier_check": check, "degraded": degraded,
            "closed_on_minor": None, "reply": str(reply) if text.strip() else None, "reply_sha256": sha256(reply) if text.strip() else None,
-           "warnings": warnings}   # pre-review F2: a dead round's path is its rerun's
+           "regraded": [f"{i} {g}" for i, g in regraded], "warnings": warnings}   # pre-review F2: a dead round's path is its rerun's
     write_json(rec_path, rec)
     pend_path.unlink()                           # before the ledger line: the record is the truth, a replay would overwrite it (r2, Sol)
     cont = "" if continuity is None and not pend.get("resumed") else (", continuity answered" if continuity else ", continuity: not answered")
     ledger_line(fdir, f"{kind} r{n} {lane}: {verdict}{cont}" + (", tier: fast" if tier == "fast" else "") + (f", degraded ({degraded})" if degraded else "")
+                + (f", regraded to Minor: {ids}" if ids else "")
                 + (f", rounds\\{folder.name}\\reply.md" if text.strip() else ", no reply"), warnings)   # 2026-09-25 fld-15: a dead round named the reply its rerun wrote
     sub = "  ".join(f"{k} {v[:6]}" for k, v in pend.get("subject", {}).items())
     print(f"{pretty_name(lane, kind, n)}\nverdict: {verdict}    " + ("in-session agent" if lane in AGENT_OF else f"cli exit: {run['cli_exit']}    {run['seconds']} s    "
@@ -801,7 +823,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     if code and transcript:
         print("transcript tail:\n" + "\n".join(transcript.splitlines()[-5:]))
     took = round((end - dt.datetime.fromisoformat(pend.get("start") or stamp(end))).total_seconds() / 60) if ran_ms is None else round(ran_ms / 60000)   # 2026-09-23 phase 6: a prose summary
-    ok, bullets = summary_bullets(text, counts, f"rounds\\{folder.name}\\reply.md")
+    bullets = summary_bullets(found, after, f"rounds\\{folder.name}\\reply.md")
     if bullets and not ok:
         print("warning: the reply's finding lines do not match its counts line: fill each ? from the reply")
     pf, pre = fdir / "rounds" / f"preflight-{lane}.txt", ""   # a green pre-flight rides in the lane's next summary (2026-10-04 Afterparty: 2 of 5 were posted)
@@ -811,7 +833,7 @@ def collect(repo, feature, kind, n, lane, degraded=None, close_minor=None, run=N
     except OSError as e:                         # pre-review F3: past the record, a read error must not cost the block
         print(f"warning: the pre-flight line was not read: {e}")
     block = (f"### {MARKERS.get(verdict, '⚪')} {pretty_name(lane, kind, n)}: {verdict} ({took} min{' since prepare' * (lane in AGENT_OF and ran_ms is None)}, {'resumed' if pend.get('resumed') else 'fresh'})"
-             + ("\n\nCritical {} · Important {} · Minor {}".format(*counts) if counts else "") + pre + "".join(f"\n\n{b}" for b in bullets))
+             + ("\n\nCritical {} · Important {} · Minor {}".format(*after) + (f" (regraded to Minor, no Trigger line: {ids})" if ids else "") if counts else "") + pre + "".join(f"\n\n{b}" for b in bullets))
     try:                                         # 2026-09-28 audit: 68 of 153 blocks posted and none reached a delegator; the finish report carries this file
         with open(fdir / "summaries.md", "a", encoding="utf-8", newline="\n") as f:
             f.write(block.replace(PENDING, "").rstrip() + "\n\n")   # pre-review F4: the answers are in chat, never a stale "pending"

@@ -5,6 +5,7 @@ Read by the `backup-implementer` alone; the Gemini lane gets the brief and nothi
 ## What to build
 
 - Build exactly the task, transcribing its code. The fenced blocks are the code; you type them in, you do not improve them.
+- Add no guard (a nil or existence check, a caught error, a fallback default) and no edge-case path (a branch, deferral, mode or helper for one case) that the fenced code lacks: the task's code decides what can fail. A guard or path you think is missing is a concern named with its trigger (`done with concerns`), never an edit.
 - The task's commit step is NOT yours: the session makes the commit after its own checks. Every other step is.
 - The failing test first, and it must fail for the expected reason the task names. Then the implementation. Then the whole suite green, output clean, before you report.
 - A task that says it has nothing worth testing under the project's test policy is built without a failing test.

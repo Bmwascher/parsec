@@ -120,7 +120,7 @@ The driver is your session itself, so every flow starts here. It sorts the reque
 ![Seat](https://img.shields.io/badge/seat-author-4c6ef5?style=flat-square)
 ![Model](https://img.shields.io/badge/Claude_Opus_5.5-high_effort-d97757?style=flat-square)
 
-Writes the spec, then the task list with the full test and implementation code in every task. In a debate it answers each design finding with an edit or a refutation backed by evidence. When a review finds a blocking defect after the build, it writes the fix task.
+Writes the spec, then the task list with the full test and implementation code in every task. In a debate it answers each design finding with an edit or a refutation backed by evidence. When a review finds a blocking defect after the build, it writes the fix task, or refutes the finding with evidence.
 
 ### Implementers
 
@@ -367,7 +367,9 @@ A **round** is one reviewer reading one package and returning one verdict. A **d
 | ![Important](https://img.shields.io/badge/Important-f08c00?style=flat-square) | Yes |
 | ![Minor](https://img.shields.io/badge/Minor-868e96?style=flat-square) | Never, with one exception: a last-look Minor triaged "fix now" gets the one confirming question from the same Fable agent. Otherwise it's fixed or recorded, then the debate closes. |
 
-Wording-only findings never cost a round either: the reviewer grades them Minor, and only the reviewer grades a finding. Code defects matter most, then tests, and quota is never spent on prose.
+Wording-only findings never cost a round either: the reviewer grades them Minor, and only the reviewer grades a finding, apart from the regrade below. Code defects matter most, then tests, and quota is never spent on prose.
+
+A Critical or Important finding names its trigger, what reaches it, cited, on a `Trigger:` line of its own anywhere under the finding line, before the next finding line and outside any quote or fence, then what you see without the fix, or a rule of your project the defect breaks; a finding with neither effect is Minor at most, whatever its trigger. `round collect` counts one with no such line as Minor and says so in the summary, so a finding with no trigger does not hold a round open (a quoted line is never a finding line; a fence indented four spaces can still lend it a trigger; and a line collect misreads as a finding line, in such a fence or in prose such as `See F3 (Important) above`, can take the count or the trigger of a real finding and prompt a close on Minor, and a code block inside a list item, or another fence collect misreads, hides the lines after it, so the next finding's bullet can turn into a `?` with the mismatch warning, and a finding whose `Trigger:` line it hides counts as Minor and can prompt a close on Minor, so every finding in the reply is still answered before any close); in a last look the one confirming question still gives the PASS, a FIX on that question goes to you, a first look rerun after an interrupted reply is still the first look when each earlier look was collected with `--agent-id` (one collected without it can make the rerun read as the confirming question), and a finding line collect cannot parse keeps the reviewer's grade. A finding that nothing can reach closes as "not reachable", with no code and no test, at any grade, and a guard or edge-case path with no named trigger is itself a finding. A hazard your project's rules name is a trigger in itself.
 
 ### The rules of a debate
 
@@ -388,10 +390,10 @@ After the build, three reviewers look at the diff in order:
 | 2 | ![Sol](https://img.shields.io/badge/Sol-cross--vendor_debate-10a37f?style=flat-square) | Debates the diff to a settled verdict; Astra, Kimi or Neon by name, Muse only with approval |
 | 3 | ![Fable](https://img.shields.io/badge/Fable-last_look-d97757?style=flat-square) | A *fresh* agent reviews the final head. The version bump is the last commit before it, so its PASS names the exact commit that ships, or the commit of a "fix now" Minor its confirming question covers. |
 
-A blocking finding anywhere in the gate becomes a fix task, written by the author and built like any other task. Only the commit that the final PASS names is ever merged.
+An unrefuted blocking finding anywhere in the gate becomes a fix task, written by the author and built like any other task; one refuted as "not reachable" gets no code. Only the commit that the final PASS names is ever merged.
 
 > [!WARNING]
-> **A gate with no cross-vendor lane is degraded, never a PASS**, except a small change in bounded work: one you can judge from the diff alone, 20 or fewer changed lines in 2 or fewer files (test files count only toward the lines), no new or changed API call, hook, event handler or timing, and no Critical or Important in any Opus pre-review round. The driver records why in the ledger, and the Fable last look still runs. A Critical or Important in that last look makes it not small: after the fix, the cross-vendor round runs, then Fable's confirming question. If codex is down and Muse isn't approved, the round is recorded as degraded and the finish report says so.
+> **A gate with no cross-vendor lane is degraded, never a PASS**, except a small change in bounded work: one you can judge from the diff alone, 20 or fewer changed lines in 2 or fewer files (test files count only toward the lines), no new or changed API call, hook, event handler or timing, and no Critical or Important in any Opus pre-review round. The driver records why in the ledger, and the Fable last look still runs. A Critical or Important in that last look makes it not small: after the answer, a fix or a refutation, the cross-vendor round runs on the head it leaves, then Fable's confirming question. If codex is down and Muse isn't approved, the round is recorded as degraded and the finish report says so.
 
 ### Panels and polls
 
@@ -463,7 +465,7 @@ checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 
 ## The tool
 
-`tools/parsec.py` is one Python file, kept at or under 1,309 lines by a test. The skills call it, so you rarely need to. Every subcommand has `--help`, and exit code `64` means a usage or setup error, such as a missing config or an unknown lane.
+`tools/parsec.py` is one Python file, kept at or under 1,331 lines by a test. The skills call it, so you rarely need to. Every subcommand has `--help`, and exit code `64` means a usage or setup error, such as a missing config or an unknown lane.
 
 | Command | What it does |
 |---|---|
@@ -543,9 +545,9 @@ The plugin stays lean because its size limits fail the build. An addition that w
 
 | What | Limit |
 |---|---|
-| `tools/parsec.py` | 1,309 lines |
+| `tools/parsec.py` | 1,331 lines |
 | `tools/hooks.py` | 80 lines |
-| All tests | 1,596 lines |
+| All tests | 1,648 lines |
 | The frozen checkers | 522 lines |
 | All skill, template, agent and model prose | 15,000 words |
 | Any one skill | 1,600 words |

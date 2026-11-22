@@ -766,7 +766,7 @@ def test_reason_cap(env):
 # row 14d: the tool prints the summary's opening lines (2026-09-23 KitnEssentials phase 6 on 0.1.11 posted a prose summary: no marker, counts or bullets)
 def test_summary_head(env):
     e = env
-    e.mp.setenv("FAKE_REPLY", "- F2 · Important: 3 of 20 lack it.\n\nCritical 0, Important 1, Minor 2\n\nVERDICT: FIX\n")   # pre-review F1: printed Important 3
+    e.mp.setenv("FAKE_REPLY", "- F2 · Important: 3 of 20 lack it.\nTrigger: a reload\n\nCritical 0, Important 1, Minor 2\n\nVERDICT: FIX\n")   # pre-review F1: printed Important 3
     assert run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x")[0] == 0   # 2026-10-04 Afterparty: 2 of 5 pre-flights and 4 of 18 summaries posted
     out = rnd(e, 1)[1]
     assert "\n\n### 🔴 Astra R1 Design Round: FIX (0 min, fresh)\n\nCritical 0 · Important 1 · Minor 2\n\n🟢 Pre-flight (" in out, out
@@ -786,7 +786,7 @@ def test_summary_head(env):
 def test_summary_bullets(env):
     e = env
     ask = "\n\n  → **Answer:** pending"
-    e.mp.setenv("FAKE_REPLY", "### F1 (Important, new): the hold is lost.\n- **M2 · Minor — wording.**\nC1: holds\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")
+    e.mp.setenv("FAKE_REPLY", "### F1 (Important, new): the hold is lost.\nTrigger: a reload\n- **M2 · Minor — wording.**\nC1: holds\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")
     out = rnd(e, 1)[1]
     assert blk(out).endswith("Critical 0 · Important 1 · Minor 1\n\n- **F1 · Important:** the hold is lost." + ask + "\n\n- **M2 · Minor:** wording." + ask + "\n"), out
     e.mp.setenv("FAKE_REPLY", "- **M1.** no grade\n\nCritical 0 · Important 0 · Minor 1\n\nVERDICT: PASS\n")   # four shapes in five replies (Fable poll): no ID guessed
@@ -794,7 +794,7 @@ def test_summary_bullets(env):
     assert "warning: the reply's finding lines do not match its counts line" in out and blk(out).endswith("- **? · Minor:** not parsed, see rounds\\design-r2-astra\\reply.md" + ask + "\n")
     e.mp.setenv("FAKE_REPLY", "VERDICT: PASS\n\nlater draft text\n")
     assert "the reply's last line is not a VERDICT line with one verdict word" in rnd(e, 3)[1]   # and the next round 3 below reruns it under its number
-    e.mp.setenv("FAKE_REPLY", "- M1 · Minor: wording.\n- I1 · Important: the hold is lost.\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")   # 0.1.15 last look F1: a Minor first in the reply
+    e.mp.setenv("FAKE_REPLY", "- M1 · Minor: wording.\n- I1 · Important: the hold is lost.\n  Trigger: a reload\n\nCritical 0 · Important 1 · Minor 1\n\nVERDICT: FIX\n")   # 0.1.15 last look F1: a Minor first in the reply
     out = rnd(e, 3)[1]
     assert out.index("- **I1 · Important:**") < out.index("- **M1 · Minor:**"), out
     span = "see `" + "long " * 30 + "code` end"                        # 2026-09-28 audit: gk-4, gk-5, gk-7 bullets broke their Markdown
@@ -811,6 +811,58 @@ def test_summary_bullets(env):
     out = rnd(e, 6)[1]
     assert "do not match" not in out and all(f"- **{i} · Minor:** {t}" in out for i, t in (("Opus F2", "carried: ride, wording"), ("Opus F3 / Sol F1", "twice"), ("api-validator 2", "no ID"), ("FabF1", "own"),
                                                                                          ("Sol R3 F1 / Astra R3 F2", "lanes"), ("api-validator t2-7 1", "tasks"), ("api-validator r2-M1", "round"), ("F9", "kept"))), out
+
+
+# row 14g: a Critical or Important finding with no Trigger: line counts as Minor (2026-11-22, atrocityUI cn-10: rounds paid for guards against cases nothing reaches, 33 of 71 cut)
+def test_regrade_without_trigger(env):
+    e = env
+    e.mp.setenv("FAKE_REPLY", "Trigger: above every finding\n- F1 · Important: kept.\n  **Trigger:** a reload\n- F2 · Important: no trigger. Trigger: inline\nF3 · Critical: lost.\n- F4 · Minor: wording.\n"
+                "  Trigger: under the Minor\n- F5 · Important: beside an unparsed one.\n- **M1.** no grade\n  Trigger: under M1\n\nCritical 1 · Important 3 · Minor 2\n\nVERDICT: FIX\n")   # design look r1 F1 (Brandon, Q13): a trigger in the finding's block holds it, an unparsed item's included; above every finding or inside the line, none
+    out = rnd(e, 1)[1]
+    assert "warning: F2 is graded Important with no Trigger: line under it, so it counts as Minor (templates/brief.md, Rules)" in out and "warning: F3 is graded Critical" in out and "stands after" not in out, out
+    assert "Critical 0 · Important 2 · Minor 4 (regraded to Minor, no Trigger line: F2, F3)\n\n- **F1 · Important:** kept." in out and "- **F5 · Important:** beside an unparsed one." in out and "- **F3 · Minor (was Critical, no Trigger line):** lost." in out and "- **F4 · Minor:** wording." in out and "- **? · Minor:** not parsed" in out, out
+    assert e.record("design", 1, "astra")["regraded"] == ["F2 Important", "F3 Critical"] and ", regraded to Minor: F2, F3, rounds" in e.ledger().splitlines()[-1] and "Critical 1 · Important 3 · Minor 2" in (e.feat / "rounds" / "design-r1-astra" / "reply.md").read_text(encoding="utf-8")
+    e.mp.setenv("FAKE_REPLY", "### F1 · Important: the hold is lost.\n\nCritical 0 · Important 1 · Minor 0\n\nVERDICT: FIX\n")   # the verdict stays the reviewer's; the close-on-Minor path ends it
+    out = rnd(e, 2)[1]
+    assert "### 🔴 Astra R2 Design Round: FIX" in out and "Critical 0 · Important 0 · Minor 1 (regraded to Minor, no Trigger line: F1)" in out and "do not match" not in out and "warning: no Critical or Important finding stands after the regrade: the FIX closes on Minor once each finding is answered (round collect --close-minor)" in out, out
+    assert run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "2", "--lane", "astra", "--close-minor", "regraded")[0] == 0 and run(e, "verify", "--feature", "09-22-x")[1].strip() == "MATCH (CLOSED ON MINOR)"
+    e.mp.setenv("FAKE_REPLY", "- F1 · Important: listed first.\n- F2 · Minor: wording.\n\n### F1 · Important: listed first\n- Trigger: a reload\n### F3 · Important: bold after\n**Trigger**: x\n• F4 · Important: kimi\n• Trigger: x\n### F5 · Important: heading\n\n### Trigger: x\n"
+                "F6 · Important: upper\nTRIGGER: x\n### F7 · Important: no mark\ntrigger: lower case\nF8 · Important: a title the reviewer\nhard-wrapped here\nTrigger: x\n"
+                "F9 · Important: the record is written before `regraded`\nis added to it\nTrigger: x\nF10 · Important: a title whose rest\nStarts in capitals\nTrigger: x\nF11 · Important: a title on\nthree lines, as the reviewer\nwrapped it twice\nTrigger: x\n"
+                "F12 · Important: numbered\n1. Trigger: x\nF13 · Important: plus\n+ Trigger: x\nF14 · Important: code\n`Trigger:` x\nF15 · Important: underscored\n_Trigger:_ x\nF16 · Important: numbered bold\n1) **Trigger:** x\nF17 · Important: the hold is lost\n```lua\nlocal x\n```\nbecause the frame hides it\nTrigger: x\n\nCritical 0 · Important 16 · Minor 1\n\nVERDICT: PASS\n")   # design r1 F4, F10: every form, a title the trigger leaves whole, a wrapped title; design look r1 F1: the wraps the … test does not see; pre-review r1 F1: the list, code and underscore shapes; F3: a fence is no title's rest
+    out = rnd(e, 3)[1]
+    assert "### 🟢 Astra R3 Design Round: PASS" in out and "Critical 0 · Important 16 · Minor 1\n\n- **F1 · Important:** listed first." in out and "- **F7 · Important:** no mark\n" in out and "- **F8 · Important:** a title the reviewer …" in out and "- **F17 · Important:** the hold is lost\n" in out and e.record("design", 3, "astra")["regraded"] == [], out
+    e.mp.setenv("FAKE_REPLY", "Opus F2 · Important: carried.\n### F3 · Important: fenced.\n```\nTrigger: in a fence\nF12 · Important: a fenced example\n```\n### F9 · Important: late\n\nA first paragraph.\n\nTrigger: after it\nF10 · Important: quoted\n> Trigger: quoted\n"   # diff r1 F3: an ID of its own, so a counted example removes the ? row, and the trigger above it, so a read one holds F3
+                "### F11 · Important: a heading, then an unparsed item\n- **M2.** no grade\n  Trigger: under M2\n\nCritical 0 · Important 6 · Minor 0\n\nVERDICT: FIX\n")   # design r2 F2, F4: a fence (a finding line in it too) and a quote give none; Q13: a later line and an unparsed item's trigger hold; a ? keeps its grade and the FIX open
+    out = rnd(e, 4)[1]
+    assert "Critical 0 · Important 3 · Minor 3 (regraded to Minor, no Trigger line: Opus F2, F3, F10)" in out and "- **? · Important:** not parsed" in out and "stands after" not in out, out
+    e.mp.setenv("FAKE_REPLY", "- F1 · Important: one.\n- F2 · Important: two.\n\nCritical 0 · Important 1 · Minor 0\n\nVERDICT: FIX\n")   # more finding lines than the counts line: nothing regraded, a ? keeps its grade
+    out = rnd(e, 5)[1]
+    assert "Critical 0 · Important 1 · Minor 0\n\n- **? · Important:** not parsed" in out and "regraded" not in out and "do not match its counts line" in out, out
+    e.mp.setenv("FAKE_REPLY", "- F1 · Important: no trigger.\n\nCritical 0 · Important 1 · Minor 0\n\nVERDICT: PASS\n")   # design r3 F19: a PASS is regraded too, its verdict and marker kept
+    code, out = rnd(e, 6)
+    assert code == 0 and "### 🟢 Astra R6 Design Round: PASS" in out and "Critical 0 · Important 0 · Minor 1 (regraded to Minor, no Trigger line: F1)" in out and "stands after" not in out and e.record("design", 6, "astra")["regraded"] == ["F1 Important"], out
+    e.mp.setenv("FAKE_REPLY", "- **F1.** Settings fail to load (Important)\n  Trigger: a reload\n\n> F9 · Important: an earlier example\n- > F8 · Important: a quote in a list item\n\nCritical 0 · Important 1 · Minor 0\n\nVERDICT: FIX\n")   # design r4 F22 (Brandon, Q11): a quoted example must not take the real Important's count; pre-review r1 F2: nor one quoted inside a list item
+    out = rnd(e, 7)[1]
+    assert "Critical 0 · Important 1 · Minor 0\n\n- **? · Important:** not parsed" in out and "F9" not in out and "F8" not in out and "regraded" not in out and "stands after" not in out, out
+    e.mp.setenv("FAKE_REPLY", "- F1 · Important: no trigger.\n\nVERDICT: FIX\n")   # diff r1 F3: with no counts line, a finding with no trigger is not regraded
+    assert "no counts line" in (out := rnd(e, 8)[1]) and "regraded" not in out and "stands after" not in out and e.record("design", 8, "astra")["regraded"] == [], out
+    for kind, rest in (("panel", []), ("lastlook", ["--head", e.head, "--base", e.base])):   # a panel's FIX judges options; a last look's PASS comes from its one confirming question (design r1 F5)
+        run(e, "round", "prepare", "--feature", "09-22-x", "--kind", kind, "--round", "1", "--lane", "fable", "--brief", str(e.brief), *rest)
+        (e.feat / "rounds" / f"{kind}-r1-fable" / "reply.md").write_text("F1 · Important: no trigger.\n\nCritical 0 · Important 1 · Minor 0\n\nVERDICT: FIX\n", encoding="utf-8")
+        out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", kind, "--round", "1", "--lane", "fable")[1]
+        assert "Critical 0 · Important 0 · Minor 1 (regraded to Minor, no Trigger line: F1)" in out and "closes on Minor" not in out and ("stands after" in out) == ("ask the one confirming question for the PASS" in out) == (kind == "lastlook"), out   # diff r1 F3: a panel prints no close warning of any text
+    ll = lambda lane, n, reply, *extra: (run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "lastlook", "--round", str(n), "--lane", lane, "--brief", str(e.brief), "--head", e.head, "--base", e.base, *extra),
+                                         (e.feat / "rounds" / f"lastlook-r{n}-{lane}" / "reply.md").write_text(reply, encoding="utf-8"), run(e, "round", "collect", "--feature", "09-22-x", "--kind", "lastlook", "--round", str(n), "--lane", lane)[1])[2]
+    fix = "F1 · Important: no trigger.\n\nCritical 0 · Important 1 · Minor 0\n\nVERDICT: FIX\n"
+    assert "verdict: NONE" in ll("opus", 1, "F1 · Important: no trigger.\n")   # design r5 F25: an interrupted first look, rerun on its session under its own number, is still the first look
+    out = ll("opus", 1, fix, "--resume", "z-9")
+    assert "ask the one confirming question for the PASS" in out and "goes to Brandon" not in out, out
+    assert "verdict: NONE" in ll("opus", 2, "F1 · Important: no trigger.\n")   # design r6 F25: a fresh look on a new head after the z-9 look's verdict, cut off, then rerun on its own agent
+    out = ll("opus", 2, fix, "--resume", "y-1")
+    assert "ask the one confirming question for the PASS" in out and "goes to Brandon" not in out, out
+    out = ll("fable", 2, fix, "--resume", "z-9") + ll("opus", 3, "F1 · Important: no trigger.\n", "--resume", "y-1") + ll("opus", 3, fix, "--resume", "y-1")   # design r3 F18: the confirming question itself, after the look's recorded FIX: on an unknown session, and (design look r1 F2) on the session the look recorded, (diff r1 F3) retried after a NONE
+    assert out.count("warning: no Critical or Important finding stands after the regrade: this FIX answers the one confirming question, and a second FIX goes to Brandon") == 2 and "ask the one confirming question for the PASS" not in out, out
 
 
 # row 14f: what the brief names reaches the package (2026-09-28 audit: notes.md and a canvas file no package held; gate logs in 4 of 16 phases)
