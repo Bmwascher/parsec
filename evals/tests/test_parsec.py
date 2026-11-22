@@ -832,7 +832,7 @@ def test_regrade_without_trigger(env):
                 "F12 · Important: numbered\n1. Trigger: x\nF13 · Important: plus\n+ Trigger: x\nF14 · Important: code\n`Trigger:` x\nF15 · Important: underscored\n_Trigger:_ x\nF16 · Important: numbered bold\n1) **Trigger:** x\nF17 · Important: the hold is lost\n```lua\nlocal x\n```\nbecause the frame hides it\nTrigger: x\n\nCritical 0 · Important 16 · Minor 1\n\nVERDICT: PASS\n")   # design r1 F4, F10: every form, a title the trigger leaves whole, a wrapped title; design look r1 F1: the wraps the … test does not see; pre-review r1 F1: the list, code and underscore shapes; F3: a fence is no title's rest
     out = rnd(e, 3)[1]
     assert "### 🟢 Astra R3 Design Round: PASS" in out and "Critical 0 · Important 16 · Minor 1\n\n- **F1 · Important:** listed first." in out and "- **F7 · Important:** no mark\n" in out and "- **F8 · Important:** a title the reviewer …" in out and "- **F17 · Important:** the hold is lost\n" in out and e.record("design", 3, "astra")["regraded"] == [], out
-    e.mp.setenv("FAKE_REPLY", "Opus F2 · Important: carried.\n### F3 · Important: fenced.\n```\nF3 · Important: fenced.\nTrigger: in a fence\n```\n### F9 · Important: late\n\nA first paragraph.\n\nTrigger: after it\nF10 · Important: quoted\n> Trigger: quoted\n"
+    e.mp.setenv("FAKE_REPLY", "Opus F2 · Important: carried.\n### F3 · Important: fenced.\n```\nTrigger: in a fence\nF12 · Important: a fenced example\n```\n### F9 · Important: late\n\nA first paragraph.\n\nTrigger: after it\nF10 · Important: quoted\n> Trigger: quoted\n"   # diff r1 F3: an ID of its own, so a counted example removes the ? row, and the trigger above it, so a read one holds F3
                 "### F11 · Important: a heading, then an unparsed item\n- **M2.** no grade\n  Trigger: under M2\n\nCritical 0 · Important 6 · Minor 0\n\nVERDICT: FIX\n")   # design r2 F2, F4: a fence (a finding line in it too) and a quote give none; Q13: a later line and an unparsed item's trigger hold; a ? keeps its grade and the FIX open
     out = rnd(e, 4)[1]
     assert "Critical 0 · Important 3 · Minor 3 (regraded to Minor, no Trigger line: Opus F2, F3, F10)" in out and "- **? · Important:** not parsed" in out and "stands after" not in out, out
@@ -845,11 +845,13 @@ def test_regrade_without_trigger(env):
     e.mp.setenv("FAKE_REPLY", "- **F1.** Settings fail to load (Important)\n  Trigger: a reload\n\n> F9 · Important: an earlier example\n- > F8 · Important: a quote in a list item\n\nCritical 0 · Important 1 · Minor 0\n\nVERDICT: FIX\n")   # design r4 F22 (Brandon, Q11): a quoted example must not take the real Important's count; pre-review r1 F2: nor one quoted inside a list item
     out = rnd(e, 7)[1]
     assert "Critical 0 · Important 1 · Minor 0\n\n- **? · Important:** not parsed" in out and "F9" not in out and "F8" not in out and "regraded" not in out and "stands after" not in out, out
+    e.mp.setenv("FAKE_REPLY", "- F1 · Important: no trigger.\n\nVERDICT: FIX\n")   # diff r1 F3: with no counts line, a finding with no trigger is not regraded
+    assert "no counts line" in (out := rnd(e, 8)[1]) and "regraded" not in out and "stands after" not in out and e.record("design", 8, "astra")["regraded"] == [], out
     for kind, rest in (("panel", []), ("lastlook", ["--head", e.head, "--base", e.base])):   # a panel's FIX judges options; a last look's PASS comes from its one confirming question (design r1 F5)
         run(e, "round", "prepare", "--feature", "09-22-x", "--kind", kind, "--round", "1", "--lane", "fable", "--brief", str(e.brief), *rest)
         (e.feat / "rounds" / f"{kind}-r1-fable" / "reply.md").write_text("F1 · Important: no trigger.\n\nCritical 0 · Important 1 · Minor 0\n\nVERDICT: FIX\n", encoding="utf-8")
         out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", kind, "--round", "1", "--lane", "fable")[1]
-        assert "Critical 0 · Important 0 · Minor 1 (regraded to Minor, no Trigger line: F1)" in out and "closes on Minor" not in out and ("ask the one confirming question for the PASS" in out) == (kind == "lastlook"), out
+        assert "Critical 0 · Important 0 · Minor 1 (regraded to Minor, no Trigger line: F1)" in out and "closes on Minor" not in out and ("stands after" in out) == ("ask the one confirming question for the PASS" in out) == (kind == "lastlook"), out   # diff r1 F3: a panel prints no close warning of any text
     ll = lambda lane, n, reply, *extra: (run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "lastlook", "--round", str(n), "--lane", lane, "--brief", str(e.brief), "--head", e.head, "--base", e.base, *extra),
                                          (e.feat / "rounds" / f"lastlook-r{n}-{lane}" / "reply.md").write_text(reply, encoding="utf-8"), run(e, "round", "collect", "--feature", "09-22-x", "--kind", "lastlook", "--round", str(n), "--lane", lane)[1])[2]
     fix = "F1 · Important: no trigger.\n\nCritical 0 · Important 1 · Minor 0\n\nVERDICT: FIX\n"
@@ -859,7 +861,7 @@ def test_regrade_without_trigger(env):
     assert "verdict: NONE" in ll("opus", 2, "F1 · Important: no trigger.\n")   # design r6 F25: a fresh look on a new head after the z-9 look's verdict, cut off, then rerun on its own agent
     out = ll("opus", 2, fix, "--resume", "y-1")
     assert "ask the one confirming question for the PASS" in out and "goes to Brandon" not in out, out
-    out = ll("fable", 2, fix, "--resume", "z-9") + ll("opus", 3, fix, "--resume", "y-1")   # design r3 F18: the confirming question itself, after the look's recorded FIX: on an unknown session, and (design look r1 F2) on the session the look recorded
+    out = ll("fable", 2, fix, "--resume", "z-9") + ll("opus", 3, "F1 · Important: no trigger.\n", "--resume", "y-1") + ll("opus", 3, fix, "--resume", "y-1")   # design r3 F18: the confirming question itself, after the look's recorded FIX: on an unknown session, and (design look r1 F2) on the session the look recorded, (diff r1 F3) retried after a NONE
     assert out.count("warning: no Critical or Important finding stands after the regrade: this FIX answers the one confirming question, and a second FIX goes to Brandon") == 2 and "ask the one confirming question for the PASS" not in out, out
 
 
