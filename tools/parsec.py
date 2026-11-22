@@ -226,7 +226,7 @@ WORD, TAG = r"(?!(?:Critical|Important|Minor|[Rr]ound)\b)[A-Za-z][\w-]*", r"[\w-
 ID = rf"(?:(?:{WORD} ){{1,3}}(?:(?:{TAG}|\d{{1,3}}) )?{TAG}|(?:{WORD} ){{1,3}}{TAG} \d{{1,3}}|(?:{WORD} ){{0,2}}(?=[A-Za-z]\w*-){WORD} \d{{1,3}}|{WORD} \d{{1,3}}|[A-Z][A-Za-z]{{0,3}}\d{{1,3}})"   # F1, FabF1, Opus F2, api-validator 2 (2026-10-04 to 10-06 Afterparty); Sol R3 F1, api-validator t2-7 1, r1-2, 15 M1 (field audit 4); never "There are 2" (pre-review F1) or "round-x 2" (Kimi F1)
 FINDING = re.compile(rf"^(?!(?:Critical|Important|Minor)\b)({ID}(?: ?/ ?{ID})*)\W{{1,6}}(Critical|Important|Minor)\b[^\w`]*(.*)")   # 2026-09-28 audit: \W* ate a title's opening backtick
 GRADES = ("Critical", "Important", "Minor")
-TRIGGER = re.compile(r"trigger\*{0,2}:", re.I)   # 2026-11-22, atrocityUI cn-10: rounds paid for guards nothing reaches; templates/brief.md, Rules: the line, after strip_line, under a Critical or Important finding
+TRIGGER = re.compile(r"(?:(?:\d+[.)]|\+)\s*)?[`_*]*trigger[`_*]{0,3}:", re.I)   # 2026-11-22, atrocityUI cn-10: rounds paid for guards nothing reaches; templates/brief.md, Rules: the line, after strip_line, under a Critical or Important finding; pre-review r1 F1: after a list number or + bullet, in code, bold or underscores
 
 
 def bullet_title(t, wrapped=False):
@@ -244,12 +244,12 @@ def parsed_findings(text, counts):
     """The reply's finding lines, ID to (grade, title, note), after the Trigger: regrade (templates/brief.md, Rules): a Critical or Important
     one with no Trigger: line in its block, from a finding line of its ID to the next finding line or the end, counts as Minor. None when the
     lines exceed the counts line. Also the regraded (ID, grade) pairs, the counts after the regrade, and whether the lines match the counts line."""
-    found, held, cur = {}, set(), None               # design look r1 F1 (Brandon, Q13): where a trigger sits, a misread layout can only keep a grade (a misread finding line can drop one: residual R2)
-    lines = [ln.decode() for _, ln in unfenced(text.encode("utf-8"))]   # a fenced line is evidence: no finding line, no trigger
-    for k, line in enumerate(lines):
-        quoted = line.lstrip().startswith(">")       # design r4 F22 (Brandon, Q11): a quoted line is an example: no finding line, no trigger
+    found, held, cur = {}, set(), None               # design look r1 F1 (Brandon, Q13): where a trigger sits, a misread layout can only keep a grade (a finding line in a fence indented four spaces can drop one: residual R2, Q12)
+    lines = [(at, ln.decode()) for at, ln in unfenced(text.encode("utf-8"))]   # a fenced line is evidence: no finding line, no trigger
+    for k, (at, line) in enumerate(lines):
+        quoted = bool(re.match(r"\s*(?:(?:[-*+•]|\d+[.)])\s+)*>", line))   # design r4 F22 (Brandon, Q11): a quoted line is an example: no finding line, no trigger; pre-review r1 F2: a quote inside a list item too
         if (m := FINDING.match(bare := strip_line(line))) and not quoted:
-            nxt = lines[k + 1].strip() if k + 1 < len(lines) else ""   # the bullet's … only: a next line that runs on in lower case, after a line with no closing mark, is the title's rest; a Trigger: line is not (design r1 F10)
+            nxt = lines[k + 1][1].strip() if k + 1 < len(lines) and lines[k + 1][0] == at + len(line.encode()) + 1 else ""   # the bullet's … only: the raw next line (pre-review r1 F3: past a fence, none, as at the base) that runs on in lower case, after a line with no closing mark, is the title's rest; a Trigger: line is not (design r1 F10)
             cur = m[1]
             found.setdefault(cur, (m[2], bullet_title(m[3], bool(re.match(r"[a-z\d(]", nxt)) and not FINDING.match(nxt) and not TRIGGER.match(strip_line(nxt)) and not re.search(r"[.!?:;)`*]$", line.rstrip()))))
         elif cur and not quoted and TRIGGER.match(bare):
