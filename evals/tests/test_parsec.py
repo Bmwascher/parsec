@@ -1,7 +1,7 @@
 """Tests for tools/parsec.py, each standing on a recorded failure (step 5 of the rethink, rows 1 to 17).
 The fake CLI is evals/tests/fake_cli.py; no model call, no network. Rows that need junctions or
 taskkill run on Windows only."""
-import importlib.util, json, os, pytest, stat, subprocess, sys, time, uuid
+import importlib.util, json, os, pytest, shutil, stat, subprocess, sys, time, uuid
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -48,8 +48,6 @@ def env(tmp_path, monkeypatch):
     feat = repo / "docs" / "09-22-x"
     feat.mkdir(parents=True)
     (feat / "spec.md").write_text("# Spec\n\nthe spec\n", encoding="utf-8")
-    (feat / "tasks.md").write_bytes(b"# Plan\n\nheader line\n\n## Global constraints\n\n- keep it\n\n## File map\n\n- a\n\n"
-                                    b"## Task 1: first\n\n- [ ] step\n\n```lua\nlocal x = 1\n```\n\n## Task 2: second\n\n- [ ] other\n")
     (feat / "ledger.md").write_text("# Ledger\n\n", encoding="utf-8")
     brief = tmp_path / "brief.md"
     brief.write_bytes(TRICKY.encode("utf-8"))
@@ -223,6 +221,7 @@ def test_brief_bytes_reach_stdin(env):
     rnd(e, 2)
     sent = (e.feat / "rounds" / "design-r2-astra" / "brief.md").read_bytes()
     assert sent == b"# Brief\n\n## 2. Task\n\nread it\n\n### " + (REPO / "templates" / "brief-design.md").read_bytes().replace(b"\r\n", b"\n")[2:].rstrip(b"\n") + b"\n\n## 3. Rules\n\n- r\n\n## 7. Final check\n" + parsec.CONTINUITY.encode()   # resumed: the tool adds the line (2026-09-28 audit, gk-4)
+    assert b"\n\nThe subject is `.parsec/spec.md`; `.parsec/context.md` names the rubric and each evidence file. The feature has no task list: after the go, the session writes the code and its tests from this spec, test first. Review the spec: behaviour left open, contradictions, cases it does not decide, a file, name, signature or call site in its Design section that does not exist or cannot work where it lands in the tree, and anything that would make correct code impossible. Check that every Behaviour case traces to the Goal and to a test or named check in its Testing section. A missing implementation is not a finding.\n\n## 3. Rules" in sent   # direct-build B2
     assert (e.tmp / "stdin.bin").read_bytes() == sent and e.record("design", 2, "astra")["brief_sha256"] == parsec.sha256(e.feat / "rounds" / "design-r2-astra" / "brief.md")
     prep = lambda kind, lane, *x: run(e, "round", "prepare", "--feature", "09-22-x", "--kind", kind, "--round", "2" if x else "1", "--lane", lane, "--brief", str(e.brief),
                                       "--head", e.head, *(["--base", e.base] if kind != "design" else []), *x)
@@ -439,7 +438,7 @@ def test_verify_states(env):
     assert v()[1].strip() == "MATCH"
     run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "2", "--lane", "astra", "--degraded", "kimi only")
     assert v()[1].strip() == "MATCH (DEGRADED PASS)"
-    (e.feat / "tasks.md").write_bytes((e.feat / "tasks.md").read_bytes() + b"\n## Task 3: fix\n\n- [ ] x\n")
+    (e.feat / "spec.md").write_text("# Spec\n\nthe spec, amended\n", encoding="utf-8")
     assert v()[1].strip() == "CHANGED"
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     code, out = v("--record-amendment", "fix task for a gate finding")
@@ -447,9 +446,10 @@ def test_verify_states(env):
     (e.feat / "rounds" / "panel-r1-fable" / "reply.md").write_text("VERDICT: BLIND\n", encoding="utf-8")
     assert "no counts line" not in run(e, "round", "collect", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable")[1]   # field audit 4: 8 of 8 blind panel records warned
     code, out = v("--record-amendment", "fix task for a gate finding")
-    assert code == 0 and "amendment 1 recorded" in out and v()[1].strip() == "MATCH (DEGRADED PASS)"   # the flag carries
+    assert code == 0 and f"amendment 1 recorded: spec {parsec.sha256(e.feat / 'spec.md')[:8]}\n" in out and v()[1].strip() == "MATCH (DEGRADED PASS)"   # the flag carries
+    assert json.loads((e.feat / "rounds" / "amendment-1.json").read_text(encoding="utf-8"))["subject"] == {"spec": parsec.sha256(e.feat / "spec.md")}   # direct-build B4
     assert (e.feat / "rounds" / "amendment-1.json").is_file()
-    assert rnd(e, 1, "sol", "diff")[0] == 0 and set(e.record("diff", 1, "sol")["subject"]) == {"spec", "tasks"}   # Brandon, 2026-09-23 (A+): every gate seat checks the diff against the approved design
+    assert rnd(e, 1, "sol", "diff")[0] == 0 and set(e.record("diff", 1, "sol")["subject"]) == {"spec"}   # Brandon, 2026-09-23 (A+): every gate seat checks the diff against the approved design
     assert "- amendment 1: fix task for a gate finding" in (e.wt / "_review" / "proj-09-22-x-diff-sol" / ".parsec" / "context.md").read_text(encoding="utf-8")
     e.mp.setenv("FAKE_REPLY", "VERDICT: FIX\n")
     rnd(e, 3)
@@ -458,6 +458,67 @@ def test_verify_states(env):
     assert v()[1].strip() == "MATCH (CLOSED ON MINOR)"
     (e.feat / "spec.md").write_text("changed\n", encoding="utf-8")
     assert v()[1].strip() == "CHANGED"
+
+
+# direct-build B4 (2026-11-25): verify compares the spec alone; a 0.1.54 record of spec and tasks still reads; a missing spec never matches
+def test_verify_spec_alone(env):
+    e = env
+    v = lambda *a: run(e, "verify", "--feature", "09-22-x", *a)
+    (e.feat / "rounds" / "design-r1-fable").mkdir(parents=True)
+    parsec.write_json(e.feat / "rounds" / "design-r1-fable" / "record.json", {"kind": "design", "verdict": "PASS", "end": "2026-11-20T10:00:00", "subject": {"spec": parsec.sha256(e.feat / "spec.md"), "tasks": "0" * 64}})
+    assert v()[1].strip() == "MATCH"                                # no tasks.md
+    (e.feat / "tasks.md").write_text("old list\n", encoding="utf-8")
+    assert v()[1].strip() == "MATCH"                                # whatever it holds
+    (e.feat / "spec.md").unlink()
+    assert v()[1].strip() == "CHANGED"
+    code, out = v("--record-amendment", "no spec")
+    assert code == 64 and f"amendment refused: no spec.md in {e.feat}" in out and not list((e.feat / "rounds").glob("amendment-*")) and "amendment" not in e.ledger(), out
+    parsec.write_json(e.feat / "rounds" / "amendment-1.json", {"time": "2026-11-21T10:00:00", "reason": "0.1.54 wrote it, then raised", "subject": {"spec": None, "tasks": None}, "degraded": None})
+    (e.feat / "tasks.md").unlink()
+    assert v()[1].strip() == "CHANGED"                              # a null spec never matches a missing file
+
+
+# direct-build B2 (2026-11-25): a design round runs on spec.md alone and refuses without it, writing nothing
+def test_design_round_on_spec_alone(env):
+    e = env
+    (e.feat / "spec.md").rename(e.tmp / "spec.md")
+    for args in (["run", "--lane", "astra"], ["prepare", "--lane", "fable"]):
+        code, out = run(e, "round", args[0], "--feature", "09-22-x", "--kind", "design", "--round", "1", *args[1:], "--brief", str(e.brief), "--head", e.head)
+        assert code == 64 and f"design round without spec.md in {e.feat}" in out and not (e.feat / "rounds").exists(), out
+    (e.tmp / "spec.md").rename(e.feat / "spec.md")
+    (e.feat / "tasks.md").write_text("old list\n", encoding="utf-8")   # an older folder's list: not copied, packed or hashed
+    assert rnd(e, 1)[0] == 0 and set(e.record("design", 1, "astra")["subject"]) == {"spec"}
+    assert (e.feat / "rounds" / "design-r1-astra" / "spec.md").is_file() and not (e.feat / "rounds" / "design-r1-astra" / "tasks.md").exists()
+    assert not (e.wt / "_review" / "proj-09-22-x-design-astra" / ".parsec" / "tasks.md").exists()
+
+
+# direct-build B5 (2026-11-25): an older folder's tasks.md reaches a reviewer only as evidence, named by the brief or passed with --file
+def test_legacy_tasks_md_is_evidence(env):
+    e = env
+    (e.feat / "tasks.md").write_text("old list\n", encoding="utf-8")
+    other, upper, dead = e.tmp / "x" / "tasks.md", e.tmp / "y" / "TASKS.md", e.feat / "build" / "task-01-report.md.dead24"
+    for f, body in ((other, "other list\n"), (upper, "upper list\n"), (dead, "old report\n")):
+        f.parent.mkdir(); f.write_text(body, encoding="utf-8")
+    (named := e.tmp / "named.md").write_text("# Brief\n\nRead `tasks.md`.\n", encoding="utf-8")
+    folder, warn = e.feat / "rounds" / "prereview-r1-opus", "packed tasks.md from the feature folder as evidence (the brief named it)"
+
+    def prep(brief, *files):                                         # (exit code, printed text, evidence name to text, subject keys)
+        code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus", "--brief", str(brief),
+                        "--head", e.head, "--base", e.base, *[x for f in files for x in ("--file", str(f))])
+        ev = {q.name: q.read_text(encoding="utf-8") for q in (folder / ".parsec" / "evidence").glob("*")}
+        got = (code, out, ev, set(json.loads((folder / "pending.json").read_text(encoding="utf-8"))["subject"]), (folder / ".parsec" / "tasks.md").exists())
+        shutil.rmtree(folder)
+        return got
+    code, out, ev, subject, packed = prep(named)
+    assert code == 0 and ev == {"1-tasks.md": "old list\n"} and warn in out and subject == {"spec"} and not packed, out
+    code, out, ev, subject, packed = prep(e.brief)
+    assert code == 0 and ev == {} and warn not in out and subject == {"spec"} and not packed, out
+    code, out, ev, _, _ = prep(named, other)
+    assert code == 0 and ev == {"1-tasks.md": "other list\n"} and warn not in out, out
+    code, out, ev, _, _ = prep(named, upper)
+    assert code == 0 and ev == {"1-TASKS.md": "upper list\n", "2-tasks.md": "old list\n"} and warn in out, out
+    code, out, ev, _, _ = prep(e.brief, dead)
+    assert code == 0 and ev == {"1-task-01-report.md.dead24": "old report\n"}, out
 
 
 # row 12b: a `#` line in a fenced code block is no heading (2026-10-02, KitnEssentials 10-02 task 1: a fenced .toc file cut a brief at "## Title:")
@@ -628,8 +689,8 @@ def test_inputs_and_preflight(env):
     assert (folder / "pending.json").is_file() and git("rev-parse", "HEAD", cwd=tree) == e.head and f"code root: {tree}" in out
     ctx = (folder / ".parsec" / "context.md").read_text(encoding="utf-8")
     assert f"brief: {folder / '.parsec' / 'brief.md'}" in out and "evidence/1-reply-r1.md is a copy of reply-r1.md" in ctx and str(extra) not in ctx
-    assert ctx.splitlines()[2].startswith("- your lane, Opus: read with your file tools only") and (folder / ".parsec" / "tasks.md").is_file()   # 2026-09-23 audit: Fable was told it had a shell
-    assert "- design: .parsec/spec.md and .parsec/tasks.md, the reviewed design\n- amendments: none" in ctx   # Brandon, 2026-09-23 (A+); reviewed, since a waived spec reading is no approval (batch F)
+    assert ctx.splitlines()[2].startswith("- your lane, Opus: read with your file tools only") and (folder / ".parsec" / "spec.md").is_file() and not (folder / ".parsec" / "tasks.md").exists()   # 2026-09-23 audit: Fable was told it had a shell
+    assert "- design: .parsec/spec.md, the reviewed design\n- amendments: none" in ctx   # Brandon, 2026-09-23 (A+); reviewed, since a waived spec reading is no approval (batch F)
     bounded = e.repo / "docs" / "09-22-b"                           # bounded work has no design to pack
     bounded.mkdir()
     (bounded / "ledger.md").write_text("# Ledger\n", encoding="utf-8")
@@ -640,7 +701,7 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")
     r = e.record("prereview", 1, "opus")
     assert code == 0 and r["verdict"] == "PASS" and r["agent"] == "reviewer-opus" and r["model"].startswith("claude-opus") and not (folder / "pending.json").exists()
-    assert set(r["subject"]) == {"spec", "tasks"}
+    assert set(r["subject"]) == {"spec"}
     again = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")[1]
     assert "in-session agent" in out and r["degraded"] is None and "already collected" in again and "round run" not in again   # 0.1.9 last look F2: an agent round has no round run
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "lastlook", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base)

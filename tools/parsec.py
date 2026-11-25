@@ -377,7 +377,7 @@ def write_package(root, args, primary, fdir, kind, ctx):   # ctx: prepare's one 
     ev = [(pkg / "evidence" / f"{k}-{src.name}", src) for k, src in enumerate([Path(f).resolve() for f in args.file or []], 1)]   # checked in prepare
     lines += [f"- evidence: .parsec/evidence/{dst.name} is a copy of {src.name}" for dst, src in ev]   # 2026-09-23: a reviewer looked for notes.md by its own name; never the path, which can name a lane
     subject = {}
-    for name in (("spec.md", "tasks.md") if kind != "panel" else ()):   # a design round has both (prepare); a gate round packs the approved design when there is one (Brandon, 2026-09-23: A+)
+    for name in (("spec.md",) if kind != "panel" else ()):   # a design round has the spec (prepare); a gate round packs it when there is one (Brandon, 2026-09-23: A+); no task list since direct-build (2026-11-25)
         if (fdir / name).is_file():
             shutil.copyfile(fdir / name, pkg / name)
             subject[name[:-3]] = sha256(fdir / name)
@@ -614,8 +614,8 @@ def prepare(args, launch):
     args.base, args.head = [c and git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary).strip() for c in (args.base, args.head)]   # full ids: "HEAD" in a reused review worktree named its old commit (2026-09-23, Astra)
     if args.lane == "neon" and (agents := [p for p in git_out(["ls-tree", "-z", "--name-only", args.head], primary).split("\0") if p.casefold() in (".agents", ".agent", "_agents", "_agent")]):   # 2026-11-20 build-time finding: agy loaded the tree's .agents/hooks.json and ran its hooks, which the deny rules do not cover; mcp_config.json unprobed; any case, as Windows ignores it, read from the root entries with -z so no path is quoted (security review); the four root folders agy's own skill agy-customizations names, each of whose hooks.json ran in the probes after Fable last look r1 F1 (Brandon: "Refuse such a tree (Recommended)"; Q7: "Refuse all four (Recommended)")
         raise Exit(64, f"lane neon refuses head {args.head[:12]}: it tracks {', '.join(agents)}, and agy loads a root .agents/, .agent/, _agents/ or _agent/ folder (its agy-customizations skill) and runs its hooks outside the deny rules; review this head on another lane")
-    if args.kind == "design" and not all((fdir / n).is_file() for n in ("spec.md", "tasks.md")):
-        raise Exit(64, f"design round without spec.md and tasks.md in {fdir}")
+    if args.kind == "design" and not (fdir / "spec.md").is_file():
+        raise Exit(64, f"design round without spec.md in {fdir}")
     lines = [l.decode() for _, l in unfenced(read_text(fdir / "spec.md").encode())] if args.kind != "panel" and (fdir / "spec.md").is_file() else []   # every round that packs the spec (write_package)
     at = next((k + 1 for k, l in enumerate(lines) if re.match(r" {0,3}##\s+Decision summary\b", l, re.I)), len(lines))   # a heading as CommonMark reads it: up to 3 spaces, the hashes, then whitespace (Sol diff r1 F2)
     words = len(" ".join(lines[at:next((k for k in range(at, len(lines)) if re.match(r" {0,3}#{1,6}(?:\s|$)", lines[k])), len(lines))]).split())   # only a heading ends the summary; ##text is text (Sol diff r1 F1)
@@ -660,7 +660,7 @@ def prepare(args, launch):
     tree = worktree_path(cfg, primary, frel, args.kind, args.lane)   # every lane reads the code at --head (2026-09-23: seven phases gave Opus and Fable the primary)
     ensure_worktree(primary, tree, args.head)
     held = {Path(p).name for p in git_out(["ls-files", "-z"], tree).split("\0")} if named else set()   # 0.1.20 last look: a bare plugin.json, at .claude-plugin/plugin.json, warned
-    given, skip = args.file or [], held | {"reply.md", "record.json", "summaries.md", "pending.json", "spec.md", "tasks.md", "notes.md"}
+    given, skip = args.file or [], held | {"reply.md", "record.json", "summaries.md", "pending.json", "spec.md", "notes.md"}   # an older folder's tasks.md goes as evidence when named (direct-build B5)
     loose = {n: p for n in sorted(named) if (p := resolve_under(fdir, n)).is_file() and p.is_relative_to(fdir) and not p.is_relative_to(folder)   # pre-review F1: the path as named, never another folder's
              and p.name not in skip | {Path(f).name for f in given}}
     args.file = given + sorted({str(p) for p in loose.values()})   # 2026-10-04 Afterparty ap-13: 27 rounds warned of a named feature-folder file and went without it
@@ -669,14 +669,13 @@ def prepare(args, launch):
         model, effort, agent = row["model"], row.get("effort", "lane home"), None
         subject, w, read = write_package(tree, args, primary, fdir, args.kind, ctx)   # one config read for context.md and the Neon read rules (Sol F3, Astra F3)
         if args.kind == "design":
-            for name in ("spec.md", "tasks.md"):
-                shutil.copyfile(fdir / name, folder / name)
+            shutil.copyfile(fdir / "spec.md", folder / "spec.md")
     else:
         model, effort, agent = agent_seat(args.lane)
         subject, w, _ = write_package(folder, args, primary, fdir, args.kind, ctx)
     warnings += w
     root = tree if cli else folder               # 2026-09-28 audit: gk-9's Sol R1 searched all of KitnDev for a canvas file (617 s)
-    warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless a task creates it"
+    warnings += [f"the brief names {n}, which neither the package nor the code root holds: pass it with --file, unless the branch creates it"
                  for n in sorted(named) if n not in loose and Path(n.replace("\\", "/")).name not in {Path(f).name for f in given} | {"reply.md", "record.json", "summaries.md", "pending.json"}   # pre-review F1, Sol diff r1 F2
                  and not any((b / n).exists() for b in (root, root / ".parsec", tree)) and n not in held]
     if args.kind in ("prereview", "diff", "lastlook") and not any(re.search(r"(?<![a-z])(?:gate|check|test)(?!s[a-z]|[a-rt-z])|\.log$", Path(f).name, re.I) for f in given):   # 2026-09-28 audit: gate logs in 4 of 16 phases; field audit 4: other files kept it silent; pre-review F5, Sol F1: never inside a word
@@ -861,7 +860,7 @@ def verify(args):
     primary = primary_of(args.repo)
     cfg = load_config(primary)
     fdir, _ = feature_dir(cfg, primary, args.feature)
-    have = {n: sha256(fdir / f"{n}.md") if (fdir / f"{n}.md").is_file() else None for n in ("spec", "tasks")}
+    have = {"spec": sha256(fdir / "spec.md") if (fdir / "spec.md").is_file() else None}   # the spec alone; a 0.1.54 record's tasks hash is not read (direct-build B4)
     design = [r for r in records(fdir) if r.get("kind") == "design" or "reason" in r]
     newest = design[-1] if design else None
     warnings = []
@@ -870,6 +869,8 @@ def verify(args):
         return r is not None and ("reason" in r or r.get("verdict") == "PASS" or
                                   (r.get("verdict") == "FIX" and r.get("closed_on_minor")))
     if args.record_amendment:
+        if have["spec"] is None:                  # 0.1.54 wrote the record and ledger line, then raised on the missing hash
+            raise Exit(64, f"amendment refused: no spec.md in {fdir}")
         if (open_ := sorted(p for p in (fdir / "rounds").glob("*/pending.json") if ".dead" not in p.parent.name)):   # 2026-09-25 fld-14: amendment 1 landed before the Fable FIX it answered
             raise Exit(64, f"amendment refused: {open_[0].parent.name} is prepared but not collected; collect it first")
         if not stands(newest):                    # Screenshot 1: a task list edited after its PASS
@@ -878,12 +879,12 @@ def verify(args):
         write_json(fdir / "rounds" / f"amendment-{k}.json",
                    {"time": stamp(), "reason": args.record_amendment, "subject": have, "degraded": newest.get("degraded")})
         ledger_line(fdir, f"amendment {k}: {args.record_amendment}", warnings)
-        print(f"amendment {k} recorded: spec {have['spec'][:8]}  tasks {have['tasks'][:8]}")
+        print(f"amendment {k} recorded: spec {have['spec'][:8]}")
         return 0
     if not stands(newest):
         print("NO-PASS-YET")
         return 0
-    status = "MATCH" if newest.get("subject") == have else "CHANGED"
+    status = "MATCH" if have["spec"] is not None and newest.get("subject", {}).get("spec") == have["spec"] else "CHANGED"   # a null-spec amendment never matches a missing file
     if status == "MATCH" and "reason" not in newest and newest.get("closed_on_minor"):
         status += " (CLOSED ON MINOR)"
     elif status == "MATCH" and newest.get("degraded"):
@@ -1132,7 +1133,7 @@ def parser():
     q = rnd.add_parser("close", help="remove the feature's review worktrees")
     q.add_argument("--feature", required=True)
     q.add_argument("--kind", choices=("panel",))  # 2026-09-22 r2 (Sol): a free string reached the name pattern; field audit 4: --kind lastlook left the diff tree
-    q = sub.add_parser("verify", help="spec.md and tasks.md against the newest design record or amendment")
+    q = sub.add_parser("verify", help="spec.md against the newest design record or amendment")
     q.add_argument("--feature", required=True)
     q.add_argument("--record-amendment", metavar="REASON", type=reason)
     q = sub.add_parser("remove-worktree", help="remove a non-primary worktree, links first")
