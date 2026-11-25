@@ -35,13 +35,8 @@ MUSE_FLAGS = ["exec", "--contributor-mode", "off",                  # 2026-10-12
               "--sandbox-network", "restricted"]                    # D2, unmeasured with the shell off; never --trust-workspace: it loads the project's rules and skills (P1, P4)
 AGY_DENY = ["write_file(*)", "command(*)", "read_url(*)", "execute_url(*)", "mcp(*)"]   # 2026-11-20: agy's default mode wrote a file and ran git log (P2); writes and commands came back as tool errors and the review went on (P4, P8, C2); fetch and MCP refusal unprobed
 PROMPT = "Read the file .parsec/brief.md and follow it exactly."   # kimi, muse and neon; nothing a driver typed reaches an argument list
-CLOSING = ("Do not run commands or attempt verification: the test steps, the commit step and "
-           "everything after the file edits are not yours; your only job is the file edits. "
-           "To find text in a file, use your grep_search tool, never a command.")   # 2026-09-28 poll: four field denials, all Select-String
 CONTINUITY = ("\n- This is a resumed round: above the VERDICT line, one line starting `CONTINUITY:` naming the verdict word of your most recent "
               "earlier round in this debate and one finding you raised there, or \"no findings\" if you raised none.\n")   # 2026-09-28 audit: gk-4's derived briefs lost it
-ROUTE_LINES = ("Print mode: starting", "Propagating selected model override", "applying agent mode accept-edits")
-SOFT_DENY = "soft-denying tool confirmation"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 MUSE_AUTH = lambda: Path.home() / ".config" / "muse" / "auth.json"   # 2026-10-12: muse has no login status command; presence only, never opened
 VRUN = r"(\d+(?:\.\d+)*)(-[\w.]+)?(?:\+[\w.]+)?"   # the version run vkey reads and the amber line prints whole (Sol design r1 F4 of 0.1.40): "codex-cli 0.159.2", "Muse Code 1.4.9 (1.4.9-R6297.1)", "0.164.0-alpha.2", "1.2.3+b"
@@ -860,7 +855,7 @@ def close_rounds(args):
     return 0
 
 
-# ---------------------------------------------------------------- verify, task-brief, build
+# ---------------------------------------------------------------- verify
 
 def verify(args):
     primary = primary_of(args.repo)
@@ -894,133 +889,6 @@ def verify(args):
     elif status == "MATCH" and newest.get("degraded"):
         status += " (DEGRADED PASS)"
     print(status)
-    return 0
-
-
-def sections(text):
-    """(heading, bytes-span) for each `## ` section, which a `#` heading ends too (2026-10-05 ap-15: a task ran into an
-    appendix's heading); the header is what comes before the first."""
-    marks = [(a, line.decode("utf-8", "replace").strip()) for a, line in unfenced(text) if re.match(rb"##? ", line)]
-    ends = [a for a, _ in marks[1:]] + [len(text)]
-    secs = [(h, text[a:b]) for (a, h), b in zip(marks, ends)]
-    return [s for s in secs if s[0].startswith("## ")], text[:next((a for a, h in marks if h.startswith("## ")), len(text))]
-
-
-def task_brief(args):
-    primary = primary_of(args.repo)
-    cfg = load_config(primary)
-    fdir, _ = feature_dir(cfg, primary, args.feature)
-    text = (fdir / "tasks.md").read_bytes()
-    secs, header = sections(text)
-    consts = [b for h, b in secs if h.lower().startswith("## global constraints")]
-    task = [b for h, b in secs if re.match(rf"## Task {args.task}\b", h)]
-    if not task:
-        raise Exit(64, f"tasks.md has no `## Task {args.task}` section")
-    parts = [a for a, line in unfenced(text) if line.startswith(b"# ")] + [len(text)]
-    steps = task[0][s.start():] if (s := re.search(rb"(?m)^[ \t]*[-*] \[[ xX]\]", task[0])) else b""   # pre-review F5: a step names it, not a reference
-    apps = [text[a:b] for a, b in zip(parts, parts[1:]) if (m := re.match(rb"# (Appendix \w+)", text[a:b])) and re.search(rb"\b%s\b" % m[1], steps)]
-    (fdir / "build").mkdir(exist_ok=True)
-    out = fdir / "build" / f"task-{args.task:02d}-brief.md"
-    out.write_bytes(header + b"".join(consts) + task[0] + b"".join(apps))   # old item 113: the slice IS the bytes
-    print(f"{out}\n{sha256(out)}")
-    return 0
-
-
-def archive_task(fdir, n):
-    report, log = fdir / "build" / f"task-{n:02d}-report.md", fdir / "build" / f"task-{n:02d}-agy.log"
-    if report.is_file():
-        k = dead_rename(report)
-        if log.is_file():
-            log.rename(log.with_name(f"{log.name}.dead{k}"))
-        return k
-    return 0
-
-
-def build_run(args):
-    primary = primary_of(args.repo)
-    cfg = load_config(primary)
-    fdir, _ = feature_dir(cfg, primary, args.feature)
-    brief = fdir / "build" / f"task-{args.task:02d}-brief.md"
-    report, log = fdir / "build" / f"task-{args.task:02d}-report.md", fdir / "build" / f"task-{args.task:02d}-agy.log"
-    checkout = Path(args.checkout).resolve()      # 2026-09-23 fld-5b: agy could not resolve --add-dir "." and dropped the workspace
-    if not brief.is_file() or not checkout.is_dir():
-        raise Exit(64, f"need {brief} and the checkout {checkout}")
-    at = git_out(["rev-parse", "HEAD"], checkout).strip()
-    if not args.head or not (at.startswith(args.head) or args.head.startswith(at)):   # 2026-09-22 17:23: Gemini built on a tree the brief told it to refuse
-        raise Exit(64, f"{checkout} is at {at[:8]}, not --head {args.head}: the lane never checks, so the tool does")
-    docs = resolve_under(primary, cfg["docs_root"])   # r2 to r4 (Sol, Opus): the docs root inside the tree is the plugin's, never dirt; the whole tree never is
-    rel = next((docs.relative_to(r.resolve()).as_posix() for r in (checkout, primary) if docs.is_relative_to(r.resolve()) and docs != r.resolve()), None)
-    dirt = lambda: [l for l in git_out(["status", "--porcelain", "--untracked-files=all"], checkout).splitlines() if l.strip() and not (rel and re.match(rf'"?{re.escape(rel)}/', l[3:]))]
-    if dirt():                                   # 2026-09-22 review (Sol): a leftover made the status test vacuous
-        raise Exit(64, f"{checkout} is dirty before the build; the success test reads git status, so it must start clean")
-    text = read_text(brief).encode()
-    task = ([b for h, b in sections(text)[0] if re.match(r"## Task \d+", h)] or [text])[-1]
-    files, on = [], False
-    for _, l in unfenced(task):                  # Sol diff r1-r2 F1: the task's own Files field, never a quoted one; 2026-10-04 ap-2 task 2: bare or "Files:**" too
-        on = bool(re.match(rb"[ \t]*(?:[-*][ \t]*)?\*\*Files(?:\*\*:?|:\*\*)", l)) or (on and bool(l.strip()) and not re.match(rb"[ \t]*(?:[-*][ \t]*)?(?:\*\*|\[[ xX]\]|#|\d+\.)", l))   # ap-8 task 5: its indented lines; field audit 4: up to the next field, step or blank line
-        files += [l.decode()] if on else []
-    files = "\n".join(files)
-    toks = [re.sub(r":\d+(-\d+)?$", "", t) for t in re.findall(r"`([^`\s]+)`", files)]   # 2026-09-28 audit: a task editing only the smoke file read "failed" (gk-14)
-    named = {q for t in toks if re.fullmatch(r"(?:[A-Za-z]:[\\/])?[\w./\\-]+\.\w+", t) for q in (resolve_under(checkout, t), resolve_under(primary, t)) if q.is_relative_to(docs)}
-    docs_state = lambda: {q: sha256(q) if q.is_file() else None for q in named}   # the task's own files, never the whole docs root, where the report and log land
-    docs_before = docs_state()
-    eol_map = lambda: {e.split("\t", 1)[1]: e.split()[1] for e in git_out(["ls-files", "--eol", "-z"], checkout).split("\0") if "\t" in e}   # 2026-09-22 02:06: LF written into CRLF files, tests green, diff unreadable; r3: through git_out, so a failed call never passes the check; the w/ token before vs after (18:20: the HEAD blob misreads autocrlf)
-    eol_before = eol_map()
-    if report.is_file():
-        if not args.again:
-            raise Exit(64, f"{report} exists: --again archives it first")
-        archive_task(fdir, args.task)
-    row = lane_row("gemini")
-    prog = program(row)                          # missing: every task goes to the backup implementer
-    digest = sha256(brief)
-    copy = checkout / f"AGY-TASK-BRIEF-{digest[:12]}.md"
-    warnings, lines = [], []
-    try:
-        shutil.copyfile(brief, copy)
-        if sha256(copy) != digest:
-            raise Exit(64, "the brief copy does not match the brief")
-        prompt = (f"Read the file {copy.name} in {checkout} and make its file edits exactly. A relative path in it is under {checkout}; "
-                  f"a code file is read and edited there only, never in another checkout. {CLOSING}")   # 2026-10-05 ap-17, ap-18: a read of the primary's copy was denied
-        argv = [prog, *row["command"][1:], "-p", prompt, "--model", row["model"], "--mode", "accept-edits",
-                "--add-dir", str(checkout), *([] if docs.is_relative_to(checkout) else ["--add-dir", str(docs)]),   # 2026-09-27 gk-10, gk-12: a read of the spec or smoke file in the primary was denied
-                "--log-file", str(log.resolve())]   # 2026-09-13: a /c/ path made no log
-        env = child_env()                        # agy's updater is off there (old item 112)
-        code, secs = run_child(argv, checkout, env, None, report, fdir / "build" / f"task-{args.task:02d}-agy.err", lambda: [log, report])
-    finally:
-        if copy.exists():
-            copy.unlink()                        # 2026-09-22 03:07: git status mid-run listed the copy
-    err = fdir / "build" / f"task-{args.task:02d}-agy.err"
-    err_text = read_text(err) if err.is_file() else ""
-    err.unlink(missing_ok=True)
-    log_text = read_text(log) if log.is_file() else ""
-    message = read_text(report).strip()
-    crlf = [p for p, w in eol_map().items() if eol_before.get(p) == "w/crlf" and w in ("w/lf", "w/mixed") and not (rel and p.startswith(rel + "/")) and (q := (checkout / p).resolve()).is_relative_to(checkout) and not q.is_relative_to(docs)]   # Sol diff r1 F1: a link or a junction above the file may lead out of the checkout or into the docs root
-    for p in crlf:                               # 2026-10-23 KitnEssentials docs-reorg: agy 1.4.4 wrote LF into CRLF files on 6 of 6 tasks (1.2.10 kept CRLF); version-check task 04 was restored by hand
-        (checkout / p).write_bytes(re.sub(rb"(?<!\r)\n", b"\r\n", (checkout / p).read_bytes()))
-    status = "\n".join(dirt())
-    checks = [(f"route line present: {r}", r in log_text) for r in ROUTE_LINES]
-    checks += [("no soft-denied step", SOFT_DENY not in log_text), ("final message non-empty", bool(message)),
-               ("every docs-root file the task's Files field names changed, and git status is non-empty when it names none (an empty diff is never done)",   # field audit 4: code alone passed phase 10 tasks 27 and 29
-                (bool(status) or bool(named)) and all(v != docs_before[q] for q, v in docs_state().items())),
-               ("line endings kept on every modified file", all(eol_before.get(p, w) in (w, "w/none", "w/") or w in ("w/none", "w/") for p, w in eol_map().items() if not (rel and p.startswith(rel + "/")))),   # r2 (Sol): no ending yet, or a file gone, is nothing to flip; r4: nor the docs root
-               ("finished within the cap", code is not None)]   # 2026-09-22 review: a capped run failed with no named reason
-    ok = all(c for _, c in checks)
-    lines = ["", "---", f"parsec build run: task {args.task:02d}, lane gemini, model {row['model']}, {secs} s, "
-             f"agy exit {code} (recorded, never trusted)"] + [f"- {'ok' if c else 'FAILED'}: {n}" for n, c in checks]
-    lines += [f"- restored CRLF in {p}, which agy wrote with LF" for p in crlf] + [f"- result: {'ok' if ok else 'failed'}"] + ([f"- agy stderr tail: {err_text.strip().splitlines()[-1][:200]}"] if err_text.strip() else [])
-    with open(report, "a", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(lines) + "\n")
-    ledger_line(fdir, f"build task {args.task:02d} gemini: {'ok' if ok else 'failed'}, build\\{report.name}", warnings)
-    print(f"Task {args.task} Implement\n" + "\n".join(lines[2:]) + "".join(f"\nwarning: {w}" for w in warnings))
-    return 0 if ok else 65
-
-
-def build_archive(args):
-    primary = primary_of(args.repo)
-    cfg = load_config(primary)
-    fdir, _ = feature_dir(cfg, primary, args.feature)
-    k = archive_task(fdir, args.task)
-    print(f"task {args.task:02d}: " + (f"report and log renamed .dead{k}" if k else "no report to archive"))
     return 0
 
 
@@ -1131,12 +999,6 @@ def preflight(args):
         fail += ([f"muse: {ver}"] if code != 0 else []) + ([f"login: no {MUSE_AUTH()}; run muse login"] if auth == "MISSING" else [])
         lines.append(f"- **CLI:** {ver}, auth.json {auth}")
         lines.append(f"- **Model:** {row['model']}, effort {row['effort']} (lanes.toml), contributor mode off")
-    elif args.lane == "gemini":
-        code, ver = probe(cmd + ["--version"], env=child_env())   # 2026-11-20: no GEMINI_API_KEY in any agy call
-        if code != 0:
-            fail.append(f"agy: {ver}")
-        lines.append(f"- **CLI:** agy {ver} at {shutil.which(cmd[0])}")
-        lines.append(f"- **Model:** {row['model']} (lanes.toml); login is read from the first run's log")
     elif args.lane == "neon":
         (code, ver), (mcode, models) = probe(cmd + ["--version"], env=child_env()), probe(cmd + ["models"], env=child_env(), whole=True)
         known = mcode == 0 and re.search(rf"(?m)^{re.escape(row['model'])}[ \t]", models) is not None   # the id, then a space or tab on the same line (Astra F29); 2026-11-20 C5: "gemini-4-neon-high<TAB>Gemini 4 Neon (High)"; C6: no login check, an empty home still listed every model
@@ -1155,20 +1017,19 @@ def preflight(args):
             fdir, _ = feature_dir(cfg, primary, args.feature, 1 if args.kind == "panel" else None)   # 2026-09-23: doctor accepted a --feature that round run then refused; a new panel only for a panel round (Sol)
         except Exit as e:
             fail.append(str(e))
-    if args.kind != "build":
-        _, warnings, found, wanted, _ = context_lines(cfg, primary, None)
-        fail += [w for w in warnings if "not found" in w]
-        files = len([c for c in cfg.get("context", []) if c.get("role", "rubric") == "rubric"])
-        rub = f"rubric {files} file{"s" * (files != 1)}, {found} of {wanted} sections found" if files else "rubric none configured"   # r3: a rubric without sections is still a rubric
-        wt = resolve_under(primary, cfg["worktrees"])
-        lines.append(f"- **Checks:** {rub} · worktrees folder {'ok' if wt.is_dir() else 'MISSING: ' + str(wt)}")
-        if not wt.is_dir():
-            fail.append("worktrees folder missing")
-    title = f"Pre-flight: {args.lane.capitalize()} · {args.kind}" + (" debate" if args.kind != "build" else "")   # Markdown, posted as is (Brandon, 2026-09-23)
+    _, warnings, found, wanted, _ = context_lines(cfg, primary, None)
+    fail += [w for w in warnings if "not found" in w]
+    files = len([c for c in cfg.get("context", []) if c.get("role", "rubric") == "rubric"])
+    rub = f"rubric {files} file{"s" * (files != 1)}, {found} of {wanted} sections found" if files else "rubric none configured"   # r3: a rubric without sections is still a rubric
+    wt = resolve_under(primary, cfg["worktrees"])
+    lines.append(f"- **Checks:** {rub} · worktrees folder {'ok' if wt.is_dir() else 'MISSING: ' + str(wt)}")
+    if not wt.is_dir():
+        fail.append("worktrees folder missing")
+    title = f"Pre-flight: {args.lane.capitalize()} · {args.kind} debate"   # Markdown, posted as is (Brandon, 2026-09-23)
     left = min((float(x) for x in re.findall(r"(\d+(?:\.\d+)?)% left", "\n".join(lines))), default=100)   # G-Q2 (Brandon, 2026-10-16): amber below 20%, red below 10%, never a stop
     print(f"### 🔴 {title} · FAILED\n\n**{'; '.join(fail)}**" if fail else f"### {'🔴' if left < 10 else '🟡' if left < 20 else '🟢'} {title}" + (f" · quota {left:g}% left" if left < 20 else ""))
     print((f"\n**{args.feature}**\n" if args.feature else "") + "\n" + "\n".join(lines))
-    pf, saved = fdir / "rounds" / f"preflight-{args.lane}.txt" if fdir and args.kind != "build" else None, False
+    pf, saved = fdir / "rounds" / f"preflight-{args.lane}.txt" if fdir else None, False
     try:
         if pf and (fail or left < 20):           # field audit 4: "week 4% left" read green and rode; a low quota is posted now
             pf.unlink(missing_ok=True)           # pre-review F2: an older green line never rides after a FAILED one
@@ -1211,7 +1072,7 @@ def doctor(args):
         name, row = names[0], rows[names[0]]
         code, ver = probe(row["command"] + ["--version"], env=child_env())   # the whole command, as the pre-flight runs it; 2026-10-12: no muse update starts here
         lcode, login = probe(row["command"] + ["login", "status"], env=child_env()) if name in ("astra", "sol") else (0, "login in the first run's log") \
-            if name in ("gemini", "neon") else (0, f"auth.json {'present' if MUSE_AUTH().is_file() else 'MISSING'}") if name == "muse" \
+            if name == "neon" else (0, f"auth.json {'present' if MUSE_AUTH().is_file() else 'MISSING'}") if name == "muse" \
             else (0, f"credentials {'present' if (resolve_under(PLUGIN, row['home']) / 'credentials').exists() else 'MISSING'} in the lane home")
         good = code == 0 and lcode == 0 and "not logged in" not in login.lower() and "MISSING" not in login   # the login's own exit too (2026-09-23 pre-review)
         who = ", ".join(f"{n} ({rows[n]['model']}" + (f", {rows[n]['effort']})" if "effort" in rows[n] else ")") for n in names)
@@ -1274,19 +1135,6 @@ def parser():
     q = sub.add_parser("verify", help="spec.md and tasks.md against the newest design record or amendment")
     q.add_argument("--feature", required=True)
     q.add_argument("--record-amendment", metavar="REASON", type=reason)
-    q = sub.add_parser("task-brief", help="slice task N into build/task-NN-brief.md")
-    q.add_argument("--feature", required=True)
-    q.add_argument("--task", required=True, type=int)
-    bld = sub.add_parser("build", help="the implementer (the Gemini lane)").add_subparsers(dest="sub", required=True)
-    q = bld.add_parser("run", help="run task N through agy in the checkout")
-    q.add_argument("--feature", required=True)
-    q.add_argument("--task", required=True, type=int)
-    q.add_argument("--checkout", required=True)
-    q.add_argument("--head", required=True, help="the commit the task builds on; refused when the checkout is elsewhere")
-    q.add_argument("--again", action="store_true", help="archive the earlier report and log first")
-    q = bld.add_parser("archive", help="rename task N's report and log .dead<k>")
-    q.add_argument("--feature", required=True)
-    q.add_argument("--task", required=True, type=int)
     q = sub.add_parser("remove-worktree", help="remove a non-primary worktree, links first")
     q.add_argument("path")
     q = sub.add_parser("doctor", help="the table, one lane's pre-flight, or the updates")
@@ -1311,10 +1159,6 @@ def main(argv=None):
             return close_rounds(args)
         if args.cmd == "verify":
             return verify(args)
-        if args.cmd == "task-brief":
-            return task_brief(args)
-        if args.cmd == "build":
-            return build_run(args) if args.sub == "run" else build_archive(args)
         if args.cmd == "remove-worktree":
             remove_worktree(primary_of(args.repo), Path(args.path)); print(f"removed {args.path}")
             return 0
