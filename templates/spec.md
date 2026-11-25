@@ -1,6 +1,6 @@
 # Spec template
 
-The spec is the design document of one feature: what it does and why, which Brandon reviews before the task list is written, or waives or delegates (`brainstorm`). No code in it; the code lives in the task list.
+The spec is the design document of one feature: what it does and why, which Brandon reviews before the go, or waives or delegates (`brainstorm`). No code in it: the session writes the code from it after the go.
 
 The spec opens with an unnumbered `## Decision summary`, before section 1: at most 150 plain words on what the feature changes and what Brandon is asked to approve. The driver posts it in chat (`brainstorm`). It names each follow-up the design creates as an open question, and after approval or its waiver states the decisions (2026-09-24).
 
@@ -12,7 +12,7 @@ The spec opens with an unnumbered `## Decision summary`, before section 1: at mo
 4. **Design.** The files, names, signatures and call sites touched, with the patterns already in the code that they follow. Design for isolation; no unrelated refactoring.
 5. **Behaviour.** The observable behaviour, case by case, including errors and edges.
 6. **Testing.** What the project's test policy calls for here, and any case that has nothing worth testing, named with its check instead.
-7. **Claims to probe.** Each game or API behaviour the design rests on that nobody ran, one per line: `C<n>: <the claim>. Probe: <how>. Status: <open | held | refuted | waived>`. The author writes each as `open`; the task list waits until none is (driver rule 7). With none, the section says "Claims to probe: None."
+7. **Claims to probe.** Each game or API behaviour the design rests on that nobody ran, one per line: `C<n>: <the claim>. Probe: <how>. Status: <open | held | refuted | waived>`. The author writes each as `open`; the go waits until none is (driver rule 7). With none, the section says "Claims to probe: None."
 8. **Open questions.** Anything still to decide, each with its owner; never a question the notes already answer. With none, the section says "Open questions: None."
 
 Goal and Behaviour state the current design, with no round tag or date; a correction's source goes in Approach or the ledger. The spec holds no appended change log, amendment or questions section: an answer rewrites the section it changes, and the history lives in the ledger's amendment lines. `round prepare` and `round run` refuse a spec that has one, or a decision summary over 150 words.

@@ -1,6 +1,6 @@
 # Ledger template
 
-The head is written by hand once; the tool appends round lines, amendments and build lines, and never parses a line it did not write.
+The head is written by hand once; the tool appends round lines and amendments, and never parses a line it did not write.
 
 ## Head
 
@@ -14,7 +14,7 @@ checkout: <path> (made by build | handed)
 
 `<time>` is `YYYY-MM-DD HH:MM ±hhmm`, from the tool or, by hand, the clock in the writing command (2026-09-23): bash `$(date '+%Y-%m-%d %H:%M %z')`, PowerShell `$((Get-Date -Format 'yyyy-MM-dd HH:mm zzz') -replace ':(?=\d\d$)')`. A hand-written line stays within 200 characters; a reason passed to the tool stays within 130, and the tool refuses a longer one. Longer detail goes in a file the line names.
 
-A hand-written line never starts with a shape the tool writes: `<kind> r<n> <lane>:`, `amendment <k>:` or `build task <NN>` (field audit, 2026-09-23).
+A hand-written line never starts with a shape the tool writes: `<kind> r<n> <lane>:` or `amendment <k>:` (field audit, 2026-09-23).
 
 `"<his words>"` is Brandon's own text as typed; relayed, `Brandon` becomes `Brandon via delegator`, the quote kept; delegated, `delegator for Brandon, <how>, "<his delegating words>"` replaces `Brandon, "<his words>"` (2026-09-28).
 
@@ -23,7 +23,7 @@ The hand-written shapes:
 - The handoff facts: `- <time> handoff: <branch, base, finish rule, report destination>`.
 - The go: `- <time> go: Brandon, "<his words>"` (or `pre-approved handoff`).
 - The spec's approval: `- <time> spec approved: Brandon, "<his words>"`.
-- A task result: `- <time> task 03: <commit>, <lane>, <tests: red then green | green | red: reason>[, whitespace trimmed]`.
+- A build step: `- <time> step 03: <commit>, <tests: red then green | green: <reason>>`.
 - A probe result: `- <time> probe <C<n> or a short name>: <held | refuted>, <how: the source, the api-validator or his run>[, Brandon, "<his words>"]` (driver rule 7).
 - A small change: `- <time> small: <base>..<head>, <n> lines in <k> files[ and <t> test files], no API call, hook, handler or timing, pre-review clean` (`build`, "Bounded work").
 - A decision on a finding: `- <time> decision <ID> (<kind> r<n> <lane>): <fix | ride | accepted as R<k> | change the approach>, Brandon, "<his words>"`; a ride on the reviewer's triage ends `<lane> triage` instead, and a Minor the session chose to fix ends `session`.

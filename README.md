@@ -5,7 +5,7 @@
   <img alt="parsec: brainstorm, build and cross-vendor review for Claude Code" src=".github/assets/banner-light.svg" width="100%">
 </picture>
 
-An Opus author writes the plan. A fast Gemini implementer types the code.<br>
+An Opus author writes the spec. Your session builds it, test first.<br>
 Models from three different companies check the work at the moments where a mistake gets expensive.
 
 ![version](https://img.shields.io/github/v/release/Bmwascher/parsec?label=version&color=4c6ef5&style=flat-square)
@@ -26,8 +26,8 @@ parsec is a [Claude Code](https://claude.com/claude-code) plugin that takes a fe
 
 | Stage | Who | What happens |
 |---|---|---|
-| ![Brainstorm](https://img.shields.io/badge/1-Brainstorm-4c6ef5?style=flat-square) | Opus author | It interviews you, then writes a spec and a step-by-step task list with the real code in every step. |
-| ![Build](https://img.shields.io/badge/2-Build-2f9e44?style=flat-square) | Gemini implementer | Types each task into the codebase. Your session runs the tests, checks the diff and makes the commit. |
+| ![Brainstorm](https://img.shields.io/badge/1-Brainstorm-4c6ef5?style=flat-square) | Opus author | It interviews you, then writes a spec: what the feature does, why, the design and how it is tested. |
+| ![Build](https://img.shields.io/badge/2-Build-2f9e44?style=flat-square) | Your session | Builds from the spec in steps: a failing test first, then the code, the whole suite, then the commit. |
 | ![Review](https://img.shields.io/badge/3-Review-7048e8?style=flat-square) | Sol, Opus, Fable | Before you commit to something, a model from a *different company* reads the work cold and argues with it until the findings are settled. |
 
 Five skills carry the rules. One Python file, `tools/parsec.py`, does the mechanical work: it packages review rounds, launches the other companies' command-line tools and records every verdict.
@@ -47,7 +47,7 @@ A model that reviews its own work tends to agree with itself. A model from anoth
 | **After the build** | A flaw in the diff hasn't reached the main branch yet. |
 
 > [!TIP]
-> **Thinking is split from typing.** The expensive model decides everything and writes the code into the plan. A cheap, fast model only transcribes it. When a transcription goes wrong, the tool can tell, and the task moves to the backup implementer, an Opus agent.
+> **Every step starts with a failing test.** The session writes the test, sees it fail, writes the code, then runs the whole suite before it commits. Before each step it checks that its checkout is clean and on the commit it expects, so another phase's work is never swept into a commit.
 
 ---
 
@@ -75,11 +75,10 @@ flowchart TD
 
     I --> S[Author writes the spec]:::brainstorm
     S --> A{You approve the spec,<br/>delegate it or waive your reading}:::you
-    A --> T[Author writes the task list<br/>with full code per task]:::brainstorm
-    T --> G{Go?}:::you
-    G --> DD[Design debate<br/>cross-vendor lane vs. author]:::review
-    DD --> FD[Fable design look<br/>fresh eyes on spec and tasks]:::review
-    FD --> B[Gemini implementer builds each task<br/>session tests, checks, commits]:::build
+    A --> G{Go?}:::you
+    G --> DD[Design debate over the spec<br/>cross-vendor lane vs. author]:::review
+    DD --> FD[Fable design look<br/>fresh eyes on the spec]:::review
+    FD --> B[Your session builds it<br/>test first, one commit per step]:::build
 
     B --> P[Opus pre-review]:::review
     BW --> P
@@ -113,37 +112,14 @@ The roles below are in the order they meet the work.
 
 ![Model](https://img.shields.io/badge/model-your_session's-868e96?style=flat-square)
 
-The driver is your session itself, so every flow starts here. It sorts the request, runs the tool, dispatches every other seat, checks each reviewer's claims against the code, runs the tests and makes every commit. It posts a summary after each round without waiting to be asked.
+The driver is your session itself, so every flow starts here. It sorts the request, runs the tool, dispatches every other seat, checks each reviewer's claims against the code, writes the code and its tests and makes every commit. It posts a summary after each round without waiting to be asked.
 
 ### Author
 
 ![Seat](https://img.shields.io/badge/seat-author-4c6ef5?style=flat-square)
 ![Model](https://img.shields.io/badge/Claude_Opus_5.5-high_effort-d97757?style=flat-square)
 
-Writes the spec, then the task list with the full test and implementation code in every task. In a debate it answers each design finding with an edit or a refutation backed by evidence. When a review finds a blocking defect after the build, it writes the fix task, or refutes the finding with evidence.
-
-### Implementers
-
-The implementers build the tasks the author wrote. Whichever one builds a task, the driver runs its tests, checks the diff and makes the commit.
-
-#### Primary: the Gemini lane
-
-![Lane](https://img.shields.io/badge/lane-gemini-2f9e44?style=flat-square)
-![Model](https://img.shields.io/badge/Gemini_4_Hydrogen-via_agy-4285f4?style=flat-square)
-
-Builds every task by typing its code exactly as written. It decides nothing, so a wrong task shows up as a failed test, never as a quiet workaround.
-
-#### Secondary: the backup implementer
-
-![Seat](https://img.shields.io/badge/seat-backup--implementer-2f9e44?style=flat-square)
-![Model](https://img.shields.io/badge/Claude_Opus_5.5-medium_effort-d97757?style=flat-square)
-
-Takes the tasks Gemini can't:
-
-- a task that deletes, renames or moves a file, since Gemini's print mode had no delete tool under accept-edits (agy 1.2.x; unmeasured on 1.5.13);
-- a task that copies or writes a binary file, such as an image, since accept-edits ran no command (agy 1.2.x, 2026-09-22; unmeasured on 1.5.13);
-- a task Gemini got wrong once;
-- every task, when `agy` isn't installed.
+Writes the spec. In the design debate it answers each finding with an edit or a refutation backed by evidence.
 
 ### Reviewers
 
@@ -173,7 +149,7 @@ These are the reviewers from other companies. They run the design debate before 
 ![Seat](https://img.shields.io/badge/seat-reviewer--fable-7048e8?style=flat-square)
 ![Model](https://img.shields.io/badge/Claude_Fable_5.2-high_effort-d97757?style=flat-square)
 
-A fresh agent that reads the final head once every other review has passed. Its PASS names the exact commit that ships. Before the build, it gives the spec and task list the same fresh look once the design debate has passed. The same seat also sits on panels, answers polls and gives advice when two positions need an outside view.
+A fresh agent that reads the final head once every other review has passed. Its PASS names the exact commit that ships. Before the build, it gives the spec the same fresh look once the design debate has passed. The same seat also sits on panels, answers polls and gives advice when two positions need an outside view.
 
 > [!TIP]
 > Model notes in [`models/`](models/) record what each model and CLI actually does, each fact dated or marked UNMEASURED. Swapping a model means re-deciding its effort level from that model's own guide, because "high" doesn't mean the same amount of thinking across companies.
@@ -191,7 +167,7 @@ A fresh agent that reads the final head once every other review has passed. Its 
 | Git | Worktrees, diffs, commits | ✅ Yes |
 | PowerShell 7 | Every shell step (never Windows PowerShell 5.1) | ✅ Yes, on Windows |
 | `codex` CLI, logged in | The Sol and Astra lanes | ✅ Yes, for cross-vendor review |
-| `agy` CLI, logged in | The implementer (Gemini lane) and the Neon lane, by name | ➖ No. Without it, every task goes to the backup implementer. |
+| `agy` CLI, logged in | The Neon lane, by name | ➖ No |
 | `muse` CLI (Muse Code), signed in | The Muse backup lane | ➖ No |
 | `kimi` CLI, logged in | The Kimi lane, by name | ➖ No |
 
@@ -303,7 +279,7 @@ You talk to it in plain words, and the skills trigger on what you say.
 
 | You say | What runs |
 |---|---|
-| "Brainstorm a keybind export feature" / "plan" | `brainstorm`: sort the request, interview, spec, task list |
+| "Brainstorm a keybind export feature" / "plan" | `brainstorm`: sort the request, interview, spec |
 | "Go" | Records the go; the design debate and the Fable design look run, then `build` |
 | "Fix the nil check in the timer" | Bounded work: build, commit, then the diff gate |
 | "Get a cross-vendor review of this branch" | `debate` on the files or branch you name |
@@ -335,7 +311,6 @@ Every long step runs **in the background with a readable name**, so you can see 
 Pre-flight: Sol
 Author: spec
 Sol R1 Design Round
-Task 3 Implement
 Opus Pre-Review
 Sol R2 Diff Round
 Fable Last Look
@@ -390,7 +365,7 @@ After the build, three reviewers look at the diff in order:
 | 2 | ![Sol](https://img.shields.io/badge/Sol-cross--vendor_debate-10a37f?style=flat-square) | Debates the diff to a settled verdict; Astra, Kimi or Neon by name, Muse only with approval |
 | 3 | ![Fable](https://img.shields.io/badge/Fable-last_look-d97757?style=flat-square) | A *fresh* agent reviews the final head. The version bump is the last commit before it, so its PASS names the exact commit that ships, or the commit of a "fix now" Minor its confirming question covers. |
 
-An unrefuted blocking finding anywhere in the gate becomes a fix task, written by the author and built like any other task; one refuted as "not reachable" gets no code. Only the commit that the final PASS names is ever merged.
+An unrefuted blocking finding anywhere in the gate is fixed by the session, on a designed feature as a build step with its failing test first; one refuted as "not reachable" gets no code. Only the commit that the final PASS names is ever merged.
 
 > [!WARNING]
 > **A gate with no cross-vendor lane is degraded, never a PASS**, except a small change in bounded work: one you can judge from the diff alone, 20 or fewer changed lines in 2 or fewer files (test files count only toward the lines), no new or changed API call, hook, event handler or timing, and no Critical or Important in any Opus pre-review round. The driver records why in the ledger, and the Fable last look still runs. A Critical or Important in that last look makes it not small: after the answer, a fix or a refutation, the cross-vendor round runs on the head it leaves, then Fable's confirming question. If codex is down and Muse isn't approved, the round is recorded as degraded and the finish report says so.
@@ -404,17 +379,16 @@ An unrefuted blocking finding anywhere in the gate becomes a fix task, written b
 
 ## What it writes to disk
 
-Each feature gets one folder under the project's docs root, named `<MM-DD>-<topic>`, and every file it writes stays inside it. Five files sit loose in it; every other file goes in a named subfolder, shown in the full tree below:
+Each feature gets one folder under the project's docs root, named `<MM-DD>-<topic>`, and every file it writes stays inside it. Four files sit loose in it; every other file goes in a named subfolder, shown in the full tree below:
 
 | File | What it holds |
 |---|---|
 | `notes.md` | Your questions and answers, verbatim |
 | `spec.md` | The plan: what the feature does and why |
-| `tasks.md` | The task list, with full code in every task |
-| `ledger.md` | The running record: base, go, rounds, tasks, finish |
+| `ledger.md` | The running record: base, go, rounds, build steps, finish |
 | `summaries.md` | Every round's summary block, as the tool printed it but without its pending answer lines |
 
-The **ledger** is the feature's memory. Its head records the base commit once. The tool appends one line per round, amendment and build, and never parses a line it didn't write. Hand-written lines, such as the go, a task result or your ruling on a finding, follow the shapes in [`templates/ledger.md`](templates/ledger.md). A failed attempt is never overwritten: it's renamed `.dead1`, `.dead2` and so on, so the evidence survives.
+The **ledger** is the feature's memory. Its head records the base commit once. The tool appends one line per round and amendment, and never parses a line it didn't write. Hand-written lines, such as the go, a build step or your ruling on a finding, follow the shapes in [`templates/ledger.md`](templates/ledger.md). A failed attempt is never overwritten: it's renamed `.dead1`, `.dead2` and so on, so the evidence survives.
 
 <details>
 <summary><b>The full folder tree</b></summary>
@@ -424,7 +398,6 @@ The **ledger** is the feature's memory. Its head records the base commit once. T
 ├── 09-22-keybind-export/
 │   ├── notes.md
 │   ├── spec.md
-│   ├── tasks.md
 │   ├── ledger.md
 │   ├── summaries.md
 │   ├── rounds/
@@ -433,9 +406,7 @@ The **ledger** is the feature's memory. Its head records the base commit once. T
 │   │   ├── diff-r1-sol/
 │   │   └── lastlook-r1-fable/
 │   ├── build/
-│   │   ├── task-01-brief.md   the exact slice Gemini received
-│   │   ├── task-01-report.md  what the tool saw
-│   │   └── task-01-agy.log
+│   │   └── cases.md          each Behaviour case and the test that covers it
 │   ├── pages/            published pages, when a question is clearer shown
 │   ├── briefs/           each brief as written
 │   └── evidence/         saved output a brief cites
@@ -453,7 +424,7 @@ The **ledger** is the feature's memory. Its head records the base commit once. T
 topic: keybind-export   branch: feature/keybind-export   base: 3f2a91c
 checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 - 2026-09-22 14:02 -0500 go: Brandon, "go"
-- 2026-09-22 14:31 -0500 task 01: 8c1d0e2, gemini, tests: green
+- 2026-09-22 14:31 -0500 step 01: 8c1d0e2, tests: red then green
 ```
 
 </details>
@@ -473,10 +444,7 @@ checkout: C:/.../_worktrees/KitnEssentials-keybind-export (made by build)
 | `round prepare` | Packages a round for an in-session seat (Opus, Fable) and prints the dispatch details |
 | `round collect` | Finishes a pending round, or marks it degraded or closed on Minor |
 | `round close` | Removes the feature's review worktrees |
-| `verify` | Checks `spec.md` and `tasks.md` against the newest design record or amendment |
-| `task-brief` | Slices task N, and each appendix its steps name, into its own brief and prints its SHA-256 |
-| `build run` | Runs task N through the implementer (Gemini) in the checkout and writes the task report |
-| `build archive` | Renames task N's report and log to `.dead<k>` before a retry |
+| `verify` | Checks `spec.md` against the newest design record or amendment |
 | `remove-worktree` | Removes a non-primary worktree (a review worktree or the checkout `build` made), unlinking junctions first so nothing real is deleted; run it from outside that worktree |
 | `doctor` | The health table, one lane's pre-flight (`--lane`), or the updates (`--update`) |
 
@@ -497,17 +465,6 @@ Each rail exists because its failure happened at least once. The dates live in t
 | The tool prints the "post now" line after the summary block and the stale-version notice as its last line | A driver filter (`sed -n '/^###/,$p'`, `tail`, `grep -v "^warning"`) dropped both |
 | A brief is written with a file tool, never through a shell, and copied into the package byte for byte | A shell heredoc once stripped every apostrophe and backtick while every check still passed |
 
-![During a build](https://img.shields.io/badge/during_a_build-2f9e44?style=for-the-badge)
-
-| The rail | The failure it prevents |
-|---|---|
-| `build run` refuses any other checkout, a checkout with uncommitted changes, and a base that isn't the expected commit | A run once transcribed its edits exactly, onto a checkout one commit too early |
-| `build run` turns LF that Gemini wrote into a CRLF file back into CRLF; a task with any other line-ending flip fails | A whole-file change that hides the real edit in the diff (agy 1.4.4 writes LF even into CRLF files) |
-| The tool reads the task's success test, never Gemini's exit code | Gemini has reported success on runs that failed |
-| The success test needs every docs-root file in the task's Files field to change | Two tasks passed on their code edits alone, with their smoke-file steps skipped |
-| Deletes, renames, moves and binary files go straight to the backup implementer | Under accept-edits, Gemini had no delete tool and ran no command (agy 1.2.x, 2026-09-22; unmeasured on 1.5.13) |
-| A second failed attempt at the same task, for any reason, goes to you | A retry loop that burns quota on a task that's wrong |
-
 ![Worktrees](https://img.shields.io/badge/worktrees-f08c00?style=for-the-badge)
 
 | The rail | The failure it prevents |
@@ -520,8 +477,9 @@ Each rail exists because its failure happened at least once. The dates live in t
 | The rail | The failure it prevents |
 |---|---|
 | After a compaction in a session that launched a parsec skill, a hook puts the driver rules and the ledger template back in Claude's context, under a line that says to reread the skill, the ledger and the notes | The reread after a compaction held in 2 of 31 phase chats; the misses cost a fresh author, a dropped diff round and about 45 ledger lines with wrong times |
-| A hook denies a `parsec:` agent dispatch that sets `model`, and tells Claude to dispatch again without it | Three backup builds ran on Sonnet because the dispatch named a model |
+| A hook denies a `parsec:` agent dispatch that sets `model`, and tells Claude to dispatch again without it | Three builds ran on Sonnet because the dispatch named a model |
 | At the end of a turn, a hook checks that a reply in the transcript holds the newest block the tool printed for posting, a round summary or a pre-flight, and sends Claude back once to post it. A send-back for a block posted in that turn is answered with the block's heading line only | Sessions skipped the summary: 4 of 18 posted in Afterparty phases 2 to 4; on 2026-10-17 the Sol round 1 block went to the author unposted. Claude Code did not save 4 of 9 posts made before a tool call, so the hook sent those turns back and the block was posted twice |
+| At the end of a turn, a hook checks each Opus or Fable round this session prepared: if its `reply.md` is written and the round is not collected, it sends Claude back once to collect each round whose reviewer has handed back, post the blocks in one reply and go on, or else to wait for the reviewer. It reads only a local round folder, never a network path | On 2026-11-25 a session saw Fable's reply, ended its turn to wait for the run time, and sat idle for 3 hours 51 minutes |
 
 The three hooks are in `hooks/hooks.json` and run `tools/hooks.py`. If a hook hits any error, it prints nothing to Claude, exits 0 and Claude Code carries on; a missing script still leaves Python's error on stderr. `"disableAllHooks": true` in your settings turns them off, along with every other hook.
 
@@ -546,7 +504,7 @@ The plugin stays lean because its size limits fail the build. An addition that w
 | What | Limit |
 |---|---|
 | `tools/parsec.py` | 1,331 lines |
-| `tools/hooks.py` | 80 lines |
+| `tools/hooks.py` | 110 lines |
 | All tests | 1,648 lines |
 | The frozen checkers | 522 lines |
 | All skill, template, agent and model prose | 15,000 words |
@@ -583,11 +541,11 @@ The plugin cache is keyed on the version string, so a missed bump means a stale 
 parsec/
 ├── .claude-plugin/     plugin.json and marketplace.json
 ├── .github/            CI, the release workflow, README images
-├── agents/             the four Claude seats: author, backup-implementer, reviewer-opus, reviewer-fable
+├── agents/             the three Claude seats: author, reviewer-opus, reviewer-fable
 ├── commands/           /parsec:doctor
-├── hooks/              hooks.json: the compaction re-inject, the model refusal and the post check
+├── hooks/              hooks.json: the compaction re-inject, the model refusal, the post check and the collect check
 ├── skills/             brainstorm, build, debate, panel, setup
-├── templates/          spec, task list, ledger, briefs, driver rules, the backup implementer's contract
+├── templates/          spec, ledger, briefs, driver rules
 ├── models/             dated notes on each model and CLI
 ├── lanes/              the Kimi reviewer's agent file
 ├── tools/              parsec.py, the one tool; hooks.py, the script the three hooks run
