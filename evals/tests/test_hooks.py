@@ -61,7 +61,7 @@ def test_missing_script_exits_0(shell, event):        # 2026-10-16 diff pre-revi
 
 
 def test_parsec_model_is_denied():
-    code, out, err = hook("PreToolUse", {"tool_name": "Agent", "tool_input": {"subagent_type": "parsec:backup-implementer", "model": "sonnet"}})
+    code, out, err = hook("PreToolUse", {"tool_name": "Agent", "tool_input": {"subagent_type": "parsec:reviewer-opus", "model": "sonnet"}})
     assert code == 0, err
     assert json.loads(out) == {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "parsec agents run with no model; the agent file names Brandon's choice (driver rule 1). Dispatch again without model."}}
 
@@ -127,3 +127,87 @@ def test_unposted_block_is_sent_back(tmp_path, lines):
                                           ((rec("result", "Sol R1\nnext: post the block above in chat now"),), OFF), ((rec("user", f"<task-notification>\n<event>{HEAD}\nCritical 0</event>\n</task-notification>"), POSTED, rec("user", "<task-notification>\n<event>next: post the block above in chat now</event>\n</task-notification>")), {**OFF, "last_assistant_message": "Done."}), ((rec("user", f"<task-notification>\n<event>{HEAD}</event>\n</task-notification>"), rec("result", "### ⚪ X"), rec("user", "<task-notification>\n<event>next: post the block above in chat now</event>\n</task-notification>"), POSTED), OFF)])   # a block line with no heading above it; a block split across records is missed, a post between or a "### " source between (R1, Brandon SR-A; Sol r3 F2, F1)
 def test_posted_block_lets_turn_end(tmp_path, lines, fields):
     assert hook("Stop", session(tmp_path, *lines, **fields))[:2] == (0, b"")
+
+
+
+# 2026-11-25 vc-arm0 (transcript 7dfa8df8-...jsonl): the Fable reply was on disk, the driver ended its turn "Collecting once the run time arrives", and sat 3 h 51 min
+SAID = "Fable confirms PASS with one new wording Minor (F7). Collecting once the run time arrives."   # record 1226
+
+
+def prep(folder, last=None):                          # round prepare's output as a Bash result carried it (record 1207, CRLF lines)
+    return rec("result", f"task name: Fable R2 Design Round\r\nbrief: {folder}\\.parsec\\brief.md\r\ncode root: C:\\x at 2a50, a review worktree that round close removes\r\n" + (last or f"report path: {folder}\\reply.md"))
+
+
+def back(folder):                                    # the hand-back (record 1223)
+    text = f'Another Claude session sent a message:\n<agent-message from="a4a8">\n[Subagent hand-back] The report follows:\n  VERDICT: PASS\n  Full report written to {folder}\\reply.md'
+    return json.dumps({"type": "user", "message": {"role": "user", "content": text}, "origin": {"kind": "peer", "from": "a4a8", "handback": True}})
+
+
+def rounds(tmp_path, *names, reply=b"VERDICT: PASS\n", pending=True):   # round folders on disk
+    out = []
+    for name in names:
+        folder = tmp_path / name
+        folder.mkdir(parents=True)
+        if pending:
+            (folder / "pending.json").write_text("{}", encoding="utf-8")
+        if reply is not None:
+            (folder / "reply.md").write_bytes(reply)
+        out.append(str(folder))
+    return out
+
+
+def late(paths, head=None):                           # spec 4.2's late and combined reasons, exactly
+    where, run = ", ".join(paths), "run round collect{} with --agent-id; --ran-ms is optional (without it the minutes count since prepare), so never wait for the notification."
+    tail = "this outranks the \"post the block above in chat now\" line each collect prints. If a reviewer is still running, or the next step waits on one, end the turn and wait for its hand-back."
+    if head is None:
+        reason = f"parsec: reply.md is written and the round is not collected (pending.json is present) in {where}. For each round whose reviewer has handed back, or with no hand-back has sent its task-notification, {run.format(' now')} After the last collect, post every block the collects printed in one reply, then go on with the flow's next step; {tail}"
+    else:
+        reason = (f'parsec: the block that starts "{head}" was printed for you to post, and no reply in the transcript holds that line; and reply.md is written and the round is not collected (pending.json is present) in {where}. '
+                  f"First, for each round whose reviewer has handed back, or with no hand-back has sent its task-notification, {run.format('')} "
+                  f'Then, in one reply after the last collect, post the block that starts "{head}" (as is, outside a code block, with the additions the debate skill names; its heading line alone if a reply of this turn already holds it) and every block the collects printed, then go on with the flow\'s next step; {tail}')
+    return json.dumps({"decision": "block", "reason": reason}).encode("utf-8")
+
+
+def test_uncollected_agent_round_is_sent_back(tmp_path):   # failed on the base tools/hooks.py, which returned nothing (direct-build step 2)
+    [folder] = rounds(tmp_path, "rounds/design-r2-fable")
+    lines = (prep(folder), back(folder), rec("assistant", [{"type": "text", "text": SAID}]))
+    assert hook("Stop", session(tmp_path, *lines, **OFF, last_assistant_message=SAID)) == (0, late([folder]), b"")
+
+
+def note(text):                                       # a Monitor event delivered mid-turn (probe C2)
+    return json.dumps({"type": "attachment", "attachment": {"type": "queued_command", "prompt": f"<task-notification>\n<task-id>m1</task-id>\n<event>{text}</event>\n</task-notification>", "commandMode": "task-notification"}})
+
+
+def late_case(tmp_path, case):                        # (transcript lines, expected folders, block owed)
+    if case == "two features":
+        a, b = rounds(tmp_path, "f2/rounds/design-r1-fable", "f1/rounds/design-r1-fable")
+        return (prep(a), prep(b)), sorted([a, b]), False
+    if case == "third not written":
+        a, b = rounds(tmp_path, "rounds/design-r1-fable", "rounds/diff-r1-opus")
+        [c] = rounds(tmp_path, "rounds/lastlook-r1-fable", reply=None)
+        return (prep(a), prep(b), prep(c)), [a, b], False
+    [f] = rounds(tmp_path, "rounds/design-r2-fable")
+    k = f.index("design-r2-fa") + len("design-r2-fa")
+    return {"still running": ((prep(f),), [f], False), "monitor": ((note(f"report path: {f}\\reply.md"),), [f], False),
+            "printed again": ((prep(f), back(f), rec("result", f"report path: {f}\\reply.md")), [f], False),
+            "wrap after label": ((prep(f, f"report path: \r\n{f}\\reply.md"),), [f], False),   # 1ddebc4c-...jsonl record 19480 (probe C6)
+            "wrap in folder": ((prep(f, f"report path: {f[:k]}\r\n{f[k:]}\\reply.md"),), [f], False),   # 7bfd7fd6-...jsonl record 6983
+            "unclosed row first": ((prep(f, f"report path: quoted text\r\nreport path: {f}\\reply.md"),), [f], False),
+            "dot-dot pair": ((prep(f, f"report path: {f}\\injected\\..\\reply.md"),), [f], False),
+            "block owed": ((NOTE, prep(f), back(f)), [f], True)}[case]
+
+
+@pytest.mark.parametrize("case", ["still running", "monitor", "printed again", "two features", "third not written", "wrap after label", "wrap in folder", "unclosed row first", "dot-dot pair", "block owed"])
+def test_late_round_reason(tmp_path, case):
+    lines, folders, owed = late_case(tmp_path, case)
+    assert hook("Stop", session(tmp_path, *lines, **OFF, last_assistant_message="Done.")) == (0, late(folders, HEAD if owed else None), b"")
+
+
+@pytest.mark.parametrize("case", ["unnamed", "numbered", "never joins", "wrap in label", "cli round", "no reply", "empty reply", "no pending", "continuation"])
+def test_round_not_late_lets_turn_end(tmp_path, case):
+    kw = {"no reply": {"reply": None}, "empty reply": {"reply": b""}, "no pending": {"pending": False}}.get(case, {})
+    [f] = rounds(tmp_path, "rounds/design-r1-fable", **kw)
+    lines = {"unnamed": (rec("result", "round prepare ran elsewhere"),), "numbered": (rec("result", [{"type": "text", "text": f"4\treport path: {f}\\reply.md"}]),),
+             "never joins": (note(f"report path: {f}\\rep"), rec("result", "ly.md")), "wrap in label": (prep(f, f"report \r\npath: {f}\\reply.md"),),
+             "cli round": (note(f"Sol R1 Design Round\nverdict: PASS\nreply: {f}\\reply.md"),)}.get(case, (prep(f),))
+    assert hook("Stop", session(tmp_path, *lines, stop_hook_active=case == "continuation", last_assistant_message="Done."))[:2] == (0, b"")

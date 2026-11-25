@@ -2,14 +2,20 @@
 """parsec's three hooks, named by hooks/hooks.json as ${CLAUDE_PLUGIN_ROOT}/tools/hooks.py <compact|agent|stop>. Fail open (D4): any error prints nothing and exits 0. Bytes in and out: a Windows text pipe re-encodes ledger.md.
 compact: after a compaction in a session that launched a parsec skill, print the driver rule 3 line, then templates/driver-rules.md and templates/ledger.md (field audit 4, 2026-10-15: the reread held 2 of 31 times).
 agent: deny a parsec: agent dispatch that sets model (Moving Day phase 10 tasks 16, 19 and 23 built on Sonnet).
-stop: send the turn back once while no reply in the transcript holds the newest block the tool printed for posting (2026-10-04 Afterparty phases 2 to 4: 4 of 18 posted)."""
+stop: send the turn back once while no reply in the transcript holds the newest block the tool printed for posting (2026-10-04 Afterparty phases 2 to 4: 4 of 18 posted),
+or while a round that round prepare named has its reply.md written and is not collected (2026-11-25 vc-arm0: the driver waited 3 h 51 min on a reply already on disk)."""
 import json
+import os
 import sys
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parent.parent      # never the working directory
 BAD = (ValueError, LookupError, TypeError, AttributeError, OSError, RecursionError)   # 2026-10-16 diff pre-review r1 (Opus F2), Sol diff r1: a bad record is skipped, and never hides a later one
 PHRASE = "next: post the block above"                # tools/parsec.py ends a round block and a pre-flight with it; test_wiring counts the two
+REPORT = "report path:"                              # round prepare prints it before an Opus or Fable round's reply.md (tools/parsec.py, cmd_prepare)
+LATE = "reply.md is written and the round is not collected (pending.json is present) in "
+RUN = "run round collect{} with --agent-id; --ran-ms is optional (without it the minutes count since prepare), so never wait for the notification."
+GO_ON = 'this outranks the "post the block above in chat now" line each collect prints. If a reviewer is still running, or the next step waits on one, end the turn and wait for its hand-back.'
 
 
 def launched(line):                                  # 2026-10-16 design r1, r2 (Sol F1): a Skill block of the message itself, never data inside one
@@ -49,24 +55,45 @@ def texts(line):                                     # one record's (sources, re
 
 
 def stop(event):                                     # 2026-10-17: the Sol R1 design block came in a task-notification and went to the author unposted
-    head, owed = None, {}                            # owed: each heading printed for posting, true until a reply holds it (design r1, Sol F3)
+    head, owed, rounds = None, {}, set()             # owed: each heading printed for posting, true until a reply holds it (design r1, Sol F3); rounds: each folder a report path row names
     with open(event["transcript_path"], "rb") as transcript:   # one record in memory at a time
         for line in transcript:
-            if PHRASE.encode() in line or b"### " in line:   # filters only, they save parsing: a block holds the phrase, and a post holds its heading
+            if PHRASE.encode() in line or b"### " in line or REPORT.encode() in line:   # filters only, they save parsing: a block holds the phrase, a post holds its heading, a prepare its report path
                 sources, replies = texts(line)
                 owed.update({h: False for h in owed if any(h in reply for reply in replies)})   # a reply that holds a heading posts that block
                 for text in sources:
-                    heading = None                   # each source finds its own heading; a block split across records is missed (R1, Brandon SR-A)
+                    heading, path = None, None       # each source finds its own heading; a block split across records is missed (R1, Brandon SR-A)
                     for row in text.splitlines():
-                        row = row.partition("\t")[2] if row.partition("\t")[0].isdigit() else row.removeprefix("<event>").removesuffix("</event>")   # a Read result numbers each line; a Monitor event wraps its text (design r2, Sol F2)
-                        if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is ever quoted in the reason (tools/parsec.py: MARKERS, the round heading and the pre-flight heading); any other "### " line is no heading
+                        numbered = row.partition("\t")[0].isdigit()
+                        row = row.partition("\t")[2] if numbered else row.removeprefix("<event>").removesuffix("</event>")   # a Read result numbers each line; a Monitor event wraps its text (design r2, Sol F2)
+                        path = row if not numbered and row.startswith(REPORT) else None if path is None else path + row   # a PowerShell wrap only inserts line breaks (probe C6); a new row drops an unclosed one; a Read copy begins none
+                        if path is not None and path.strip().endswith("reply.md"):
+                            rounds.add(os.path.dirname(os.path.normpath(path[len(REPORT):].strip())))   # normalised: a <name>\.. pair never reaches the reason
+                            path = None
+                        if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is quoted in the reason (tools/parsec.py: MARKERS, the round heading and the pre-flight heading), and beside it only a late round's normalised folder, which holds pending.json and a non-empty reply.md; any other "### " line is no heading
                             heading = row.rstrip()
                         elif row.startswith(PHRASE) and heading and heading not in owed:   # every block in order (design r2, Sol F1); a line start, so a read of the tool's source has none
                             head = heading           # the newest block, the one the end checks; a heading seen before changes nothing
                             owed[head] = True
-    if event["stop_hook_active"] or not owed.get(head) or head in (event.get("last_assistant_message") or ""):   # never on any Stop hook's continuation, ours or another plugin's (one shared flag); the transcript may lag the last reply, a field the CLI marks optional
+    late = []                                        # full paths, sorted: two features' design-r1-fable stay apart, and round collect takes the feature
+    for folder in sorted(rounds):
+        try:
+            if (Path(folder) / "pending.json").is_file() and (Path(folder) / "reply.md").stat().st_size:
+                late.append(folder)
+        except OSError:                              # a reply.md not yet written, or a folder another session's prepare renamed: that folder only is not late
+            pass
+    if event["stop_hook_active"]:                    # never on any Stop hook's continuation, ours or another plugin's (one shared flag); a missing key fails open
         return b""
-    return json.dumps({"decision": "block", "reason": f'parsec: the block that starts "{head}" was printed for you to post, and no reply in the transcript holds that line. If you posted it in this turn, reply with its heading line only, then end the turn. Otherwise post it now, as is and outside a code block, with the additions the debate skill names, then end the turn.'}).encode("utf-8")   # 2026-10-17: 4 of 9 posts made before a tool call were not saved, so the block was posted twice; a reply of its heading line clears it (the last_assistant_message check above)
+    block, where = owed.get(head) and head not in (event.get("last_assistant_message") or ""), ", ".join(late)   # the transcript may lag the last reply, a field the CLI marks optional
+    if block and late:                               # every post in one reply after the last collect: a post made before a tool call can be lost (below)
+        reason = f'parsec: the block that starts "{head}" was printed for you to post, and no reply in the transcript holds that line; and {LATE}{where}. First, for each round whose reviewer has handed back, or with no hand-back has sent its task-notification, {RUN.format("")} Then, in one reply after the last collect, post the block that starts "{head}" (as is, outside a code block, with the additions the debate skill names; its heading line alone if a reply of this turn already holds it) and every block the collects printed, then go on with the flow\'s next step; {GO_ON}'
+    elif late:                                       # 2026-11-25 vc-arm0: a reason that ended the turn after the collect would leave the session idle one step later
+        reason = f"parsec: {LATE}{where}. For each round whose reviewer has handed back, or with no hand-back has sent its task-notification, {RUN.format(' now')} After the last collect, post every block the collects printed in one reply, then go on with the flow's next step; {GO_ON}"
+    elif block:
+        reason = f'parsec: the block that starts "{head}" was printed for you to post, and no reply in the transcript holds that line. If you posted it in this turn, reply with its heading line only, then end the turn. Otherwise post it now, as is and outside a code block, with the additions the debate skill names, then end the turn.'   # 2026-10-17: 4 of 9 posts made before a tool call were not saved, so the block was posted twice; a reply of its heading line clears it
+    else:
+        return b""
+    return json.dumps({"decision": "block", "reason": reason}).encode("utf-8")
 
 
 def main(argv):
