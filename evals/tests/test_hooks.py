@@ -203,11 +203,12 @@ def test_late_round_reason(tmp_path, case):
     assert hook("Stop", session(tmp_path, *lines, **OFF, last_assistant_message="Done.")) == (0, late(folders, HEAD if owed else None), b"")
 
 
-@pytest.mark.parametrize("case", ["unnamed", "numbered", "never joins", "wrap in label", "cli round", "no reply", "empty reply", "no pending", "continuation"])
+@pytest.mark.parametrize("case", ["unnamed", "numbered", "never joins", "wrap in label", "cli round", "no reply", "empty reply", "no pending", "continuation", "not a round folder", "unc path"])
 def test_round_not_late_lets_turn_end(tmp_path, case):
     kw = {"no reply": {"reply": None}, "empty reply": {"reply": b""}, "no pending": {"pending": False}}.get(case, {})
-    [f] = rounds(tmp_path, "rounds/design-r1-fable", **kw)
+    [f] = rounds(tmp_path, "notes/design-r1-fable" if case == "not a round folder" else "rounds/design-r1-fable", **kw)
     lines = {"unnamed": (rec("result", "round prepare ran elsewhere"),), "numbered": (rec("result", [{"type": "text", "text": f"4\treport path: {f}\\reply.md"}]),),
              "never joins": (note(f"report path: {f}\\rep"), rec("result", "ly.md")), "wrap in label": (prep(f, f"report \r\npath: {f}\\reply.md"),),
-             "cli round": (note(f"Sol R1 Design Round\nverdict: PASS\nreply: {f}\\reply.md"),)}.get(case, (prep(f),))
+             "cli round": (note(f"Sol R1 Design Round\nverdict: PASS\nreply: {f}\\reply.md"),),   # security review of 685a686: any tool result can print a row, so only a local round-shaped folder is read or quoted
+             "unc path": (rec("result", "report path: \\\\parsec-test.invalid\\share\\rounds\\design-r1-fable\\reply.md"),)}.get(case, (prep(f),))
     assert hook("Stop", session(tmp_path, *lines, stop_hook_active=case == "continuation", last_assistant_message="Done."))[:2] == (0, b"")

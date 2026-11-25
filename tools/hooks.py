@@ -6,6 +6,7 @@ stop: send the turn back once while no reply in the transcript holds the newest 
 or while a round that round prepare named has its reply.md written and is not collected (2026-11-25 vc-arm0: the driver waited 3 h 51 min on a reply already on disk)."""
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -13,6 +14,7 @@ PLUGIN = Path(__file__).resolve().parent.parent      # never the working directo
 BAD = (ValueError, LookupError, TypeError, AttributeError, OSError, RecursionError)   # 2026-10-16 diff pre-review r1 (Opus F2), Sol diff r1: a bad record is skipped, and never hides a later one
 PHRASE = "next: post the block above"                # tools/parsec.py ends a round block and a pre-flight with it; test_wiring counts the two
 REPORT = "report path:"                              # round prepare prints it before an Opus or Fable round's reply.md (tools/parsec.py, cmd_prepare)
+ROUND = re.compile(r"[A-Za-z]:(?:\\[^\\/:*?\"<>|\x00-\x1f]+)*\\rounds\\(?:design|prereview|diff|lastlook|panel)-r\d+-(?:opus|fable)")   # an agent round folder on a local drive, the shape of every field row (probe C6); never a UNC path, which Windows would open over the network
 LATE = "reply.md is written and the round is not collected (pending.json is present) in "
 RUN = "run round collect{} with --agent-id; --ran-ms is optional (without it the minutes count since prepare), so never wait for the notification."
 GO_ON = 'this outranks the "post the block above in chat now" line each collect prints. If a reviewer is still running, or the next step waits on one, end the turn and wait for its hand-back.'
@@ -68,7 +70,8 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
                         row = row.partition("\t")[2] if numbered else row.removeprefix("<event>").removesuffix("</event>")   # a Read result numbers each line; a Monitor event wraps its text (design r2, Sol F2)
                         path = row if not numbered and row.startswith(REPORT) else None if path is None else path + row   # a PowerShell wrap only inserts line breaks (probe C6); a new row drops an unclosed one; a Read copy begins none
                         if path is not None and path.strip().endswith("reply.md"):
-                            rounds.add(os.path.dirname(os.path.normpath(path[len(REPORT):].strip())))   # normalised: a <name>\.. pair never reaches the reason
+                            folder = os.path.dirname(os.path.normpath(path[len(REPORT):].strip()))   # normalised: a <name>\.. pair never reaches the reason
+                            rounds |= {folder} if ROUND.fullmatch(folder) and len(folder) < 260 else set()   # security review of 685a686: any tool result can print such a row, so only this shape is read or quoted
                             path = None
                         if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is quoted in the reason (tools/parsec.py: MARKERS, the round heading and the pre-flight heading), and beside it only a late round's normalised folder, which holds pending.json and a non-empty reply.md; any other "### " line is no heading
                             heading = row.rstrip()
