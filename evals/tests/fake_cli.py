@@ -23,7 +23,7 @@ if argv[:1] == ["app-server"]:                           # codex app-server: one
     time.sleep(600)
 if env.get("FAKE_WRITE"):                                # a reviewer that writes into the tree
     Path(env["FAKE_WRITE"]).write_bytes(b"written by the reviewer\n")   # bytes: write_text made CRLF on Windows (2026-09-22 review)
-if "--log-file" in argv:                                 # agy: the log the success test reads
+if "--log-file" in argv:                                 # agy: the log the Neon checks read
     Path(argv[argv.index("--log-file") + 1]).write_text(env.get("FAKE_AGY_LOG", ""), encoding="utf-8")
 time.sleep(float(env.get("FAKE_SLEEP", "0")))
 sys.stdout.write(env.get("FAKE_STDOUT", ""))

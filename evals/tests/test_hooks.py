@@ -146,12 +146,9 @@ def back(folder):                                    # the hand-back (record 122
 def rounds(tmp_path, *names, reply=b"VERDICT: PASS\n", pending=True):   # round folders on disk
     out = []
     for name in names:
-        folder = tmp_path / name
-        folder.mkdir(parents=True)
-        if pending:
-            (folder / "pending.json").write_text("{}", encoding="utf-8")
-        if reply is not None:
-            (folder / "reply.md").write_bytes(reply)
+        (folder := tmp_path / name).mkdir(parents=True)
+        if pending: (folder / "pending.json").write_text("{}", encoding="utf-8")
+        if reply is not None: (folder / "reply.md").write_bytes(reply)
         out.append(str(folder))
     return out
 
@@ -194,19 +191,20 @@ def late_case(tmp_path, case):                        # (transcript lines, expec
             "wrap in folder": ((prep(f, f"report path: {f[:k]}\r\n{f[k:]}\\reply.md"),), [f], False),   # 7bfd7fd6-...jsonl record 6983
             "unclosed row first": ((prep(f, f"report path: quoted text\r\nreport path: {f}\\reply.md"),), [f], False),
             "dot-dot pair": ((prep(f, f"report path: {f}\\injected\\..\\reply.md"),), [f], False),
-            "block owed": ((NOTE, prep(f), back(f)), [f], True)}[case]
+            "block owed": ((NOTE, prep(f), back(f)), [f], True), "other case": ((prep(f), prep(f[:f.index("\\rounds\\")].upper() + f[f.index("\\rounds\\"):])), [f], False)}[case]   # Sol diff r1 F3: one folder in two casings counts once
 
 
-@pytest.mark.parametrize("case", ["still running", "monitor", "printed again", "two features", "third not written", "wrap after label", "wrap in folder", "unclosed row first", "dot-dot pair", "block owed"])
+@pytest.mark.parametrize("case", ["still running", "monitor", "printed again", "two features", "third not written", "wrap after label", "wrap in folder", "unclosed row first", "dot-dot pair", "block owed", "other case"])
 def test_late_round_reason(tmp_path, case):
     lines, folders, owed = late_case(tmp_path, case)
     assert hook("Stop", session(tmp_path, *lines, **OFF, last_assistant_message="Done.")) == (0, late(folders, HEAD if owed else None), b"")
 
 
-@pytest.mark.parametrize("case", ["unnamed", "numbered", "never joins", "wrap in label", "cli round", "no reply", "empty reply", "no pending", "continuation", "not a round folder", "unc path"])
+@pytest.mark.parametrize("case", ["unnamed", "numbered", "never joins", "wrap in label", "cli round", "no reply", "empty reply", "no pending", "continuation", "not a round folder", "unc path", "junction"])
 def test_round_not_late_lets_turn_end(tmp_path, case):
     kw = {"no reply": {"reply": None}, "empty reply": {"reply": b""}, "no pending": {"pending": False}}.get(case, {})
-    [f] = rounds(tmp_path, "notes/design-r1-fable" if case == "not a round folder" else "rounds/design-r1-fable", **kw)
+    [f] = rounds(tmp_path, {"not a round folder": "notes/design-r1-fable", "junction": "real/rounds/design-r1-fable"}.get(case, "rounds/design-r1-fable"), **kw)
+    if case == "junction": subprocess.run(["cmd", "/c", "mklink", "/J", str(tmp_path / "j"), str(tmp_path / "real")], check=True, capture_output=True); f = str(tmp_path / "j" / "rounds" / "design-r1-fable")   # Sol diff r1 F1: a link or junction on the way can lead to a share; a mapped drive by reading
     lines = {"unnamed": (rec("result", "round prepare ran elsewhere"),), "numbered": (rec("result", [{"type": "text", "text": f"4\treport path: {f}\\reply.md"}]),),
              "never joins": (note(f"report path: {f}\\rep"), rec("result", "ly.md")), "wrap in label": (prep(f, f"report \r\npath: {f}\\reply.md"),),
              "cli round": (note(f"Sol R1 Design Round\nverdict: PASS\nreply: {f}\\reply.md"),),   # security review of 685a686: any tool result can print a row, so only a local round-shaped folder is read or quoted

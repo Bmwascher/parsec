@@ -4,6 +4,8 @@ compact: after a compaction in a session that launched a parsec skill, print the
 agent: deny a parsec: agent dispatch that sets model (Moving Day phase 10 tasks 16, 19 and 23 built on Sonnet).
 stop: send the turn back once while no reply in the transcript holds the newest block the tool printed for posting (2026-10-04 Afterparty phases 2 to 4: 4 of 18 posted),
 or while a round that round prepare named has its reply.md written and is not collected (2026-11-25 vc-arm0: the driver waited 3 h 51 min on a reply already on disk)."""
+import ctypes
+import itertools
 import json
 import os
 import re
@@ -56,8 +58,13 @@ def texts(line):                                     # one record's (sources, re
         return [], []
 
 
+def local(folder):                                   # Sol diff r1 F1: a fixed drive (a mapped share is DRIVE_REMOTE) and no link or junction on the way, each part tested without following one
+    parts = Path(folder).parts
+    return ctypes.windll.kernel32.GetDriveTypeW(parts[0]) == 3 and not any(os.path.islink(p) or os.path.isjunction(p) for p in itertools.accumulate(parts[1:], os.path.join, initial=parts[0]))
+
+
 def stop(event):                                     # 2026-10-17: the Sol R1 design block came in a task-notification and went to the author unposted
-    head, owed, rounds = None, {}, set()             # owed: each heading printed for posting, true until a reply holds it (design r1, Sol F3); rounds: each folder a report path row names
+    head, owed, rounds = None, {}, {}                # owed: each heading printed for posting, true until a reply holds it (design r1, Sol F3); rounds: each folder a report path row names, by its case-folded path
     with open(event["transcript_path"], "rb") as transcript:   # one record in memory at a time
         for line in transcript:
             if PHRASE.encode() in line or b"### " in line or REPORT.encode() in line:   # filters only, they save parsing: a block holds the phrase, a post holds its heading, a prepare its report path
@@ -71,7 +78,8 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
                         path = row if not numbered and row.startswith(REPORT) else None if path is None else path + row   # a PowerShell wrap only inserts line breaks (probe C6); a new row drops an unclosed one; a Read copy begins none
                         if path is not None and path.strip().endswith("reply.md"):
                             folder = os.path.dirname(os.path.normpath(path[len(REPORT):].strip()))   # normalised: a <name>\.. pair never reaches the reason
-                            rounds |= {folder} if ROUND.fullmatch(folder) and len(folder) < 260 else set()   # security review of 685a686: any tool result can print such a row, so only this shape is read or quoted
+                            if ROUND.fullmatch(folder) and len(folder) < 260:   # security review of 685a686: any tool result can print such a row, so only this shape is read or quoted
+                                rounds.setdefault(os.path.normcase(folder), folder)   # Sol diff r1 F3: two casings of one folder count once
                             path = None
                         if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is quoted in the reason (tools/parsec.py: MARKERS, the round heading and the pre-flight heading), and beside it only a late round's normalised folder, which holds pending.json and a non-empty reply.md; any other "### " line is no heading
                             heading = row.rstrip()
@@ -79,9 +87,9 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
                             head = heading           # the newest block, the one the end checks; a heading seen before changes nothing
                             owed[head] = True
     late = []                                        # full paths, sorted: two features' design-r1-fable stay apart, and round collect takes the feature
-    for folder in sorted(rounds):
+    for folder in sorted(rounds.values()):
         try:
-            if (Path(folder) / "pending.json").is_file() and (Path(folder) / "reply.md").stat().st_size:
+            if local(folder) and (Path(folder) / "pending.json").is_file() and (Path(folder) / "reply.md").stat().st_size:
                 late.append(folder)
         except OSError:                              # a reply.md not yet written, or a folder another session's prepare renamed: that folder only is not late
             pass

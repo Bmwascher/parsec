@@ -1140,7 +1140,7 @@ def parser():
     q.add_argument("path")
     q = sub.add_parser("doctor", help="the table, one lane's pre-flight, or the updates")
     q.add_argument("--lane")
-    q.add_argument("--kind", default="design")
+    q.add_argument("--kind", default="design", choices=KINDS)   # Sol diff r1 F2: a free string ran a build pre-flight after the build path went
     q.add_argument("--feature")
     for a in ("--fast", "--update"):
         q.add_argument(a, action="store_true")

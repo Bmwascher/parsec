@@ -976,7 +976,7 @@ def test_neon_preflight_and_doctor(env):
 def test_removed_build_path(env, capsys):
     e = env
     for args, word in ((["task-brief", "--feature", "09-22-x", "--task", "1"], "task-brief"), (["build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", ".", "--head", "HEAD"], "build"),
-                       (["build", "archive", "--feature", "09-22-x", "--task", "1"], "build")):
+                       (["build", "archive", "--feature", "09-22-x", "--task", "1"], "build"), (["doctor", "--lane", "opus", "--kind", "build", "--feature", "09-22-x"], "build")):   # Sol diff r1 F2: no build pre-flight
         capsys.readouterr(); assert run(e, *args)[0] == 2 and f"invalid choice: '{word}'" in capsys.readouterr().err, args
     code, out = run(e, "doctor", "--lane", "gemini", "--kind", "design", "--feature", "09-22-x")
     assert code == 64 and "lane gemini is not a lane or a seat" in out, out
