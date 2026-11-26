@@ -209,7 +209,7 @@ def instant(r):
     """A record's end or an amendment's time as an instant: as text, the hour repeated when the clocks go back misordered them (Astra diff r1 F4 of 0.1.55, R7). A stamp with no offset reads as local time."""
     try:
         return dt.datetime.fromisoformat(r.get("end") or r.get("time")).astimezone()
-    except (TypeError, ValueError, OverflowError):   # saved data: no stamp, or a hand-made or old record's text that is none, sorts first and is still read
+    except (TypeError, ValueError, OverflowError, OSError):   # saved data: no stamp, or a hand-made or old record's text that is none or that Windows cannot convert (before 1970; Opus pre-review F1), sorts first and is still read
         return dt.datetime.min.replace(tzinfo=dt.timezone.utc)
 
 

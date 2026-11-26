@@ -481,7 +481,7 @@ def test_verify_spec_alone(env):
 # R7 (Astra diff r1 F4 of 0.1.55): records sort by instant, so in the hour repeated when the clocks go back verify reads the newer record; a stamp with no offset still reads
 def test_records_sort_by_instant(env):
     e = env
-    for name, end, verdict in (("design-r1-fable", "2026-11-01T01:30:00.000000-05:00", "PASS"), ("design-r2-fable", "2026-11-01T01:10:00.000000-06:00", "FIX"), ("design-r1-astra", "2026-10-31T10:00:00", "PASS")):
+    for name, end, verdict in (("design-r1-fable", "2026-11-01T01:30:00.000000-05:00", "PASS"), ("design-r2-fable", "2026-11-01T01:10:00.000000-06:00", "FIX"), ("design-r1-astra", "2026-10-31T10:00:00", "PASS"), ("design-r1-opus", "1969-12-31T10:00:00", "PASS")):   # Opus pre-review F1: Windows cannot convert a time before 1970
         (e.feat / "rounds" / name).mkdir(parents=True)
         parsec.write_json(e.feat / "rounds" / name / "record.json", {"kind": "design", "verdict": verdict, "end": end, "subject": {"spec": parsec.sha256(e.feat / "spec.md")}})
     assert run(e, "verify", "--feature", "09-22-x")[1].strip() == "NO-PASS-YET"   # 01:10 CST is 40 minutes after 01:30 CDT
