@@ -183,19 +183,20 @@ def late_case(tmp_path, case):                        # (transcript lines, expec
         a, b = rounds(tmp_path, "rounds/design-r1-fable", "rounds/diff-r1-opus")
         [c] = rounds(tmp_path, "rounds/lastlook-r1-fable", reply=None)
         return (prep(a), prep(b), prep(c)), [a, b], False
-    [f] = rounds(tmp_path, "reply.md notes/rounds/design-r2-fable")   # a folder name that holds reply.md (Astra diff r1 F2)
-    k, m = f.index("design-r2-fa") + len("design-r2-fa"), f.index("reply.md notes") + len("reply.md")
+    [f] = rounds(tmp_path, "rounds/design-r1-fable/reply.md notes/12345/rounds/design-r2-fable")   # under a round-shaped folder, a folder name that holds reply.md, and one of digits (Astra diff r1 F2, r2 F2, F13)
+    k, m, d = f.index("design-r2-fa") + len("design-r2-fa"), f.index("reply.md notes") + len("reply.md"), f.index("\\12345\\") + 1
     return {"still running": ((prep(f),), [f], False), "monitor": ((note(f"report path: {f}\\reply.md"),), [f], False),
             "printed again": ((prep(f), back(f), rec("result", f"report path: {f}\\reply.md")), [f], False),
             "wrap after label": ((prep(f, f"report path: \r\n{f}\\reply.md"),), [f], False),   # 1ddebc4c-...jsonl record 19480 (probe C6)
             "wrap in folder": ((prep(f, f"report path: {f[:k]}\r\n{f[k:]}\\reply.md"),), [f], False),   # 7bfd7fd6-...jsonl record 6983
             "wrap after reply.md": ((prep(f, f"report path: {f[:m]}\r\n{f[m:]}\\reply.md"),), [f], False),
+            "wrap in digits": ((prep(f, f"report path: {f[:d]}\r\n12345\r\n{f[d + 5:]}\\reply.md"),), [f], False),
             "unclosed row first": ((prep(f, f"report path: quoted text\r\nreport path: {f}\\reply.md"),), [f], False),
             "dot-dot pair": ((prep(f, f"report path: {f}\\injected\\..\\reply.md"),), [f], False),
             "block owed": ((NOTE, prep(f), back(f)), [f], True), "other case": ((prep(f), prep(f[0].swapcase() + f[1:])), sorted([f, f[0].swapcase() + f[1:]]), False)}[case]   # one folder in two casings is listed twice, never dropped (Sol diff r3 F12, F13; R5)
 
 
-@pytest.mark.parametrize("case", ["still running", "monitor", "printed again", "two features", "third not written", "wrap after label", "wrap in folder", "wrap after reply.md", "unclosed row first", "dot-dot pair", "block owed", "other case"])
+@pytest.mark.parametrize("case", ["still running", "monitor", "printed again", "two features", "third not written", "wrap after label", "wrap in folder", "wrap after reply.md", "wrap in digits", "unclosed row first", "dot-dot pair", "block owed", "other case"])
 def test_late_round_reason(tmp_path, case):
     lines, folders, owed = late_case(tmp_path, case)
     assert hook("Stop", session(tmp_path, *lines, **OFF, last_assistant_message="Done.")) == (0, late(folders, HEAD if owed else None), b"")

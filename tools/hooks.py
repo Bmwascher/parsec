@@ -74,11 +74,11 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
                 for text in sources:
                     heading, path = None, None       # each source finds its own heading; a block split across records is missed (R1, Brandon SR-A)
                     for row in text.splitlines():
-                        numbered = row.partition("\t")[0].isdigit()
+                        numbered = "\t" in row and row.partition("\t")[0].isdigit()   # a wrapped line of digits alone is no Read line (Astra diff r2 F13)
                         row = row.partition("\t")[2] if numbered else row.removeprefix("<event>").removesuffix("</event>")   # a Read result numbers each line; a Monitor event wraps its text (design r2, Sol F2)
                         path = row if not numbered and row.startswith(REPORT) else None if path is None else path + row   # a PowerShell wrap only inserts line breaks (probe C6); a new row drops an unclosed one; a Read copy begins none
-                        if path is not None and path.strip().endswith("\\reply.md") and ROUND.fullmatch(folder := os.path.dirname(os.path.normpath(path[len(REPORT):].strip()))) and len(folder) < 260:   # normalised: a <name>\.. pair never reaches the reason; security review of 685a686: any tool result can print such a row, so only this shape is read or quoted; any other text joins on, as a folder name can hold reply.md (Astra diff r1 F2)
-                            rounds.add(folder); path = None
+                        if path is not None and path.strip().endswith("\\reply.md") and ROUND.fullmatch(folder := os.path.dirname(os.path.normpath(path[len(REPORT):].strip()))) and len(folder) < 260:   # normalised: a <name>\.. pair never reaches the reason; security review of 685a686: any tool result can print such a row, so only this shape is read or quoted; the join goes on, as a folder name can hold reply.md, even under a round-shaped folder (Astra diff r1 F2, r2 F2)
+                            rounds.add(folder)
                         if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is quoted in the reason (tools/parsec.py: MARKERS, the round heading and the pre-flight heading), and beside it only a late round's normalised folder, which holds pending.json and a non-empty reply.md; any other "### " line is no heading
                             heading = row.rstrip()
                         elif row.startswith(PHRASE) and heading and heading not in owed:   # every block in order (design r2, Sol F1); a line start, so a read of the tool's source has none
