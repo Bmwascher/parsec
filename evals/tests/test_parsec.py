@@ -698,6 +698,9 @@ def test_inputs_and_preflight(env):
     pkg = bounded / "rounds" / "diff-r1-fable" / ".parsec"
     assert "- design:" not in (pkg / "context.md").read_text(encoding="utf-8") and not (pkg / "spec.md").exists()
     (folder / "reply.md").write_text("report\n\nVERDICT: PASS\n", encoding="utf-8")
+    (e.tmp / "session.jsonl").write_text(json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "content": out}]}}) + "\n", encoding="utf-8")   # Fable last look F1 of 0.1.55: the Stop hook reads the row this prepare printed
+    stop = subprocess.run([sys.executable, str(REPO / "tools" / "hooks.py"), "stop"], input=json.dumps({"transcript_path": str(e.tmp / "session.jsonl"), "cwd": str(e.repo), "stop_hook_active": False}).encode(), capture_output=True).stdout
+    assert "in these folders of the docs root: 09-22-x\\rounds\\prereview-r1-opus. " in json.loads(stop)["reason"], stop
     code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")
     r = e.record("prereview", 1, "opus")
     assert code == 0 and r["verdict"] == "PASS" and r["agent"] == "reviewer-opus" and r["model"].startswith("claude-opus") and not (folder / "pending.json").exists()

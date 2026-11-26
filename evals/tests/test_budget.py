@@ -30,14 +30,14 @@ def test_tool_within_1331_lines():
     assert lines(REPO / "tools" / "parsec.py") <= 1331   # Brandon, 2026-11-22: "A Raise to built count (Recommended)", the Trigger regrade (was 1,309)
 
 
-def test_hooks_within_116_lines():
-    assert lines(REPO / "tools" / "hooks.py") <= 116   # Brandon, 2026-11-25: "Not too worried about the budgets"; the built count of the late-round check, its round-shape guard and its local-drive check (direct-build B12; was 80)
+def test_hooks_within_117_lines():
+    assert lines(REPO / "tools" / "hooks.py") <= 117   # Brandon, 2026-11-25: "Check for a cut first (redundant/out of date info) and then raise if needed"; the docs-root check (security review of v0.1.55), after the imports joined (was 116)
 
 
-def test_tests_within_1648_lines():
+def test_tests_within_1691_lines():
     tests = sorted((REPO / "evals" / "tests").glob("*.py"))
     assert tests, "missing input: the test folder"
-    assert sum(lines(p) for p in tests) <= 1648   # Brandon, 2026-11-22, Q4: "A Raise to built count (Recommended)", the Trigger regrade test and its pre-review r1 and diff r1 fixes (was 1,596)
+    assert sum(lines(p) for p in tests) <= 1691   # Brandon, 2026-11-25: "Check for a cut first (redundant/out of date info) and then raise if needed"; no redundant test found; the docs-root fixture and the report path, R6, R7 and R11 tests (was 1,648)
 
 
 def test_frozen_checkers_do_not_grow():
