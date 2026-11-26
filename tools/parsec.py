@@ -616,7 +616,7 @@ def prepare(args, launch):
         raise Exit(64, f"brief not found: {args.brief}")
     folder = round_folder(fdir, args.kind, args.round, args.lane)
     files = [Path(f).resolve() for f in args.file or []]   # inside the round folder, the rerun's rename would move it away mid-round (2026-09-23, Sol)
-    if len(set(files)) < len(files) or not all(f.is_file() and not f.is_relative_to(folder) for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind)
+    if len(set(files)) < len(files) or not all(f.is_file() and not f.is_relative_to(folder.resolve()) for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind); both resolved, as a feature named through a junction keeps that spelling in folder (Sol diff r1 F2 of 0.1.56)
         raise Exit(64, f"--file {' '.join(args.file)}: missing, given twice, or inside {folder.name}")
     ctx = context_lines(cfg, primary, args.reference)   # Q5-A: an outside reference is refused here, before anything is written; context.md and the read rules share this one result (Sol R2 F3, Astra F18)
     args.base, args.head = [c and git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary).strip() for c in (args.base, args.head)]   # full ids: "HEAD" in a reused review worktree named its old commit (2026-09-23, Astra)
@@ -669,7 +669,7 @@ def prepare(args, launch):
     ensure_worktree(primary, tree, args.head)
     held = {Path(p).name for p in git_out(["ls-files", "-z"], tree).split("\0")} if named else set()   # 0.1.20 last look: a bare plugin.json, at .claude-plugin/plugin.json, warned
     given, skip = args.file or [], held | {"reply.md", "record.json", "summaries.md", "pending.json", "spec.md", "notes.md"}   # an older folder's tasks.md goes as evidence when named (direct-build B5)
-    loose = {n: p for n in sorted(named) if (p := resolve_under(fdir, n)).is_file() and p.is_relative_to(fdir) and not p.is_relative_to(folder)   # pre-review F1: the path as named, never another folder's
+    loose = {n: p for n in sorted(named) if (p := resolve_under(fdir, n)).is_file() and p.is_relative_to(fdir.resolve()) and not p.is_relative_to(folder.resolve())   # pre-review F1: the path as named, never another folder's
              and p.name not in skip | {Path(f).name for f in given}}
     args.file = [str(f) for f in files] + sorted({str(p) for p in loose.values()})   # 2026-10-04 Afterparty ap-13: 27 rounds warned of a named feature-folder file and went without it; each --file by the path checked above (R11)
     warnings += [f"packed {n} from the feature folder as evidence (the brief named it)" for n in loose]

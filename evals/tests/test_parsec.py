@@ -502,13 +502,15 @@ def test_packaged_spec_is_hashed(env):
 # R11 (Astra diff r3 F19 of 0.1.55): a --file reached through a junction in the round being rerun is read by the path prepare checked, not by its first spelling after the rename
 def test_file_through_junction_in_rerun_round(env):
     e = env
-    prep = lambda *a: run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base, *a)
+    prep = lambda *a, f="09-22-x": run(e, "round", "prepare", "--feature", f, "--kind", "prereview", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base, *a)
     folder, logs = e.feat / "rounds" / "prereview-r1-opus", e.tmp / "logs"
     assert prep()[0] == 0
     logs.mkdir(); (logs / "gate.log").write_text("green\n", encoding="utf-8")
     subprocess.run(["cmd", "/c", "mklink", "/J", str(folder / "j"), str(logs)], check=True, capture_output=True)
     code, out = prep("--file", str(folder / "j" / "gate.log"))
     assert code == 0 and (folder / ".parsec" / "evidence" / "1-gate.log").read_text(encoding="utf-8") == "green\n", out
+    subprocess.run(["cmd", "/c", "mklink", "/J", str(alias := e.feat.with_name("09-22-alias")), str(e.feat)], check=True, capture_output=True)   # Sol diff r1 F2: a file inside the round, named through a feature junction, is refused before anything moves
+    assert (r := prep("--file", str(alias / "rounds" / "prereview-r1-opus" / ".parsec" / "evidence" / "1-gate.log"), f="09-22-alias"))[0] == 64 and "inside prereview-r1-opus" in r[1] and (folder / "pending.json").is_file(), r[1]
 
 
 # direct-build B2 (2026-11-25): a design round runs on spec.md alone and refuses without it, writing nothing

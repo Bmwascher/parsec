@@ -34,10 +34,10 @@ def test_hooks_within_116_lines():
     assert lines(REPO / "tools" / "hooks.py") <= 116   # Brandon, 2026-11-25: "Not too worried about the budgets"; the built count of the late-round check, its round-shape guard and its local-drive check (direct-build B12; was 80)
 
 
-def test_tests_within_1688_lines():
+def test_tests_within_1690_lines():
     tests = sorted((REPO / "evals" / "tests").glob("*.py"))
     assert tests, "missing input: the test folder"
-    assert sum(lines(p) for p in tests) <= 1688   # Brandon, 2026-11-25: "Check for a cut first (redundant/out of date info) and then raise if needed"; no redundant test found; the hook's names-only cases and the report path, R6, R7 and R11 tests (was 1,648)
+    assert sum(lines(p) for p in tests) <= 1690   # Brandon, 2026-11-25: "Check for a cut first (redundant/out of date info) and then raise if needed"; no redundant test found; the hook's names-only cases and the report path, R6, R7 and R11 tests, and the Sol diff r1 F2 case (was 1,648)
 
 
 def test_frozen_checkers_do_not_grow():
