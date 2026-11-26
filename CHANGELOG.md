@@ -4,7 +4,7 @@ Newest first. Each section opens with plain words for the user; the detail follo
 
 ## v0.1.56 (2026-11-26)
 
-The hook that sends a turn back for an uncollected review now quotes only short folder names. A cloned repository can no longer put its text in front of the driver. This release also fixes three older defects in the tool.
+The hook that sends a turn back for an uncollected review now quotes only short folder names. A cloned repository can no longer put a folder name with spaces or other marks in front of the driver. A name of words with hyphens, dots or underscores between them still gets through, and Brandon accepted this. This release also fixes three older defects in the tool.
 
 - The hook names a late round by its last three names, the feature folder, `rounds` and the round. It counts the round only when each of those names uses ASCII letters, digits, `_`, `.` and `-`. Before, it quoted the full path, and a cloned repository could name a folder with instructions. A security review found this.
 - The hook starts no program and reads no project config. One build step read the docs root through `git`, but a second security review found that Windows can run a `git.exe` from the project folder. A cloned repository can also commit its own config. Brandon chose the short names in place of the docs root.
