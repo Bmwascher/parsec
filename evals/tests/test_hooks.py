@@ -144,7 +144,7 @@ def back(folder):                                    # the hand-back (record 122
 
 
 def rounds(tmp_path, *names, reply=b"VERDICT: PASS\n", pending=True):   # round folders on disk
-    out = [] if ctypes.windll.kernel32.GetDriveTypeW(tmp_path.anchor) == 3 else pytest.skip("pytest's temp folder is not on a fixed drive, which the hook never reads (Astra diff r1 F5)")
+    out = [] if ctypes.windll.kernel32.GetDriveTypeW(tmp_path.anchor) == 3 and all(len(str(tmp_path / n)) < 260 for n in names) else pytest.skip("pytest's temp folder is not on a fixed drive, or too deep for the hook's 260-character limit, so the hook never reads it (Astra diff r1 F5, r2 F5)")
     for name in names:
         (folder := tmp_path / name).mkdir(parents=True)
         if pending: (folder / "pending.json").write_text("{}", encoding="utf-8")
