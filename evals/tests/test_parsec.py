@@ -511,6 +511,9 @@ def test_file_through_junction_in_rerun_round(env):
     assert code == 0 and (folder / ".parsec" / "evidence" / "1-gate.log").read_text(encoding="utf-8") == "green\n", out
     subprocess.run(["cmd", "/c", "mklink", "/J", str(alias := e.feat.with_name("09-22-alias")), str(e.feat)], check=True, capture_output=True)   # Sol diff r1 F2: a file inside the round, named through a feature junction, is refused before anything moves
     assert (r := prep("--file", str(alias / "rounds" / "prereview-r1-opus" / ".parsec" / "evidence" / "1-gate.log"), f="09-22-alias"))[0] == 64 and "inside prereview-r1-opus" in r[1] and (folder / "pending.json").is_file(), r[1]
+    (e.feat / "other").mkdir(); (e.feat / "other" / "gate2.log").write_text("two\n", encoding="utf-8")   # Sol diff r2 F3: a rerun moves only the entry of a round folder that is itself a junction, so its target's file is packed
+    subprocess.run(["cmd", "/c", "mklink", "/J", str(e.feat / "rounds" / "lastlook-r1-opus"), str(e.feat / "other")], check=True, capture_output=True)
+    assert (r := run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "lastlook", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base, "--file", str(e.feat / "other" / "gate2.log")))[0] == 0 and (e.feat / "rounds" / "lastlook-r1-opus" / ".parsec" / "evidence" / "1-gate2.log").read_text(encoding="utf-8") == "two\n", r[1]
 
 
 # direct-build B2 (2026-11-25): a design round runs on spec.md alone and refuses without it, writing nothing
