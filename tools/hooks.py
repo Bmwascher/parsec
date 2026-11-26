@@ -9,6 +9,7 @@ import itertools
 import json
 import os
 import re
+import stat
 import sys
 from pathlib import Path
 
@@ -89,7 +90,7 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
     late = []                                        # full paths, sorted: two features' design-r1-fable stay apart, and round collect takes the feature
     for folder in sorted(rounds.values()):
         try:
-            if local(folder) and (Path(folder) / "pending.json").is_file() and (Path(folder) / "reply.md").stat().st_size:
+            if local(folder) and all(stat.S_ISREG((s := os.lstat(os.path.join(folder, n))).st_mode) for n in ("pending.json", "reply.md")) and s.st_size:   # lstat: a linked pending.json or reply.md is never followed (security review of 394c155); s is reply.md's
                 late.append(folder)
         except OSError:                              # a reply.md not yet written, or a folder another session's prepare renamed: that folder only is not late
             pass
