@@ -2,6 +2,27 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.55 (2026-11-25)
+
+Your session now builds a designed feature from the spec. The author no longer writes a task list, and parsec has no implementers now. A hook now stops the end of a turn while a review by Opus or Fable has a reply that the session did not collect. The hook then tells the session to collect the review, or to wait while the reviewer still works.
+
+- After Brandon approves the spec, the next question is "Go?", unless a go is already on record. The design debate reviews only the spec.
+- At the start of each step, the session checks that its checkout is clean and on the right commit. Before each commit, it checks the branch and that the commit did not move. If another phase changed the checkout, the session stops and asks Brandon.
+- The session writes each test first and sees it fail. It runs all tests before each commit, and it lists the cases of the spec in `build\cases.md`. Each commit gets a ledger line `step NN`. A step with nothing to test names its check and gets the word green with the reason.
+- Subagents read code, but they do not write code, tests or the spec.
+- The session fixes serious issues from the gate itself, test first. Before, the author wrote a fix task.
+- The session changes only the Design part of the spec by itself. Any other change goes to Brandon first. The session records each change with `verify --record-amendment`, and the final report lists each change.
+- A design round needs only `spec.md`. `verify` compares only the spec, and it still reads older records. With no spec, `verify` refuses to record an amendment and writes nothing.
+- An older `tasks.md` stays where it is. The tool packs it only as evidence, when a brief names it or `--file` passes it.
+- `task-brief`, `build run`, `build archive`, the build check of the doctor and the `gemini` lane no longer exist. Git history keeps them. The Neon lane still uses agy.
+- The trial of 2026-11-25 led to this change. A build from the spec used 29% less Claude spend, and the task list made no feature better.
+- On 2026-11-25 a session saw the reply of Fable, ended its turn to wait for the run time, and sat for 3 hours 51 minutes. The new hook stops this. It finds each round that `round prepare` named in the transcript, with `reply.md` written and `pending.json` still there. It tells the driver to collect each round whose reviewer came back, to post the blocks in one reply and to go on. If a reviewer still works, the driver waits.
+- The hook joins a report path again when PowerShell breaks it over two or more lines. It names each late round by its full path. One folder that the transcript shows in two casings appears twice.
+- The hook reads only a round folder of the usual shape on a fixed drive. It accepts no link or junction on the path, and no link as either file. It never opens a network path, and it never quotes other text from the transcript. Security reviews found these risks.
+- This release does not fix a second stall, which stays a watch item. A driver can end a turn after a PASS and not start the next round.
+- The spec of this feature lists the limits that stay (R3 to R12). Three older defects in `round prepare` and `verify` (R6, R7 and R11) go to a later release.
+- The limits: `tools/parsec.py` is 1,176 lines, under its limit of 1,331. `tools/hooks.py` is 116 lines, and its limit is now 116 (it was 80). The tests are 1,648 lines, at their limit of 1,648. The prose is 11,655 words. The build skill is 1,598 words and the debate skill is 1,590 words, each under the limit of 1,600.
+
 ## v0.1.54 (2026-11-22)
 
 Reviewers must now show how serious findings can happen. Critical or Important findings with no trigger line count as Minor, so they do not hold a round open, except in rare cases. New code and fixes guard only what can really fail.
