@@ -12,8 +12,8 @@ BAD = (ValueError, LookupError, TypeError, AttributeError, OSError, RecursionErr
 PHRASE = "next: post the block above"                # tools/parsec.py ends a round block and a pre-flight with it; test_wiring counts the two
 REPORT = "report path:"                              # round prepare prints it before an Opus or Fable round's reply.md (tools/parsec.py, prepare); test_inputs_and_preflight feeds that output to this hook
 ROUND = re.compile(r"[A-Za-z]:(?:\\[^\\/:*?\"<>|\x00-\x1f]+)*\\rounds\\(?:design|prereview|diff|lastlook|panel)-r\d+-(?:opus|fable)")   # an agent round folder on a local drive, the shape of every field row (probe C6); never a UNC path, which Windows would open over the network
-REL = re.compile(r"(?:[\w.-]+\\)+rounds\\(?:design|prereview|diff|lastlook|panel)-r\d+-(?:opus|fable)", re.ASCII)   # what the reason quotes: the round folder from the docs root, its feature folders named in a strict set (security review of v0.1.55)
-LATE = "reply.md is written and the round is not collected (pending.json is present) in these folders of the docs root: "
+REL = re.compile(r"[\w.-]+\\rounds\\(?:design|prereview|diff|lastlook|panel)-r\d+-(?:opus|fable)", re.ASCII)   # all the reason quotes of a late round: its last three names, each in a strict set, so a cloned repository's folder name that holds text is never quoted (security review of v0.1.55, Brandon Q-H B); the hook runs no program and reads no project config
+LATE = "reply.md is written and the round is not collected (pending.json is present) in "
 RUN = "run round collect{} with --agent-id; --ran-ms is optional (without it the minutes count since prepare), so never wait for the notification."
 GO_ON = 'this outranks the "post the block above in chat now" line each collect prints. If a reviewer is still running, or the next step waits on one, end the turn and wait for its hand-back.'
 
@@ -74,23 +74,17 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
                         path = row if not numbered and row.startswith(REPORT) else None if path is None else path + row   # a PowerShell wrap only inserts line breaks (probe C6); a new row drops an unclosed one; a Read copy begins none
                         if path is not None and path.strip().endswith("\\reply.md") and ROUND.fullmatch(folder := os.path.dirname(os.path.normpath(path[len(REPORT):].strip()))) and len(folder) < 260:   # normalised: a <name>\.. pair never reaches the reason; security review of 685a686: any tool result can print such a row, so only this shape is read or quoted; the join goes on, as a folder name can hold reply.md, even under a round-shaped folder (Astra diff r1 F2, r2 F2)
                             rounds.add(folder)
-                        if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is quoted in the reason (tools/parsec.py: MARKERS, the round heading and the pre-flight heading), and beside it only a late round's folder from the docs root, in REL's strict set, which holds pending.json and a non-empty reply.md; any other "### " line is no heading
+                        if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is quoted in the reason (tools/parsec.py: MARKERS, the round heading and the pre-flight heading), and beside it only a late round's last three names, in REL's strict set, whose folder holds pending.json and a non-empty reply.md; any other "### " line is no heading
                             heading = row.rstrip()
                         elif row.startswith(PHRASE) and heading and heading not in owed:   # every block in order (design r2, Sol F1); a line start, so a read of the tool's source has none
                             head = heading           # the newest block, the one the end checks; a heading seen before changes nothing
                             owed[head] = True
-    late, docs = [], None                            # paths from the docs root, sorted by full path: two features' design-r1-fable stay apart, and round collect takes the feature; one folder printed in two casings is listed twice (R5, Sol diff r3 F12, F13)
-    if rounds:                                       # security review of v0.1.55: a cloned repository can commit a round-shaped folder named with instructions, so only a folder of the configured docs root counts
-        try:
-            import parsec                            # tools/parsec.py, beside this file: the docs root as round prepare finds it, the primary checkout's .claude/parsec.toml
-            docs = parsec.resolve_under(primary := parsec.primary_of(event["cwd"]), parsec.load_config(primary)["docs_root"])
-        except Exception:                            # no cwd, no git or no config: no folder counts
-            pass
+    late = []                                        # each feature\rounds\round, sorted by full path: two features' design-r1-fable stay apart, and round collect takes the feature; one folder printed in two casings is listed twice (R5, Sol diff r3 F12, F13)
     for folder in sorted(rounds):
         try:
-            if REL.fullmatch(rel := str(Path(folder).relative_to(docs))) and local(folder) and all(stat.S_ISREG((s := os.lstat(os.path.join(folder, n))).st_mode) for n in ("pending.json", "reply.md")) and s.st_size:   # lstat: a linked file is never followed (security review of 394c155); s is reply.md's
-                late.append(rel)
-        except BAD:                                  # a reply.md not yet written, a folder another session's prepare renamed, or one outside the docs root (with none, TypeError): that folder only is not late
+            if REL.fullmatch(name := "\\".join(Path(folder).parts[-3:])) and local(folder) and all(stat.S_ISREG((s := os.lstat(os.path.join(folder, n))).st_mode) for n in ("pending.json", "reply.md")) and s.st_size:   # lstat: a linked file is never followed (security review of 394c155); s is reply.md's
+                late.append(name)
+        except OSError:                              # a reply.md not yet written, or a folder another session's prepare renamed: that folder only is not late
             pass
     if event["stop_hook_active"]:                    # never on any Stop hook's continuation, ours or another plugin's (one shared flag); a missing key fails open
         return b""
