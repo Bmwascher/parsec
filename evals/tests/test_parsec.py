@@ -478,6 +478,15 @@ def test_verify_spec_alone(env):
     assert v()[1].strip() == "CHANGED"                              # a null spec never matches a missing file
 
 
+# R7 (Astra diff r1 F4 of 0.1.55): records sort by instant, so in the hour repeated when the clocks go back verify reads the newer record; a stamp with no offset still reads
+def test_records_sort_by_instant(env):
+    e = env
+    for name, end, verdict in (("design-r1-fable", "2026-11-01T01:30:00.000000-05:00", "PASS"), ("design-r2-fable", "2026-11-01T01:10:00.000000-06:00", "FIX"), ("design-r1-astra", "2026-10-31T10:00:00", "PASS")):
+        (e.feat / "rounds" / name).mkdir(parents=True)
+        parsec.write_json(e.feat / "rounds" / name / "record.json", {"kind": "design", "verdict": verdict, "end": end, "subject": {"spec": parsec.sha256(e.feat / "spec.md")}})
+    assert run(e, "verify", "--feature", "09-22-x")[1].strip() == "NO-PASS-YET"   # 01:10 CST is 40 minutes after 01:30 CDT
+
+
 # R6 (Astra diff r1 F1 of 0.1.55): the hash and the round's archived spec.md are the packaged bytes, even when the spec is saved again just after the copy
 def test_packaged_spec_is_hashed(env):
     e = env
