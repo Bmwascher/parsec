@@ -478,6 +478,44 @@ def test_verify_spec_alone(env):
     assert v()[1].strip() == "CHANGED"                              # a null spec never matches a missing file
 
 
+# R7 (Astra diff r1 F4 of 0.1.55): records sort by instant, so in the hour repeated when the clocks go back verify reads the newer record; a stamp with no offset still reads
+def test_records_sort_by_instant(env):
+    e = env
+    for name, end, verdict in (("design-r1-fable", "2026-11-01T01:30:00.000000-05:00", "PASS"), ("design-r2-fable", "2026-11-01T01:10:00.000000-06:00", "FIX"), ("design-r1-astra", "2026-10-31T10:00:00", "PASS"), ("design-r1-opus", "1969-12-31T10:00:00", "PASS")):   # Opus pre-review F1: Windows cannot convert a time before 1970
+        (e.feat / "rounds" / name).mkdir(parents=True)
+        parsec.write_json(e.feat / "rounds" / name / "record.json", {"kind": "design", "verdict": verdict, "end": end, "subject": {"spec": parsec.sha256(e.feat / "spec.md")}})
+    assert run(e, "verify", "--feature", "09-22-x")[1].strip() == "NO-PASS-YET"   # 01:10 CST is 40 minutes after 01:30 CDT
+
+
+# R6 (Astra diff r1 F1 of 0.1.55): the hash and the round's archived spec.md are the packaged bytes, even when the spec is saved again just after the copy
+def test_packaged_spec_is_hashed(env):
+    e = env
+    sent, copy = (e.feat / "spec.md").read_bytes(), shutil.copyfile
+    def save_after(src, dst):
+        copy(src, dst)
+        if Path(src) == e.feat / "spec.md" and Path(dst).parent.name == ".parsec": (e.feat / "spec.md").write_bytes(b"# Spec\n\nsaved later\n")
+    e.mp.setattr(parsec.shutil, "copyfile", save_after)
+    assert rnd(e, 1)[0] == 0
+    assert e.record("design", 1, "astra")["subject"]["spec"] == parsec.hashlib.sha256(sent).hexdigest() and (e.feat / "rounds" / "design-r1-astra" / "spec.md").read_bytes() == sent
+
+
+# R11 (Astra diff r3 F19 of 0.1.55): a --file reached through a junction in the round being rerun is read by the path prepare checked, not by its first spelling after the rename
+def test_file_through_junction_in_rerun_round(env):
+    e = env
+    prep = lambda *a, f="09-22-x": run(e, "round", "prepare", "--feature", f, "--kind", "prereview", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base, *a)
+    folder, logs = e.feat / "rounds" / "prereview-r1-opus", e.tmp / "logs"
+    assert prep()[0] == 0
+    logs.mkdir(); (logs / "gate.log").write_text("green\n", encoding="utf-8")
+    subprocess.run(["cmd", "/c", "mklink", "/J", str(folder / "j"), str(logs)], check=True, capture_output=True)
+    code, out = prep("--file", str(folder / "j" / "gate.log"))
+    assert code == 0 and (folder / ".parsec" / "evidence" / "1-gate.log").read_text(encoding="utf-8") == "green\n", out
+    subprocess.run(["cmd", "/c", "mklink", "/J", str(alias := e.feat.with_name("09-22-alias")), str(e.feat)], check=True, capture_output=True)   # Sol diff r1 F2: a file inside the round, named through a feature junction, is refused before anything moves
+    assert (r := prep("--file", str(alias / "rounds" / "prereview-r1-opus" / ".parsec" / "evidence" / "1-gate.log"), f="09-22-alias"))[0] == 64 and "inside prereview-r1-opus" in r[1] and (folder / "pending.json").is_file(), r[1]
+    (e.feat / "other").mkdir(); (e.feat / "other" / "gate2.log").write_text("two\n", encoding="utf-8")   # Sol diff r2 F3: a rerun moves only the entry of a round folder that is itself a junction, so its target's file is packed
+    subprocess.run(["cmd", "/c", "mklink", "/J", str(e.feat / "rounds" / "lastlook-r1-opus"), str(e.feat / "other")], check=True, capture_output=True)
+    assert (r := run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "lastlook", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base, "--file", str(e.feat / "other" / "gate2.log")))[0] == 0 and (e.feat / "rounds" / "lastlook-r1-opus" / ".parsec" / "evidence" / "1-gate2.log").read_text(encoding="utf-8") == "two\n", r[1]
+
+
 # direct-build B2 (2026-11-25): a design round runs on spec.md alone and refuses without it, writing nothing
 def test_design_round_on_spec_alone(env):
     e = env
@@ -698,6 +736,9 @@ def test_inputs_and_preflight(env):
     pkg = bounded / "rounds" / "diff-r1-fable" / ".parsec"
     assert "- design:" not in (pkg / "context.md").read_text(encoding="utf-8") and not (pkg / "spec.md").exists()
     (folder / "reply.md").write_text("report\n\nVERDICT: PASS\n", encoding="utf-8")
+    (e.tmp / "session.jsonl").write_text(json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "content": out}]}}) + "\n", encoding="utf-8")   # Fable last look F1 of 0.1.55: the Stop hook reads the row this prepare printed
+    stop = subprocess.run([sys.executable, str(REPO / "tools" / "hooks.py"), "stop"], input=json.dumps({"transcript_path": str(e.tmp / "session.jsonl"), "stop_hook_active": False}).encode(), capture_output=True).stdout
+    assert "(pending.json is present) in 09-22-x\\rounds\\prereview-r1-opus (for a standalone panel's round, round collect takes --feature panels/<name>). " in json.loads(stop)["reason"], stop
     code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")
     r = e.record("prereview", 1, "opus")
     assert code == 0 and r["verdict"] == "PASS" and r["agent"] == "reviewer-opus" and r["model"].startswith("claude-opus") and not (folder / "pending.json").exists()

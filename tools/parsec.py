@@ -202,7 +202,15 @@ def records(fdir):
             r = read_json(p)
             r["_path"] = str(p)
             out.append(r)
-    return sorted(out, key=lambda r: r.get("end") or r.get("time") or "")
+    return sorted(out, key=instant)
+
+
+def instant(r):
+    """A record's end or an amendment's time as an instant: as text, the hour repeated when the clocks go back misordered them (Astra diff r1 F4 of 0.1.55, R7). A stamp with no offset reads as local time."""
+    try:
+        return dt.datetime.fromisoformat(r.get("end") or r.get("time")).astimezone()
+    except (TypeError, ValueError, OverflowError, OSError):   # saved data: no stamp, or a hand-made or old record's text that is none or that Windows cannot convert (before 1970; Opus pre-review F1), sorts first and is still read
+        return dt.datetime.min.replace(tzinfo=dt.timezone.utc)
 
 
 def strip_line(line):
@@ -374,13 +382,13 @@ def write_package(root, args, primary, fdir, kind, ctx):   # ctx: prepare's one 
     shutil.copyfile(args.brief, pkg / "brief.md")                          # the same bytes
     lines, warnings, _, _, read = ctx                   # prepare's one context_lines result
     lines.insert(0, f"- your lane, {args.lane.capitalize()}: {SHELL_READS if args.lane in ('astra', 'sol') else FILE_READS}")
-    ev = [(pkg / "evidence" / f"{k}-{src.name}", src) for k, src in enumerate([Path(f).resolve() for f in args.file or []], 1)]   # checked in prepare
+    ev = [(pkg / "evidence" / f"{k}-{src.name}", src) for k, src in enumerate([Path(f) for f in args.file or []], 1)]   # resolved and checked in prepare, never resolved again after a rerun's rename (Astra diff r3 F19 of 0.1.55, R11)
     lines += [f"- evidence: .parsec/evidence/{dst.name} is a copy of {src.name}" for dst, src in ev]   # 2026-09-23: a reviewer looked for notes.md by its own name; never the path, which can name a lane
     subject = {}
     for name in (("spec.md",) if kind != "panel" else ()):   # a design round has the spec (prepare); a gate round packs it when there is one (Brandon, 2026-09-23: A+); no task list since direct-build (2026-11-25)
         if (fdir / name).is_file():
             shutil.copyfile(fdir / name, pkg / name)
-            subject[name[:-3]] = sha256(fdir / name)
+            subject[name[:-3]] = sha256(pkg / name)   # the packaged bytes: a save just after the copy is never recorded as reviewed (Astra diff r1 F1 of 0.1.55, R6)
     if subject and kind != "design":
         lines.append(f"- design: {' and '.join(f'.parsec/{n}.md' for n in subject)}, the reviewed design")
         lines += [f"- amendment {k}: {r['reason']}" for k, r in enumerate([r for r in records(fdir) if "reason" in r], 1)] or ["- amendments: none"]
@@ -608,7 +616,8 @@ def prepare(args, launch):
         raise Exit(64, f"brief not found: {args.brief}")
     folder = round_folder(fdir, args.kind, args.round, args.lane)
     files = [Path(f).resolve() for f in args.file or []]   # inside the round folder, the rerun's rename would move it away mid-round (2026-09-23, Sol)
-    if len(set(files)) < len(files) or not all(f.is_file() and not f.is_relative_to(folder) for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind)
+    moved = folder.parent.resolve() / folder.name           # the entry a rerun renames: its parent resolved, as a feature named through a junction keeps that spelling in folder (Sol diff r1 F2 of 0.1.56); never followed itself, as the rename moves a junction's entry, not its target (Sol diff r2 F3)
+    if len(set(files)) < len(files) or not all(f.is_file() and not f.is_relative_to(moved) for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind)
         raise Exit(64, f"--file {' '.join(args.file)}: missing, given twice, or inside {folder.name}")
     ctx = context_lines(cfg, primary, args.reference)   # Q5-A: an outside reference is refused here, before anything is written; context.md and the read rules share this one result (Sol R2 F3, Astra F18)
     args.base, args.head = [c and git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary).strip() for c in (args.base, args.head)]   # full ids: "HEAD" in a reused review worktree named its old commit (2026-09-23, Astra)
@@ -661,15 +670,15 @@ def prepare(args, launch):
     ensure_worktree(primary, tree, args.head)
     held = {Path(p).name for p in git_out(["ls-files", "-z"], tree).split("\0")} if named else set()   # 0.1.20 last look: a bare plugin.json, at .claude-plugin/plugin.json, warned
     given, skip = args.file or [], held | {"reply.md", "record.json", "summaries.md", "pending.json", "spec.md", "notes.md"}   # an older folder's tasks.md goes as evidence when named (direct-build B5)
-    loose = {n: p for n in sorted(named) if (p := resolve_under(fdir, n)).is_file() and p.is_relative_to(fdir) and not p.is_relative_to(folder)   # pre-review F1: the path as named, never another folder's
+    loose = {n: p for n in sorted(named) if (p := resolve_under(fdir, n)).is_file() and p.is_relative_to(fdir.resolve()) and not p.is_relative_to(moved)   # pre-review F1: the path as named, never another folder's
              and p.name not in skip | {Path(f).name for f in given}}
-    args.file = given + sorted({str(p) for p in loose.values()})   # 2026-10-04 Afterparty ap-13: 27 rounds warned of a named feature-folder file and went without it
+    args.file = [str(f) for f in files] + sorted({str(p) for p in loose.values()})   # 2026-10-04 Afterparty ap-13: 27 rounds warned of a named feature-folder file and went without it; each --file by the path checked above (R11)
     warnings += [f"packed {n} from the feature folder as evidence (the brief named it)" for n in loose]
     if cli:
         model, effort, agent = row["model"], row.get("effort", "lane home"), None
         subject, w, read = write_package(tree, args, primary, fdir, args.kind, ctx)   # one config read for context.md and the Neon read rules (Sol F3, Astra F3)
         if args.kind == "design":
-            shutil.copyfile(fdir / "spec.md", folder / "spec.md")
+            shutil.copyfile(tree / ".parsec" / "spec.md", folder / "spec.md")   # the bytes sent and hashed (R6)
     else:
         model, effort, agent = agent_seat(args.lane)
         subject, w, _ = write_package(folder, args, primary, fdir, args.kind, ctx)
