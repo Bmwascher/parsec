@@ -87,11 +87,11 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
                         elif row.startswith(PHRASE) and heading and heading not in owed:   # every block in order (design r2, Sol F1); a line start, so a read of the tool's source has none
                             head = heading           # the newest block, the one the end checks; a heading seen before changes nothing
                             owed[head] = True
-    late, seen = [], set()                           # full paths, sorted: two features' design-r1-fable stay apart, and round collect takes the feature
+    late = []                                        # full paths, sorted: two features' design-r1-fable stay apart, and round collect takes the feature; one folder printed in two casings is listed twice (R5, Sol diff r3 F12, F13)
     for folder in sorted(rounds):
         try:
-            if local(folder) and all(stat.S_ISREG((s := os.lstat(os.path.join(folder, n))).st_mode) for n in ("pending.json", "reply.md")) and s.st_size and (s.st_dev, s.st_ino) not in seen:   # lstat: a linked file is never followed (security review of 394c155); s is reply.md's, whose identity counts a folder once in any casing, and keeps two folders of a case-sensitive directory apart (Sol diff r1 F3, r2 F9)
-                seen.add((s.st_dev, s.st_ino)); late.append(folder)
+            if local(folder) and all(stat.S_ISREG((s := os.lstat(os.path.join(folder, n))).st_mode) for n in ("pending.json", "reply.md")) and s.st_size:   # lstat: a linked file is never followed (security review of 394c155); s is reply.md's
+                late.append(folder)
         except OSError:                              # a reply.md not yet written, or a folder another session's prepare renamed: that folder only is not late
             pass
     if event["stop_hook_active"]:                    # never on any Stop hook's continuation, ours or another plugin's (one shared flag); a missing key fails open
