@@ -47,7 +47,7 @@ A model that reviews its own work tends to agree with itself. A model from anoth
 | **After the build** | A flaw in the diff hasn't reached the main branch yet. |
 
 > [!TIP]
-> **Every step starts with a failing test.** The session writes the test, sees it fail, writes the code, then runs the whole suite before it commits. Before each step it checks that its checkout is clean and on the commit it expects, so another phase's work is never swept into a commit.
+> **Every step starts with a failing test.** The session writes the test, sees it fail, writes the code, then runs the whole suite before it commits. A step with nothing worth testing under the project's test policy names its check instead and is logged green with the reason. Before each step it checks that its checkout is clean and on the commit it expects, so another phase's work is never swept into a commit.
 
 ---
 

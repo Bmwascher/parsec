@@ -1,7 +1,7 @@
 """Tests for tools/hooks.py and hooks/hooks.json (specs: dev/reviews/10-16-hooks in this repo; 10-17-stop-hook-unposted-block in the parsec docs folder, outside it). Field audit 4, 2026-10-15:
 the reread after a compaction held 2 of 31 times; Moving Day phase 10 tasks 16, 19 and 23 built on Sonnet because a parsec dispatch set model;
 on 2026-10-17 a round block went to the author unposted. Each test runs the command that hooks/hooks.json names, so the wiring is under test."""
-import json, pytest, shlex, shutil, subprocess, sys
+import ctypes, json, pytest, shlex, shutil, subprocess, sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -144,7 +144,7 @@ def back(folder):                                    # the hand-back (record 122
 
 
 def rounds(tmp_path, *names, reply=b"VERDICT: PASS\n", pending=True):   # round folders on disk
-    out = []
+    out = [] if ctypes.windll.kernel32.GetDriveTypeW(tmp_path.anchor) == 3 else pytest.skip("pytest's temp folder is not on a fixed drive, which the hook never reads (Astra diff r1 F5)")
     for name in names:
         (folder := tmp_path / name).mkdir(parents=True)
         if pending: (folder / "pending.json").write_text("{}", encoding="utf-8")
