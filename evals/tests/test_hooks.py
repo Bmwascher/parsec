@@ -176,8 +176,9 @@ def note(text):                                       # a Monitor event delivere
 
 
 def late_case(tmp_path, case):                        # (transcript lines, expected folders, block owed)
-    if case == "two features":
-        a, b = rounds(tmp_path, "f2/rounds/design-r1-fable", "f1/rounds/design-r1-fable")
+    if case in ("two features", "case twins"):                # Sol diff r2 F9: two real folders that differ only by case, in a case-sensitive folder, both count
+        _ = case == "case twins" and ((tmp_path / "cs").mkdir() or subprocess.run(["fsutil", "file", "setCaseSensitiveInfo", str(tmp_path / "cs"), "enable"], check=True, capture_output=True))
+        a, b = rounds(tmp_path, *(("cs/Feat/rounds/design-r1-fable", "cs/feat/rounds/design-r1-fable") if case == "case twins" else ("f2/rounds/design-r1-fable", "f1/rounds/design-r1-fable")))
         return (prep(a), prep(b)), sorted([a, b]), False
     if case == "third not written":
         a, b = rounds(tmp_path, "rounds/design-r1-fable", "rounds/diff-r1-opus")
@@ -191,10 +192,10 @@ def late_case(tmp_path, case):                        # (transcript lines, expec
             "wrap in folder": ((prep(f, f"report path: {f[:k]}\r\n{f[k:]}\\reply.md"),), [f], False),   # 7bfd7fd6-...jsonl record 6983
             "unclosed row first": ((prep(f, f"report path: quoted text\r\nreport path: {f}\\reply.md"),), [f], False),
             "dot-dot pair": ((prep(f, f"report path: {f}\\injected\\..\\reply.md"),), [f], False),
-            "block owed": ((NOTE, prep(f), back(f)), [f], True), "other case": ((prep(f), prep(f[:f.index("\\rounds\\")].upper() + f[f.index("\\rounds\\"):])), [f], False)}[case]   # Sol diff r1 F3: one folder in two casings counts once
+            "block owed": ((NOTE, prep(f), back(f)), [f], True), "other case": ((prep(f), prep(f[:f.index("\\rounds\\")].upper() + f[f.index("\\rounds\\"):])), [min(f, f[:f.index("\\rounds\\")].upper() + f[f.index("\\rounds\\"):])], False)}[case]   # Sol diff r1 F3: one folder in two casings counts once
 
 
-@pytest.mark.parametrize("case", ["still running", "monitor", "printed again", "two features", "third not written", "wrap after label", "wrap in folder", "unclosed row first", "dot-dot pair", "block owed", "other case"])
+@pytest.mark.parametrize("case", ["still running", "monitor", "printed again", "two features", "third not written", "wrap after label", "wrap in folder", "unclosed row first", "dot-dot pair", "block owed", "other case", "case twins"])
 def test_late_round_reason(tmp_path, case):
     lines, folders, owed = late_case(tmp_path, case)
     assert hook("Stop", session(tmp_path, *lines, **OFF, last_assistant_message="Done.")) == (0, late(folders, HEAD if owed else None), b"")

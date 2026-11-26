@@ -65,7 +65,7 @@ def local(folder):                                   # Sol diff r1 F1: a fixed d
 
 
 def stop(event):                                     # 2026-10-17: the Sol R1 design block came in a task-notification and went to the author unposted
-    head, owed, rounds = None, {}, {}                # owed: each heading printed for posting, true until a reply holds it (design r1, Sol F3); rounds: each folder a report path row names, by its case-folded path
+    head, owed, rounds = None, {}, set()             # owed: each heading printed for posting, true until a reply holds it (design r1, Sol F3); rounds: each folder a report path row names
     with open(event["transcript_path"], "rb") as transcript:   # one record in memory at a time
         for line in transcript:
             if PHRASE.encode() in line or b"### " in line or REPORT.encode() in line:   # filters only, they save parsing: a block holds the phrase, a post holds its heading, a prepare its report path
@@ -80,18 +80,18 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
                         if path is not None and path.strip().endswith("reply.md"):
                             folder = os.path.dirname(os.path.normpath(path[len(REPORT):].strip()))   # normalised: a <name>\.. pair never reaches the reason
                             if ROUND.fullmatch(folder) and len(folder) < 260:   # security review of 685a686: any tool result can print such a row, so only this shape is read or quoted
-                                rounds.setdefault(os.path.normcase(folder), folder)   # Sol diff r1 F3: two casings of one folder count once
+                                rounds.add(folder)
                             path = None
                         if row.startswith(("### 🔴", "### 🟡", "### 🟢", "### ⚪")) and len(row) < 200:   # X-A (Brandon, 2026-10-17; security review of 927de85): only the tool's heading shape, short, is quoted in the reason (tools/parsec.py: MARKERS, the round heading and the pre-flight heading), and beside it only a late round's normalised folder, which holds pending.json and a non-empty reply.md; any other "### " line is no heading
                             heading = row.rstrip()
                         elif row.startswith(PHRASE) and heading and heading not in owed:   # every block in order (design r2, Sol F1); a line start, so a read of the tool's source has none
                             head = heading           # the newest block, the one the end checks; a heading seen before changes nothing
                             owed[head] = True
-    late = []                                        # full paths, sorted: two features' design-r1-fable stay apart, and round collect takes the feature
-    for folder in sorted(rounds.values()):
+    late, seen = [], set()                           # full paths, sorted: two features' design-r1-fable stay apart, and round collect takes the feature
+    for folder in sorted(rounds):
         try:
-            if local(folder) and all(stat.S_ISREG((s := os.lstat(os.path.join(folder, n))).st_mode) for n in ("pending.json", "reply.md")) and s.st_size:   # lstat: a linked pending.json or reply.md is never followed (security review of 394c155); s is reply.md's
-                late.append(folder)
+            if local(folder) and all(stat.S_ISREG((s := os.lstat(os.path.join(folder, n))).st_mode) for n in ("pending.json", "reply.md")) and s.st_size and (s.st_dev, s.st_ino) not in seen:   # lstat: a linked file is never followed (security review of 394c155); s is reply.md's, whose identity counts a folder once in any casing, and keeps two folders of a case-sensitive directory apart (Sol diff r1 F3, r2 F9)
+                seen.add((s.st_dev, s.st_ino)); late.append(folder)
         except OSError:                              # a reply.md not yet written, or a folder another session's prepare renamed: that folder only is not late
             pass
     if event["stop_hook_active"]:                    # never on any Stop hook's continuation, ours or another plugin's (one shared flag); a missing key fails open
