@@ -213,7 +213,6 @@ def instant(r):
         return dt.datetime.min.replace(tzinfo=dt.timezone.utc)
 
 
-
 def strip_line(line):
     return re.sub(r"^[\s\-\*>#•]*\**", "", line).strip()   # 2026-09-24: kimi starts each reply block with "• " (0.43.1 and 2.1.1)
 
@@ -383,7 +382,7 @@ def write_package(root, args, primary, fdir, kind, ctx):   # ctx: prepare's one 
     shutil.copyfile(args.brief, pkg / "brief.md")                          # the same bytes
     lines, warnings, _, _, read = ctx                   # prepare's one context_lines result
     lines.insert(0, f"- your lane, {args.lane.capitalize()}: {SHELL_READS if args.lane in ('astra', 'sol') else FILE_READS}")
-    ev = [(pkg / "evidence" / f"{k}-{src.name}", src) for k, src in enumerate([Path(f).resolve() for f in args.file or []], 1)]   # checked in prepare
+    ev = [(pkg / "evidence" / f"{k}-{src.name}", src) for k, src in enumerate([Path(f) for f in args.file or []], 1)]   # resolved and checked in prepare, never resolved again after a rerun's rename (Astra diff r3 F19 of 0.1.55, R11)
     lines += [f"- evidence: .parsec/evidence/{dst.name} is a copy of {src.name}" for dst, src in ev]   # 2026-09-23: a reviewer looked for notes.md by its own name; never the path, which can name a lane
     subject = {}
     for name in (("spec.md",) if kind != "panel" else ()):   # a design round has the spec (prepare); a gate round packs it when there is one (Brandon, 2026-09-23: A+); no task list since direct-build (2026-11-25)
@@ -672,7 +671,7 @@ def prepare(args, launch):
     given, skip = args.file or [], held | {"reply.md", "record.json", "summaries.md", "pending.json", "spec.md", "notes.md"}   # an older folder's tasks.md goes as evidence when named (direct-build B5)
     loose = {n: p for n in sorted(named) if (p := resolve_under(fdir, n)).is_file() and p.is_relative_to(fdir) and not p.is_relative_to(folder)   # pre-review F1: the path as named, never another folder's
              and p.name not in skip | {Path(f).name for f in given}}
-    args.file = given + sorted({str(p) for p in loose.values()})   # 2026-10-04 Afterparty ap-13: 27 rounds warned of a named feature-folder file and went without it
+    args.file = [str(f) for f in files] + sorted({str(p) for p in loose.values()})   # 2026-10-04 Afterparty ap-13: 27 rounds warned of a named feature-folder file and went without it; each --file by the path checked above (R11)
     warnings += [f"packed {n} from the feature folder as evidence (the brief named it)" for n in loose]
     if cli:
         model, effort, agent = row["model"], row.get("effort", "lane home"), None

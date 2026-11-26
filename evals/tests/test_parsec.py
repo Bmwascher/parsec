@@ -499,6 +499,18 @@ def test_packaged_spec_is_hashed(env):
     assert e.record("design", 1, "astra")["subject"]["spec"] == parsec.hashlib.sha256(sent).hexdigest() and (e.feat / "rounds" / "design-r1-astra" / "spec.md").read_bytes() == sent
 
 
+# R11 (Astra diff r3 F19 of 0.1.55): a --file reached through a junction in the round being rerun is read by the path prepare checked, not by its first spelling after the rename
+def test_file_through_junction_in_rerun_round(env):
+    e = env
+    prep = lambda *a: run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base, *a)
+    folder, logs = e.feat / "rounds" / "prereview-r1-opus", e.tmp / "logs"
+    assert prep()[0] == 0
+    logs.mkdir(); (logs / "gate.log").write_text("green\n", encoding="utf-8")
+    subprocess.run(["cmd", "/c", "mklink", "/J", str(folder / "j"), str(logs)], check=True, capture_output=True)
+    code, out = prep("--file", str(folder / "j" / "gate.log"))
+    assert code == 0 and (folder / ".parsec" / "evidence" / "1-gate.log").read_text(encoding="utf-8") == "green\n", out
+
+
 # direct-build B2 (2026-11-25): a design round runs on spec.md alone and refuses without it, writing nothing
 def test_design_round_on_spec_alone(env):
     e = env
