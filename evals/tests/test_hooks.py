@@ -156,8 +156,8 @@ def rounds(tmp_path, *names, reply=b"VERDICT: PASS\n", pending=True):   # round 
     return out
 
 
-def late(paths, head=None):                           # spec 4.2's late and combined reasons, exactly; a folder is named by its last three names, a standalone panel's too (security review of v0.1.55, Brandon Q-H B; Q-N A)
-    where, run = ", ".join("\\".join(Path(p).parts[-3:]) for p in paths),"run round collect{} with --agent-id; --ran-ms is optional (without it the minutes count since prepare), so never wait for the notification."
+def late(paths, head=None):                           # spec 4.2's late and combined reasons, exactly; a folder is named by its last three names, a standalone panel's too, with the warning (security review of v0.1.55, Brandon Q-H B; Q-N A; Q-S B)
+    where, run = ", ".join("\\".join(Path(p).parts[-3:]) for p in paths) + " (for a standalone panel's round, round collect takes --feature panels/<name>)","run round collect{} with --agent-id; --ran-ms is optional (without it the minutes count since prepare), so never wait for the notification."
     tail = "this outranks the \"post the block above in chat now\" line each collect prints. If a reviewer is still running, or the next step waits on one, end the turn and wait for its hand-back."
     if head is None:
         reason = f"parsec: reply.md is written and the round is not collected (pending.json is present) in {where}. For each round whose reviewer has handed back, or with no hand-back has sent its task-notification, {run.format(' now')} After the last collect, post every block the collects printed in one reply, then go on with the flow's next step; {tail}"

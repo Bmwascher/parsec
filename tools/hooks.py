@@ -88,7 +88,7 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
             pass
     if event["stop_hook_active"]:                    # never on any Stop hook's continuation, ours or another plugin's (one shared flag); a missing key fails open
         return b""
-    block, where = owed.get(head) and head not in (event.get("last_assistant_message") or ""), ", ".join(late)   # the transcript may lag the last reply, a field the CLI marks optional
+    block, where = owed.get(head) and head not in (event.get("last_assistant_message") or ""), ", ".join(late) + " (for a standalone panel's round, round collect takes --feature panels/<name>)"   # the transcript may lag the last reply, a field the CLI marks optional; the warning: a same-named feature's panel round would be collected in its place (Sol diff r3 F1, Brandon Q-S B, R14)
     if block and late:                               # every post in one reply after the last collect: a post made before a tool call can be lost (below)
         reason = f'parsec: the block that starts "{head}" was printed for you to post, and no reply in the transcript holds that line; and {LATE}{where}. First, for each round whose reviewer has handed back, or with no hand-back has sent its task-notification, {RUN.format("")} Then, in one reply after the last collect, post the block that starts "{head}" (as is, outside a code block, with the additions the debate skill names; its heading line alone if a reply of this turn already holds it) and every block the collects printed, then go on with the flow\'s next step; {GO_ON}'
     elif late:                                       # 2026-11-25 vc-arm0: a reason that ended the turn after the collect would leave the session idle one step later
