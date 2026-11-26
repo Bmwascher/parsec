@@ -156,8 +156,8 @@ def rounds(tmp_path, *names, reply=b"VERDICT: PASS\n", pending=True):   # round 
     return out
 
 
-def late(paths, head=None):                           # spec 4.2's late and combined reasons, exactly; a folder is named by its last three names, a panel round's with panels\ (security review of v0.1.55, Brandon Q-H B; Opus pre-review F2)
-    where, run = ", ".join("\\".join(Path(p).parts[-4 if Path(p).parts[-4] == "panels" and Path(p).name.startswith("panel-") else -3:]) for p in paths),"run round collect{} with --agent-id; --ran-ms is optional (without it the minutes count since prepare), so never wait for the notification."
+def late(paths, head=None):                           # spec 4.2's late and combined reasons, exactly; a folder is named by its last three names, a standalone panel's too (security review of v0.1.55, Brandon Q-H B; Q-N A)
+    where, run = ", ".join("\\".join(Path(p).parts[-3:]) for p in paths),"run round collect{} with --agent-id; --ran-ms is optional (without it the minutes count since prepare), so never wait for the notification."
     tail = "this outranks the \"post the block above in chat now\" line each collect prints. If a reviewer is still running, or the next step waits on one, end the turn and wait for its hand-back."
     if head is None:
         reason = f"parsec: reply.md is written and the round is not collected (pending.json is present) in {where}. For each round whose reviewer has handed back, or with no hand-back has sent its task-notification, {run.format(' now')} After the last collect, post every block the collects printed in one reply, then go on with the flow's next step; {tail}"
@@ -180,7 +180,7 @@ def note(text):                                       # a Monitor event delivere
 
 def late_case(tmp_path, case):                        # (transcript lines, expected folders, block owed)
     if case == "two features":
-        both = rounds(tmp_path, "f2/rounds/design-r1-fable", "f1/rounds/design-r1-fable", "panels/f1/rounds/panel-r1-fable", "panels/f3/rounds/design-r1-fable")   # one round name in two features; a panel; a design round under a folder named panels (Sol diff r1 F1, F3)
+        both = rounds(tmp_path, "f2/rounds/design-r1-fable", "f1/rounds/design-r1-fable", "panels/f1/rounds/panel-r1-fable", "panels/f3/rounds/design-r1-fable")   # one round name in two features (Sol diff r1 F3); a standalone panel and a round under a folder named panels, named without it (Brandon, Q-N A)
         return tuple(map(prep, both)), sorted(both), False
     if case == "third not written":
         a, b = rounds(tmp_path, "f/rounds/design-r1-fable", "f/rounds/diff-r1-opus")

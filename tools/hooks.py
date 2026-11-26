@@ -12,7 +12,7 @@ BAD = (ValueError, LookupError, TypeError, AttributeError, OSError, RecursionErr
 PHRASE = "next: post the block above"                # tools/parsec.py ends a round block and a pre-flight with it; test_wiring counts the two
 REPORT = "report path:"                              # round prepare prints it before an Opus or Fable round's reply.md (tools/parsec.py, prepare); test_inputs_and_preflight feeds that output to this hook
 ROUND = re.compile(r"[A-Za-z]:(?:\\[^\\/:*?\"<>|\x00-\x1f]+)*\\rounds\\(?:design|prereview|diff|lastlook|panel)-r\d+-(?:opus|fable)")   # an agent round folder on a local drive, the shape of every field row (probe C6); never a UNC path, which Windows would open over the network
-REL = re.compile(r"(?:panels\\)?[\w.-]+\\rounds\\(?:design|prereview|diff|lastlook|panel)-r\d+-(?:opus|fable)", re.ASCII)   # all the reason quotes of a late round: its last three names, with panels\ before a panel round's (Opus pre-review F2; only a panel round, Sol diff r1 F1), each in a strict set, so a cloned repository's folder name that holds text is never quoted (security review of v0.1.55, Brandon Q-H B); the hook runs no program and reads no project config
+REL = re.compile(r"[\w.-]+\\rounds\\(?:design|prereview|diff|lastlook|panel)-r\d+-(?:opus|fable)", re.ASCII)   # all the reason quotes of a late round: its last three names, a standalone panel's too, which round collect takes with panels/ before it (Brandon, Q-N A: Opus pre-review F2, Sol diff r1 F1, r2 F1, F2), each in a strict set, so a cloned repository's folder name that holds text is never quoted (security review of v0.1.55, Brandon Q-H B); the hook runs no program and reads no project config
 LATE = "reply.md is written and the round is not collected (pending.json is present) in "
 RUN = "run round collect{} with --agent-id; --ran-ms is optional (without it the minutes count since prepare), so never wait for the notification."
 GO_ON = 'this outranks the "post the block above in chat now" line each collect prints. If a reviewer is still running, or the next step waits on one, end the turn and wait for its hand-back.'
@@ -82,7 +82,7 @@ def stop(event):                                     # 2026-10-17: the Sol R1 de
     late = []                                        # each feature\rounds\round, sorted by full path: two features' design-r1-fable stay apart, and round collect takes the feature; one folder printed in two casings is listed twice (R5, Sol diff r3 F12, F13)
     for folder in sorted(rounds):
         try:
-            if REL.fullmatch(name := "\\".join((p := Path(folder).parts)[-4 if p[-4:-3] == ("panels",) and p[-1].startswith("panel-") else -3:])) and local(folder) and all(stat.S_ISREG((s := os.lstat(os.path.join(folder, n))).st_mode) for n in ("pending.json", "reply.md")) and s.st_size:   # lstat: a linked file is never followed (security review of 394c155); s is reply.md's
+            if REL.fullmatch(name := "\\".join(Path(folder).parts[-3:])) and local(folder) and all(stat.S_ISREG((s := os.lstat(os.path.join(folder, n))).st_mode) for n in ("pending.json", "reply.md")) and s.st_size:   # lstat: a linked file is never followed (security review of 394c155); s is reply.md's
                 late.append(name)
         except OSError:                              # a reply.md not yet written, or a folder another session's prepare renamed: that folder only is not late
             pass
