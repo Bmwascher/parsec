@@ -608,7 +608,7 @@ def prepare(args, launch):
         raise Exit(64, f"brief not found: {args.brief}")
     folder = round_folder(fdir, args.kind, args.round, args.lane)
     files = [Path(f).resolve() for f in args.file or []]   # inside the round folder, the rerun's rename would move it away mid-round (2026-09-23, Sol)
-    if len(set(map(str, files))) < len(files) or not all(f.is_file() and not str(f).startswith(str(folder.resolve()) + os.sep) for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind); twice and inside compare resolved text, as a Windows path compares two case-sensitive twins equal (Astra diff r1 F3, r2 F14)
+    if len(set(files)) < len(files) or not all(f.is_file() and not f.is_relative_to(folder) for f in files):   # these three before any write (2026-09-23 pre-review: a new panel's folder was left behind)
         raise Exit(64, f"--file {' '.join(args.file)}: missing, given twice, or inside {folder.name}")
     ctx = context_lines(cfg, primary, args.reference)   # Q5-A: an outside reference is refused here, before anything is written; context.md and the read rules share this one result (Sol R2 F3, Astra F18)
     args.base, args.head = [c and git_out(["rev-parse", "--verify", f"{c}^{{commit}}"], primary).strip() for c in (args.base, args.head)]   # full ids: "HEAD" in a reused review worktree named its old commit (2026-09-23, Astra)
