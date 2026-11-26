@@ -1,6 +1,6 @@
 {
   "name": "parsec",
-  "version": "0.1.55",
+  "version": "0.1.56",
   "description": "Brainstorm, build and cross-vendor debate for Claude Code: an Opus author writes the spec, your session builds it test first, and Sol, Astra, Muse, Kimi, Neon, Opus and Fable review at the commitment boundaries. One Python tool runs the rounds.",
   "author": {
     "name": "Brandon Wascher",

@@ -2,6 +2,19 @@
 
 Newest first. Each section opens with plain words for the user; the detail follows.
 
+## v0.1.56 (2026-11-26)
+
+The hook that sends a turn back for an uncollected review now quotes only short folder names. A cloned repository can no longer put its text in front of the driver. This release also fixes three older defects in the tool.
+
+- The hook names a late round by its last three names, the feature folder, `rounds` and the round. It counts the round only when each of those names uses ASCII letters, digits, `_`, `.` and `-`. Before, it quoted the full path, and a cloned repository could name a folder with instructions. A security review found this.
+- The hook starts no program and reads no project config. One build step read the docs root through `git`, but a second security review found that Windows can run a `git.exe` from the project folder. A cloned repository can also commit its own config. Brandon chose the short names in place of the docs root.
+- The hook names a standalone panel round without `panels`. The reason tells the driver that `round collect` takes such a round as `--feature panels/<name>`. Brandon accepted the rare case of a feature and a standalone panel of one name (R13, R14).
+- A test gives the real output of `round prepare` to the hook, so a change to the `report path:` line on either side fails the test.
+- `round prepare` hashes the copy of `spec.md` that it packs, and a design round keeps that copy. Before, a save just after the copy could record bytes that no reviewer got (R6).
+- `verify` sorts the records by their time, not by their text. Before, the hour that repeats when the clocks go back could put an older record last (R7). A record with a time that the tool cannot read sorts first.
+- `round prepare` packs each `--file` from the path that it checked. Before, a new run of a round could read a file again from a path that its own rename had moved (R11). It also follows each junction on the way to the round before it compares the paths. So a feature or a round folder that is a junction gets the right answer.
+- The limits: `tools/parsec.py` is 1,185 lines, under its limit of 1,331. `tools/hooks.py` is 111 lines, under its limit of 116. The tests are 1,693 lines, and their limit is now 1,693 (it was 1,648). Brandon said to cut first, then to raise the limit if necessary.
+
 ## v0.1.55 (2026-11-25)
 
 Your session now builds a designed feature from the spec. The author no longer writes a task list, and parsec has no implementers now. A hook now stops the end of a turn while a review by Opus or Fable has a reply that the session did not collect. The hook then tells the session to collect the review, or to wait while the reviewer still works.
