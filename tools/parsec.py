@@ -380,7 +380,7 @@ def write_package(root, args, primary, fdir, kind, ctx):   # ctx: prepare's one 
     for name in (("spec.md",) if kind != "panel" else ()):   # a design round has the spec (prepare); a gate round packs it when there is one (Brandon, 2026-09-23: A+); no task list since direct-build (2026-11-25)
         if (fdir / name).is_file():
             shutil.copyfile(fdir / name, pkg / name)
-            subject[name[:-3]] = sha256(fdir / name)
+            subject[name[:-3]] = sha256(pkg / name)   # the packaged bytes: a save just after the copy is never recorded as reviewed (Astra diff r1 F1 of 0.1.55, R6)
     if subject and kind != "design":
         lines.append(f"- design: {' and '.join(f'.parsec/{n}.md' for n in subject)}, the reviewed design")
         lines += [f"- amendment {k}: {r['reason']}" for k, r in enumerate([r for r in records(fdir) if "reason" in r], 1)] or ["- amendments: none"]
@@ -669,7 +669,7 @@ def prepare(args, launch):
         model, effort, agent = row["model"], row.get("effort", "lane home"), None
         subject, w, read = write_package(tree, args, primary, fdir, args.kind, ctx)   # one config read for context.md and the Neon read rules (Sol F3, Astra F3)
         if args.kind == "design":
-            shutil.copyfile(fdir / "spec.md", folder / "spec.md")
+            shutil.copyfile(tree / ".parsec" / "spec.md", folder / "spec.md")   # the bytes sent and hashed (R6)
     else:
         model, effort, agent = agent_seat(args.lane)
         subject, w, _ = write_package(folder, args, primary, fdir, args.kind, ctx)

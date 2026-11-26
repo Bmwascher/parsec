@@ -478,6 +478,18 @@ def test_verify_spec_alone(env):
     assert v()[1].strip() == "CHANGED"                              # a null spec never matches a missing file
 
 
+# R6 (Astra diff r1 F1 of 0.1.55): the hash and the round's archived spec.md are the packaged bytes, even when the spec is saved again just after the copy
+def test_packaged_spec_is_hashed(env):
+    e = env
+    sent, copy = (e.feat / "spec.md").read_bytes(), shutil.copyfile
+    def save_after(src, dst):
+        copy(src, dst)
+        if Path(src) == e.feat / "spec.md" and Path(dst).parent.name == ".parsec": (e.feat / "spec.md").write_bytes(b"# Spec\n\nsaved later\n")
+    e.mp.setattr(parsec.shutil, "copyfile", save_after)
+    assert rnd(e, 1)[0] == 0
+    assert e.record("design", 1, "astra")["subject"]["spec"] == parsec.hashlib.sha256(sent).hexdigest() and (e.feat / "rounds" / "design-r1-astra" / "spec.md").read_bytes() == sent
+
+
 # direct-build B2 (2026-11-25): a design round runs on spec.md alone and refuses without it, writing nothing
 def test_design_round_on_spec_alone(env):
     e = env
