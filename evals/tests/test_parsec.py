@@ -1,7 +1,7 @@
 """Tests for tools/parsec.py, each standing on a recorded failure (step 5 of the rethink, rows 1 to 17).
 The fake CLI is evals/tests/fake_cli.py; no model call, no network. Rows that need junctions or
 taskkill run on Windows only."""
-import importlib.util, json, os, pytest, stat, subprocess, sys, time, uuid
+import importlib.util, json, os, pytest, shutil, stat, subprocess, sys, time, uuid
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -48,8 +48,6 @@ def env(tmp_path, monkeypatch):
     feat = repo / "docs" / "09-22-x"
     feat.mkdir(parents=True)
     (feat / "spec.md").write_text("# Spec\n\nthe spec\n", encoding="utf-8")
-    (feat / "tasks.md").write_bytes(b"# Plan\n\nheader line\n\n## Global constraints\n\n- keep it\n\n## File map\n\n- a\n\n"
-                                    b"## Task 1: first\n\n- [ ] step\n\n```lua\nlocal x = 1\n```\n\n## Task 2: second\n\n- [ ] other\n")
     (feat / "ledger.md").write_text("# Ledger\n\n", encoding="utf-8")
     brief = tmp_path / "brief.md"
     brief.write_bytes(TRICKY.encode("utf-8"))
@@ -58,7 +56,6 @@ def env(tmp_path, monkeypatch):
     lanes.write_text(f'[astra]\nmodel = "gpt-6-astra"\neffort = "high"\ncommand = {cmd}\n'
                      f'[sol]\nmodel = "gpt-5.6-sol"\neffort = "high"\ncommand = {cmd}\n'
                      f'[kimi]\nmodel = "kimi-code/k3"\ncommand = {cmd}\nhome = "{(tmp_path / "kimi-home").as_posix()}"\n'
-                     f'[gemini]\nmodel = "gemini-3.8-flash-high"\ncommand = {cmd}\n'
                      f'[neon]\nmodel = "gemini-4-neon-high"\neffort = "high"\ncommand = {cmd}\n'
                      f'[muse]\nmodel = "muse-wonder-full-1.0"\neffort = "high"\ncommand = {cmd}\n', encoding="utf-8")
     (tmp_path / "kimi-home").mkdir()
@@ -224,6 +221,7 @@ def test_brief_bytes_reach_stdin(env):
     rnd(e, 2)
     sent = (e.feat / "rounds" / "design-r2-astra" / "brief.md").read_bytes()
     assert sent == b"# Brief\n\n## 2. Task\n\nread it\n\n### " + (REPO / "templates" / "brief-design.md").read_bytes().replace(b"\r\n", b"\n")[2:].rstrip(b"\n") + b"\n\n## 3. Rules\n\n- r\n\n## 7. Final check\n" + parsec.CONTINUITY.encode()   # resumed: the tool adds the line (2026-09-28 audit, gk-4)
+    assert b"\n\nThe subject is `.parsec/spec.md`; `.parsec/context.md` names the rubric and each evidence file. The feature has no task list: after the go, the session writes the code and its tests from this spec, test first. Review the spec: behaviour left open, contradictions, cases it does not decide, a file, name, signature or call site in its Design section that does not exist or cannot work where it lands in the tree, and anything that would make correct code impossible. Check that every Behaviour case traces to the Goal and to a test or named check in its Testing section. A missing implementation is not a finding.\n\n## 3. Rules" in sent   # direct-build B2
     assert (e.tmp / "stdin.bin").read_bytes() == sent and e.record("design", 2, "astra")["brief_sha256"] == parsec.sha256(e.feat / "rounds" / "design-r2-astra" / "brief.md")
     prep = lambda kind, lane, *x: run(e, "round", "prepare", "--feature", "09-22-x", "--kind", kind, "--round", "2" if x else "1", "--lane", lane, "--brief", str(e.brief),
                                       "--head", e.head, *(["--base", e.base] if kind != "design" else []), *x)
@@ -440,7 +438,7 @@ def test_verify_states(env):
     assert v()[1].strip() == "MATCH"
     run(e, "round", "collect", "--feature", "09-22-x", "--kind", "design", "--round", "2", "--lane", "astra", "--degraded", "kimi only")
     assert v()[1].strip() == "MATCH (DEGRADED PASS)"
-    (e.feat / "tasks.md").write_bytes((e.feat / "tasks.md").read_bytes() + b"\n## Task 3: fix\n\n- [ ] x\n")
+    (e.feat / "spec.md").write_text("# Spec\n\nthe spec, amended\n", encoding="utf-8")
     assert v()[1].strip() == "CHANGED"
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable", "--brief", str(e.brief))
     code, out = v("--record-amendment", "fix task for a gate finding")
@@ -448,9 +446,10 @@ def test_verify_states(env):
     (e.feat / "rounds" / "panel-r1-fable" / "reply.md").write_text("VERDICT: BLIND\n", encoding="utf-8")
     assert "no counts line" not in run(e, "round", "collect", "--feature", "09-22-x", "--kind", "panel", "--round", "1", "--lane", "fable")[1]   # field audit 4: 8 of 8 blind panel records warned
     code, out = v("--record-amendment", "fix task for a gate finding")
-    assert code == 0 and "amendment 1 recorded" in out and v()[1].strip() == "MATCH (DEGRADED PASS)"   # the flag carries
+    assert code == 0 and f"amendment 1 recorded: spec {parsec.sha256(e.feat / 'spec.md')[:8]}\n" in out and v()[1].strip() == "MATCH (DEGRADED PASS)"   # the flag carries
+    assert json.loads((e.feat / "rounds" / "amendment-1.json").read_text(encoding="utf-8"))["subject"] == {"spec": parsec.sha256(e.feat / "spec.md")}   # direct-build B4
     assert (e.feat / "rounds" / "amendment-1.json").is_file()
-    assert rnd(e, 1, "sol", "diff")[0] == 0 and set(e.record("diff", 1, "sol")["subject"]) == {"spec", "tasks"}   # Brandon, 2026-09-23 (A+): every gate seat checks the diff against the approved design
+    assert rnd(e, 1, "sol", "diff")[0] == 0 and set(e.record("diff", 1, "sol")["subject"]) == {"spec"}   # Brandon, 2026-09-23 (A+): every gate seat checks the diff against the approved design
     assert "- amendment 1: fix task for a gate finding" in (e.wt / "_review" / "proj-09-22-x-diff-sol" / ".parsec" / "context.md").read_text(encoding="utf-8")
     e.mp.setenv("FAKE_REPLY", "VERDICT: FIX\n")
     rnd(e, 3)
@@ -461,34 +460,75 @@ def test_verify_states(env):
     assert v()[1].strip() == "CHANGED"
 
 
-# row 12: task-brief slices bytes (old item 113)
-def test_task_brief_slice(env):
+# direct-build B4 (2026-11-25): verify compares the spec alone; a 0.1.54 record of spec and tasks still reads; a missing spec never matches
+def test_verify_spec_alone(env):
     e = env
-    code, out = run(e, "task-brief", "--feature", "09-22-x", "--task", "1")
-    path, digest = out.strip().splitlines()
-    data = Path(path).read_bytes()
-    assert path.endswith("task-01-brief.md") and digest == parsec.sha256(path)
-    assert data.startswith(b"# Plan\n\nheader line\n\n") and b"## Global constraints\n\n- keep it\n\n" in data
-    assert data.endswith(b"## Task 1: first\n\n- [ ] step\n\n```lua\nlocal x = 1\n```\n\n") and b"Task 2" not in data and b"File map" not in data
-    assert run(e, "task-brief", "--feature", "09-22-x", "--task", "9")[0] == 64
-    head, app = b"# Plan\n\n## Global constraints\n\n- keep it\n\n", b"# Appendix A: smoke\n\n## Phase 1\n\n- step\n\n"   # 2026-10-05 Afterparty ap-15 task 6: the brief ended at the appendix heading
-    t1, t2 = b"## Task 1: smoke\n\nUses Appendix B.\n\n- [ ] Append Appendix A.\n\n", b"## Task 2: last\n\nAppendix A keys on it.\n\n- [ ] other\n\n"   # pre-review F5: a step names it
-    (e.feat / "tasks.md").write_bytes(head + t1 + t2 + app + b"# Appendix B: b\n\nb\n")
-    assert Path(run(e, "task-brief", "--feature", "09-22-x", "--task", "1")[1].split()[0]).read_bytes() == head + t1 + app
-    assert Path(run(e, "task-brief", "--feature", "09-22-x", "--task", "2")[1].split()[0]).read_bytes() == head + t2
+    v = lambda *a: run(e, "verify", "--feature", "09-22-x", *a)
+    (e.feat / "rounds" / "design-r1-fable").mkdir(parents=True)
+    parsec.write_json(e.feat / "rounds" / "design-r1-fable" / "record.json", {"kind": "design", "verdict": "PASS", "end": "2026-11-20T10:00:00", "subject": {"spec": parsec.sha256(e.feat / "spec.md"), "tasks": "0" * 64}})
+    assert v()[1].strip() == "MATCH"                                # no tasks.md
+    (e.feat / "tasks.md").write_text("old list\n", encoding="utf-8")
+    assert v()[1].strip() == "MATCH"                                # whatever it holds
+    (e.feat / "spec.md").unlink()
+    assert v()[1].strip() == "CHANGED"
+    code, out = v("--record-amendment", "no spec")
+    assert code == 64 and f"amendment refused: no spec.md in {e.feat}" in out and not list((e.feat / "rounds").glob("amendment-*")) and "amendment" not in e.ledger(), out
+    parsec.write_json(e.feat / "rounds" / "amendment-1.json", {"time": "2026-11-21T10:00:00", "reason": "0.1.54 wrote it, then raised", "subject": {"spec": None, "tasks": None}, "degraded": None})
+    (e.feat / "tasks.md").unlink()
+    assert v()[1].strip() == "CHANGED"                              # a null spec never matches a missing file
 
 
-# row 12b: a `#` line in a fenced code block is no heading (2026-10-02, KitnEssentials 10-02 task 1: a fenced .toc file cut the brief at "## Title:")
+# direct-build B2 (2026-11-25): a design round runs on spec.md alone and refuses without it, writing nothing
+def test_design_round_on_spec_alone(env):
+    e = env
+    (e.feat / "spec.md").rename(e.tmp / "spec.md")
+    for args in (["run", "--lane", "astra"], ["prepare", "--lane", "fable"]):
+        code, out = run(e, "round", args[0], "--feature", "09-22-x", "--kind", "design", "--round", "1", *args[1:], "--brief", str(e.brief), "--head", e.head)
+        assert code == 64 and f"design round without spec.md in {e.feat}" in out and not (e.feat / "rounds").exists(), out
+    (e.tmp / "spec.md").rename(e.feat / "spec.md")
+    (e.feat / "tasks.md").write_text("old list\n", encoding="utf-8")   # an older folder's list: not copied, packed or hashed
+    assert rnd(e, 1)[0] == 0 and set(e.record("design", 1, "astra")["subject"]) == {"spec"}
+    assert (e.feat / "rounds" / "design-r1-astra" / "spec.md").is_file() and not (e.feat / "rounds" / "design-r1-astra" / "tasks.md").exists()
+    assert not (e.wt / "_review" / "proj-09-22-x-design-astra" / ".parsec" / "tasks.md").exists()
+
+
+# direct-build B5 (2026-11-25): an older folder's tasks.md reaches a reviewer only as evidence, named by the brief or passed with --file
+def test_legacy_tasks_md_is_evidence(env):
+    e = env
+    (e.feat / "tasks.md").write_text("old list\n", encoding="utf-8")
+    other, upper, dead = e.tmp / "x" / "tasks.md", e.tmp / "y" / "TASKS.md", e.feat / "build" / "task-01-report.md.dead24"
+    for f, body in ((other, "other list\n"), (upper, "upper list\n"), (dead, "old report\n")):
+        f.parent.mkdir(); f.write_text(body, encoding="utf-8")
+    (named := e.tmp / "named.md").write_text("# Brief\n\nRead `tasks.md`.\n", encoding="utf-8")
+    folder, warn = e.feat / "rounds" / "prereview-r1-opus", "packed tasks.md from the feature folder as evidence (the brief named it)"
+
+    def prep(brief, *files):                                         # (exit code, printed text, evidence name to text, subject keys)
+        code, out = run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus", "--brief", str(brief),
+                        "--head", e.head, "--base", e.base, *[x for f in files for x in ("--file", str(f))])
+        ev = {q.name: q.read_text(encoding="utf-8") for q in (folder / ".parsec" / "evidence").glob("*")}
+        got = (code, out, ev, set(json.loads((folder / "pending.json").read_text(encoding="utf-8"))["subject"]), (folder / ".parsec" / "tasks.md").exists())
+        shutil.rmtree(folder)
+        return got
+    code, out, ev, subject, packed = prep(named)
+    assert code == 0 and ev == {"1-tasks.md": "old list\n"} and warn in out and subject == {"spec"} and not packed, out
+    code, out, ev, subject, packed = prep(e.brief)
+    assert code == 0 and ev == {} and warn not in out and subject == {"spec"} and not packed, out
+    code, out, ev, _, _ = prep(named, other)
+    assert code == 0 and ev == {"1-tasks.md": "other list\n"} and warn not in out, out
+    code, out, ev, _, _ = prep(named, upper)
+    assert code == 0 and ev == {"1-TASKS.md": "upper list\n", "2-tasks.md": "old list\n"} and warn in out, out
+    code, out, ev, _, _ = prep(e.brief, dead)
+    assert code == 0 and ev == {"1-task-01-report.md.dead24": "old report\n"}, out
+
+
+# row 12b: a `#` line in a fenced code block is no heading (2026-10-02, KitnEssentials 10-02 task 1: a fenced .toc file cut a brief at "## Title:")
 def test_fenced_hash_line_is_no_heading(env):
     e = env
     head, task2 = b"# Plan\n\n## Global constraints\n\n- keep it\n\n", b"## Task 2: second\n\n- [ ] other\n"
     task1 = (b"## Task 1: the toc\n\n- **Files**: `a.toc`\n\n```toc title\n## Title: Kit\n~~~\n## Interface: 120100\n``` x\n## Notes: kit\n```\n\n"
              b"  ~~~~markdown\n## Task 9: quoted\n~~~\n## Step 1\n  ~~~~~\n\n```a` b\n")   # another mark, a run with text after it and a shorter run close nothing; a backtick info string opens nothing
-    (e.feat / "tasks.md").write_bytes(head + task1 + task2)
-    path = run(e, "task-brief", "--feature", "09-22-x", "--task", "1")[1].split()[0]
-    brief = Path(path).read_bytes()
-    assert brief == head + task1 and [h for h, _ in parsec.sections(brief)[0]] == ["## Global constraints", "## Task 1: the toc"]   # build run reads the Files field here
-    assert run(e, "task-brief", "--feature", "09-22-x", "--task", "2")[0] == 0 and run(e, "task-brief", "--feature", "09-22-x", "--task", "9")[0] == 64
+    (e.tmp / "fence.md").write_bytes(head + task1 + task2)
+    assert parsec.heading_index(e.tmp / "fence.md") == ["Plan", "Global constraints", "Task 1: the toc", "Task 2: second"]   # unfenced's closing rules, which prepare and the rubric reader use
     (e.tmp / "rub.md").write_text("# Rules\n\n```md\n# Fake\n```\n\n## Git\n", encoding="utf-8")
     assert parsec.heading_index(e.tmp / "rub.md") == ["Rules", "Git"]
     e.brief.write_bytes(b"## 2. Task\n\n```\n## 3. quoted\n# Diff insert\n```\n\n## 3. Rules\n## 4. Final check\n")
@@ -536,7 +576,7 @@ def test_doctor_stale_install(env):
     upd = json.dumps([sys.executable, str(FAKE), "update"])
     (e.tmp / "lanes.toml").write_text(f'[astra]\nmodel = "a"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\nlatest = "{new.as_uri()}"\n'
                                       f'[sol]\nmodel = "s"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\nlatest = "{new.as_uri()}"\n'
-                                      f'[gemini]\nmodel = "g"\ncommand = {cmd}\nupdate = {upd[:-1]}, "agy"]\nlatest = "{(e.tmp / "none.json").as_uri()}"\n'
+                                      f'[neon]\nmodel = "g"\neffort = "high"\ncommand = {cmd}\nupdate = {upd[:-1]}, "agy"]\nlatest = "{(e.tmp / "none.json").as_uri()}"\n'
                                       f'[muse]\nmodel = "m"\neffort = "high"\ncommand = {cmd}\nupdate = {upd[:-1]}, "muse"]\nlatest = "{(e.tmp / "bad.json").as_uri()}"\n', encoding="utf-8")
     e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json"))
     code, out = run(e, "doctor", "--update")
@@ -548,7 +588,7 @@ def test_doctor_stale_install(env):
     (e.home / ".config" / "muse").mkdir(parents=True); (e.home / ".config" / "muse" / "auth.json").write_text("{}", encoding="utf-8"); (e.wt / "t1").mkdir()
     e.mp.setattr(parsec, "CLAUDE_LATEST", new.as_uri())                # a red row makes no lookup, so its row gets no tail
     out = run(e, "doctor")[1]                                       # 2026-10-17: one row per CLI (Brandon); a CLI behind its latest release read green
-    assert "\n- 🟢 codex-cli 0.159.2, Logged in using ChatGPT: astra (a, high), sol (s, high)\n  - 🟡 behind: 0.159.2 installed, 0.163.0 is out\n" in out and "\n- 🟢 codex-cli 0.159.2, login in the first run's log: gemini (g) · latest unknown\n" in out and "\n- 🟢 codex-cli 0.159.2, auth.json present: muse (m, high) · latest unknown\n" in out and "\n- 🔴 **Claude Code:** parsec-no-such-claude not found on PATH\n- 🟢 **config:** ok\n\n**Lane CLIs**\n" in out and "\n\nnext: run /parsec:doctor update: a CLI above is behind its latest release\nstale: this tool is parsec 0.0.9" in out, out
+    assert "\n- 🟢 codex-cli 0.159.2, Logged in using ChatGPT: astra (a, high), sol (s, high)\n  - 🟡 behind: 0.159.2 installed, 0.163.0 is out\n" in out and "\n- 🟢 codex-cli 0.159.2, login in the first run's log: neon (g, high) · latest unknown\n" in out and "\n- 🟢 codex-cli 0.159.2, auth.json present: muse (m, high) · latest unknown\n" in out and "\n- 🔴 **Claude Code:** parsec-no-such-claude not found on PATH\n- 🟢 **config:** ok\n\n**Lane CLIs**\n" in out and "\n\nnext: run /parsec:doctor update: a CLI above is behind its latest release\nstale: this tool is parsec 0.0.9" in out, out
     (same := e.tmp / "same.json").write_text('{"version": "0.159.2-R2"}', encoding="utf-8")   # current: only a build suffix differs, as a muse -R release
     e.mp.setattr(parsec, "CLAUDE", [sys.executable, str(FAKE)]); e.mp.setattr(parsec, "CLAUDE_LATEST", same.as_uri())
     out = run(e, "doctor")[1]
@@ -558,7 +598,7 @@ def test_doctor_stale_install(env):
     (cut := e.tmp / "cut.txt").write_bytes(b"9.9.9" + b" " * ((1 << 20) - 5) + b"</html>"); e.mp.setattr(parsec, "CLAUDE_LATEST", cut.as_uri())   # Sol diff r2 F4: its first MiB strips to 9.9.9, but the whole answer is no version
     assert "\n- 🟢 **Claude Code:** codex-cli 0.159.2 · latest unknown\n" in run(e, "doctor")[1]
     assert "next: run" not in run(e, "doctor", "--update")[1]                # a guard, green on the base too (Sol design r1 F4)
-    look = lambda ver, body, after="": (e.mp.setenv("FAKE_VERSION", ver), (e.tmp / "l.txt").write_text(body, encoding="utf-8"), (e.tmp / "lanes.toml").write_text(f'[gemini]\nmodel = "g"\ncommand = {cmd}\nlatest = "{(e.tmp / "l.txt").as_uri()}"\nlatest_after = "{after}"\n', encoding="utf-8"), run(e, "doctor")[1].split("gemini (g)", 1)[1])[3]   # the text after the one lane row
+    look = lambda ver, body, after="": (e.mp.setenv("FAKE_VERSION", ver), (e.tmp / "l.txt").write_text(body, encoding="utf-8"), (e.tmp / "lanes.toml").write_text(f'[neon]\nmodel = "g"\neffort = "high"\ncommand = {cmd}\nlatest = "{(e.tmp / "l.txt").as_uri()}"\nlatest_after = "{after}"\n', encoding="utf-8"), run(e, "doctor")[1].split("neon (g, high)", 1)[1])[3]   # the text after the one lane row
     assert [look("0.164.0-alpha.2", "0.164.0").startswith("\n  - 🟡 behind: 0.164.0-alpha.2 installed, 0.164.0 is out\n"), look("2.2", "2.2.0").startswith("\n\n**Worktrees**\n"), look("1.2.3+b", "1.2.4").startswith("\n  - 🟡 behind: 1.2.3+b installed, 1.2.4 is out\n")] == [True, True, True]   # item 2, Q2-A (Brandon, 2026-10-17): a pre-release read current, and 2.2 read behind 2.2.0; Sol design r1 F4 of 0.1.40: the installed version printed whole
     assert [look("1.2.16", "Antigravity CLI auto updater is running! Stable Version: 1.4.2. Rolled out to 100%", "Stable Version: ").startswith("\n  - 🟡 behind: 1.2.16 installed, 1.4.2 is out\n"), look("1.2.16", "9.9.9", "Stable Version: ").startswith(" · latest unknown\n")] == [True, True]   # item 1 (Brandon, 2026-10-17): agy's banner as probe C1 read it; a lane with latest_after never falls back to a bare version
 
@@ -575,7 +615,7 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "round", "prepare", "--feature", "09-22-y", "--kind", "design", "--round", "1", "--lane", "opus",
                     "--brief", str(e.brief), "--head", e.head)
     assert code == 64 and not (e.repo / "docs" / "09-22-y").exists()
-    code, out = run(e, "task-brief", "--feature", "../09-22-x", "--task", "1")
+    code, out = run(e, "verify", "--feature", "../09-22-x")
     assert code == 64 and "not under the docs root" in out      # 2026-09-22 review: --feature could climb out of the docs root
     (e.repo / ".claude" / "parsec.toml").rename(e.repo / ".claude" / "off.toml")
     assert (r := run(e, "doctor", "--lane", "astra", "--kind", "design", "--feature", "09-22-x"))[0] == 64 and "run setup first" in r[1]
@@ -649,8 +689,8 @@ def test_inputs_and_preflight(env):
     assert (folder / "pending.json").is_file() and git("rev-parse", "HEAD", cwd=tree) == e.head and f"code root: {tree}" in out
     ctx = (folder / ".parsec" / "context.md").read_text(encoding="utf-8")
     assert f"brief: {folder / '.parsec' / 'brief.md'}" in out and "evidence/1-reply-r1.md is a copy of reply-r1.md" in ctx and str(extra) not in ctx
-    assert ctx.splitlines()[2].startswith("- your lane, Opus: read with your file tools only") and (folder / ".parsec" / "tasks.md").is_file()   # 2026-09-23 audit: Fable was told it had a shell
-    assert "- design: .parsec/spec.md and .parsec/tasks.md, the reviewed design\n- amendments: none" in ctx   # Brandon, 2026-09-23 (A+); reviewed, since a waived spec reading is no approval (batch F)
+    assert ctx.splitlines()[2].startswith("- your lane, Opus: read with your file tools only") and (folder / ".parsec" / "spec.md").is_file() and not (folder / ".parsec" / "tasks.md").exists()   # 2026-09-23 audit: Fable was told it had a shell
+    assert "- design: .parsec/spec.md, the reviewed design\n- amendments: none" in ctx   # Brandon, 2026-09-23 (A+); reviewed, since a waived spec reading is no approval (batch F)
     bounded = e.repo / "docs" / "09-22-b"                           # bounded work has no design to pack
     bounded.mkdir()
     (bounded / "ledger.md").write_text("# Ledger\n", encoding="utf-8")
@@ -661,7 +701,7 @@ def test_inputs_and_preflight(env):
     code, out = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")
     r = e.record("prereview", 1, "opus")
     assert code == 0 and r["verdict"] == "PASS" and r["agent"] == "reviewer-opus" and r["model"].startswith("claude-opus") and not (folder / "pending.json").exists()
-    assert set(r["subject"]) == {"spec", "tasks"}
+    assert set(r["subject"]) == {"spec"}
     again = run(e, "round", "collect", "--feature", "09-22-x", "--kind", "prereview", "--round", "1", "--lane", "opus")[1]
     assert "in-session agent" in out and r["degraded"] is None and "already collected" in again and "round run" not in again   # 0.1.9 last look F2: an agent round has no round run
     run(e, "round", "prepare", "--feature", "09-22-x", "--kind", "lastlook", "--round", "1", "--lane", "opus", "--brief", str(e.brief), "--head", e.head, "--base", e.base)
@@ -925,144 +965,21 @@ def test_neon_preflight_and_doctor(env):
     code, out = pf()
     assert code == 0 and ["models"] in e.calls() and "GEMINI_API_KEY" not in dump() and "- **CLI:** agy fake-cli 1.0, model known to agy\n- **Model:** gemini-4-neon-high, effort high (lanes.toml; the id picks the level); login not checked (C6: no logged-out run was possible)" in out, out   # the dump is agy models'; the version call's own environment is untested, accepted residual R1 (Brandon, 2026-11-20)
     e.mp.setenv("FAKE_VERSION_EXIT", "3"); assert (r := pf())[0] == 64 and r[1].startswith("### 🔴 Pre-flight: Neon · design debate · FAILED") and "model known to agy" in r[1], r[1]; e.mp.delenv("FAKE_VERSION_EXIT")   # a failed version call fails the pre-flight with the model listed (Sol R4 F2, Astra F28)
-    assert pf("gemini")[0] == 0 and "GEMINI_API_KEY" not in dump() and dump()["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true"   # the gemini pre-flight's version call (Neon F2)
-    rows = parsec.tomllib.loads((REPO / "lanes.toml").read_text(encoding="utf-8")); assert [rows["neon"][k] for k in ("command", "update")] == [rows["gemini"][k] for k in ("command", "update")]   # the shipped rows: one doctor row, one update
+    rows = parsec.tomllib.loads((REPO / "lanes.toml").read_text(encoding="utf-8")); assert "gemini" not in rows and [k for k, r in rows.items() if r.get("command") == ["agy"]] == ["neon"]   # the shipped rows: neon alone runs agy (direct build, 2026-11-25)
     cmd, upd = json.dumps([sys.executable, str(FAKE)]), json.dumps([sys.executable, str(FAKE), "update", "agy"])
-    (e.tmp / "lanes.toml").write_text(f'[neon]\nmodel = "gemini-4-neon-high"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n[gemini]\nmodel = "g"\ncommand = {cmd}\nupdate = {upd}\n', encoding="utf-8")
+    (e.tmp / "lanes.toml").write_text(f'[neon]\nmodel = "gemini-4-neon-high"\neffort = "high"\ncommand = {cmd}\nupdate = {upd}\n', encoding="utf-8")
     code, out = run(e, "doctor", "--update")
-    assert "\n- 🟢 fake-cli 1.0, login in the first run's log: neon (gemini-4-neon-high, high), gemini (g)\n" in out and [c for c in e.calls() if c[:1] == ["update"]] == [["update"], ["update", "agy"]] and "- **update neon, gemini:** exit 0" in out, out   # the row's order no longer sends agy to the Kimi credentials check
+    assert "\n- 🟢 fake-cli 1.0, login in the first run's log: neon (gemini-4-neon-high, high)\n" in out and [c for c in e.calls() if c[:1] == ["update"]] == [["update"], ["update", "agy"]] and "- **update neon:** exit 0" in out, out   # the row's order no longer sends agy to the Kimi credentials check
 
 
-# row 16: build run against a fake agy (2026-09-22 gemini_probes.py; 2026-09-12 and 09-13; old items 112 and 47a)
-GOOD_LOG = "Print mode: starting with model gemini-3.8-flash-high\nPropagating selected model override\napplying agent mode accept-edits\nsilent auth succeeded\n"
-
-
-def test_build_run_success_test(env):
+# row 16: the Gemini build path is gone (2026-11-25 direct-build trial: the session builds from the spec; Brandon D1-A); its commands exit 2, its lane 64
+def test_removed_build_path(env, capsys):
     e = env
-    run(e, "task-brief", "--feature", "09-22-x", "--task", "1")
-    co = e.tmp / "checkout"
-    git("worktree", "add", "--detach", str(co), e.head, cwd=e.repo)
-    e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG)
-    e.mp.setenv("FAKE_STDOUT", "I made the edits.\n")
-    e.mp.setenv("FAKE_ENV_DUMP", str(e.tmp / "env.json")); e.mp.setenv("GEMINI_API_KEY", "stray-key")   # 2026-11-20: the key reaches no agy call (Sol F8)
-    e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
-    b = lambda *a: run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", e.head, *a)
-    code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", "0" * 40)
-    assert code == 64 and "not --head" in out                # 2026-09-22 17:23: the lane built on a tree the brief told it to refuse
-    e.mp.chdir(co)                                               # 2026-09-23 fld-5b: --checkout . reached agy's --add-dir as ".", which it could not resolve
-    code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", ".", "--head", e.head)
-    assert code == 0 and "result: ok" in out, out
-    a = e.calls()[-1]
-    prompt = a[a.index("-p") + 1]
-    digest = parsec.sha256(e.feat / "build" / "task-01-brief.md")
-    assert prompt.startswith(f"Read the file AGY-TASK-BRIEF-{digest[:12]}.md in {co.resolve()} ") and prompt.endswith(parsec.CLOSING)
-    assert "never in another checkout" in prompt                # 2026-10-05 Afterparty ap-17, ap-18: a read of the primary's copy was denied
-    assert "grep_search" in prompt                               # 2026-09-28 poll: all four field RunCommand denials were Select-String searches
-    assert a[a.index("--model") + 1] == "gemini-3.8-flash-high" and a[a.index("--mode") + 1] == "accept-edits"
-    assert a[a.index("--log-file") + 1] == str((e.feat / "build" / "task-01-agy.log").resolve())
-    assert [a[i + 1] for i, x in enumerate(a) if x == "--add-dir"] == [str(co.resolve()), str(e.feat.parent.resolve())]   # 2026-09-27 gk-12: a read in the primary's docs root was denied
-    child = json.loads((e.tmp / "env.json").read_text(encoding="utf-8"))
-    assert child["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true" and "GEMINI_API_KEY" not in child and not list(co.glob("AGY-TASK-BRIEF-*"))
-    report = (e.feat / "build" / "task-01-report.md").read_text(encoding="utf-8")
-    assert report.startswith("I made the edits.") and "agy exit 0 (recorded, never trusted)" in report
-    assert "build task 01 gemini: ok" in e.ledger()
-    code, out = b("--again")
-    assert code == 64 and "dirty before the build" in out      # 2026-09-22 review: a pre-dirty tree made the status test vacuous
-    clean = lambda: (git("checkout", "--", ".", cwd=co), git("clean", "-fdq", cwd=co))
-    clean()
-    code, out = b()
-    assert code == 64 and "--again archives it first" in out   # a report already present without --again (r2 Opus: was vacuous)
-    e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG + "soft-denying tool confirmation for RunCommand\n")
-    code, out = b("--again")
-    assert code == 65 and "FAILED: no soft-denied step" in out and (e.feat / "build" / "task-01-report.md.dead1").is_file()
-    assert (e.feat / "build" / "task-01-agy.log.dead1").is_file() and not list(co.glob("AGY-TASK-BRIEF-*"))
-    clean()
-    e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG)
-    e.mp.setenv("FAKE_STDOUT", "")
-    assert b("--again")[0] == 65                                # an empty final message despite exit 0
-    clean()
-    e.mp.setenv("FAKE_STDOUT", "done\n")
-    e.mp.delenv("FAKE_WRITE")
-    code, out = b("--again")
-    assert code == 65 and "FAILED: every docs-root file" in out     # an empty diff is never done
-    (e.feat / "build" / "task-01-brief.md").write_text("## Global constraints\n\n- **Files**: keep `docs/09-22-x/other.md`\n\n## Task 1: t\n\n- keep `docs/09-22-x/other.md` too\n- **Files**: `docs/09-22-x/smoke.md:3` only\n\n```md\n- **Files**: `docs/09-22-x/other.md`\n## Task 2: quoted\n```\n", encoding="utf-8")
-    e.mp.setenv("FAKE_WRITE", str(e.feat / "other.md"))
-    assert "FAILED: every docs-root file" in b("--again")[1]      # Sol diff r1-r2 F1: a docs file outside the task's Files field is no success
-    e.mp.setenv("FAKE_WRITE", str(e.feat / "smoke.md"))
-    code, out = b("--again")
-    assert code == 0 and "ok: every docs-root file" in out, out   # 2026-09-28 audit: gk-14's smoke-only task read "failed"
-    for k, field in enumerate(("**Files**:", "**Files:**", "* **Files:**")):   # 2026-10-04 Afterparty ap-2 task 2: a bare Files line named nothing, so a docs-only task read "failed"
-        (e.feat / "build" / "task-01-brief.md").write_text(f"## Task 1: t\n\n{field} `docs/09-22-x/s{k}.md`\n", encoding="utf-8")
-        e.mp.setenv("FAKE_WRITE", str(e.feat / f"s{k}.md"))
-        assert "ok: every docs-root file" in b("--again")[1], field
-    for k, field in ((3, "- **Files**:\n  - `docs/09-22-x/s3.md`\n"), (4, "- **Files**: `code.txt` (new),\n  `docs/09-22-x/s4.md`\n"),   # 2026-10-04 ap-8 task 5: paths under the Files line
-                     (5, "- **Files**:\n- `docs/09-22-x/s5.md`\n"), (6, "- **Files**: `x.lua`,\n`docs/09-22-x/s6.md`\n"), (7, "**Files** `docs/09-22-x/s7.md`\n")):   # field audit 4: 110 of 266 tasks
-        (e.feat / "build" / "task-01-brief.md").write_text(f"## Task 1: t\n\n{field}- **Checks**: `docs/09-22-x/other.md`\n", encoding="utf-8")
-        e.mp.setenv("FAKE_WRITE", str(e.feat / f"s{k}.md"))
-        assert "ok: every docs-root file" in b("--again")[1], field
-    e.mp.setenv("FAKE_WRITE", str(e.feat / "checks.md"))
-    (e.feat / "build" / "task-01-brief.md").write_text("## Task 1: t\n\n- **Files**:\n  - `docs/09-22-x/s3.md`\n- **Checks**: `docs/09-22-x/checks.md`\n", encoding="utf-8")
-    assert "FAILED: every docs-root file" in b("--again")[1]      # pre-review F4: the field stops at the next one
-    e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
-    (e.feat / "build" / "task-01-brief.md").write_text("## Task 1: t\n\n- **Files**: `new.txt`, `docs/09-22-x/s9.md`\n", encoding="utf-8")
-    assert "FAILED: every docs-root file" in b("--again")[1]      # field audit 4: Moving Day phase 10 tasks 27 and 29 skipped their smoke-file steps
-    clean()
-    (e.feat / "build" / "task-01-brief.md").write_text("## Task 1: t\n\n- **Files**: `new.txt`\n", encoding="utf-8")
-    e.mp.setenv("FAKE_AGY_LOG", "Print mode: starting\n")
-    code, out = b("--again")
-    assert code == 65 and "FAILED: route line present: applying agent mode accept-edits" in out
-    clean()
-    b2 = lambda: run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(co), "--head", git("rev-parse", "HEAD", cwd=co), "--again")
-    (co / "crlf.txt").write_bytes(b"one\r\ntwo\r\n")
-    git("add", "crlf.txt", cwd=co)
-    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "crlf", cwd=co)
-    e.mp.setenv("FAKE_WRITE", str(co / "crlf.txt"))                 # the fake writes LF into the CRLF file, whole or mixed
-    for log, made in ((GOOD_LOG.replace("silent", "FAKE_MIXED silent"), b"written\r\nby the reviewer\r\n"), (GOOD_LOG, b"written by the reviewer\r\n")):
-        e.mp.setenv("FAKE_AGY_LOG", log)                            # 2026-10-23: agy 1.4.4 wrote LF into CRLF files, so the tool restores CRLF
-        code, out = b2()
-        assert code == 0 and "ok: line endings kept" in out and "restored CRLF in crlf.txt" in out and (co / "crlf.txt").read_bytes() == made, out
-        clean()
-    (co / ".gitignore").write_text(".claude/\nignored.txt\n", encoding="utf-8")   # a docs root git does not ignore, as setup allows
-    conf = e.repo / ".claude" / "parsec.toml"
-    conf.write_text(conf.read_text(encoding="utf-8").replace('docs_root = "docs"', f'docs_root = "{(e.repo / "docs").as_posix()}"'), encoding="utf-8")   # r3 (Sol): absolute too
-    git("commit", "-qam", "docs tracked", cwd=co)
-    (co / "docs" / "09-22-x" / "rounds").mkdir(parents=True)
-    (co / "docs" / "09-22-x" / "rounds" / "pending.md").write_text("open round\n", encoding="utf-8")
-    e.mp.setenv("FAKE_WRITE", str(co / "new.txt"))
-    code, out = b2()
-    assert code == 0 and "result: ok" in out, out                # 2026-09-22 r2 (Sol): open rounds under a tracked docs root are not dirt
-    clean()
-    (co / "empty.txt").write_bytes(b"")
-    (co / "lf.txt").write_bytes(b"one\ntwo\n")
-    git("add", "empty.txt", "lf.txt", cwd=co)
-    git("commit", "-qm", "empty and lf", cwd=co)
-    e.mp.setenv("FAKE_WRITE", str(co / "empty.txt"))              # w/none to w/lf: a first ending is no flip (r2, Sol)
-    assert "ok: line endings kept" in b2()[1]
-    clean()
-    e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG.replace("silent", "FAKE_CRLF silent"))
-    e.mp.setenv("FAKE_WRITE", str(co / "lf.txt"))                 # the fake writes CRLF when its log says FAKE_CRLF
-    assert "FAILED: line endings kept" in b2()[1]                  # LF to CRLF is a flip too (r2, Sol)
-    clean()
-    e.mp.setenv("FAKE_AGY_LOG", GOOD_LOG)
-    e.mp.delenv("FAKE_WRITE")
-    e.mp.setenv("FAKE_DELETE", str(co / "lf.txt"))
-    assert "ok: line endings kept" in b2()[1]                      # r4 (Sol): a file the work tree lost has nothing to flip
-    clean()
-    real = parsec.git_out
-    e.mp.setattr(parsec, "git_out", lambda a, c: (_ for _ in ()).throw(parsec.Exit(64, "ls-files failed")) if a[0] == "ls-files" else real(a, c))
-    assert b2()[0] == 64                                           # r4 (Sol): a failed ls-files fails the build, never passes the check
-    e.mp.setattr(parsec, "git_out", real)
-    (e.repo / ".gitignore").write_text(".claude/\nignored.txt\n", encoding="utf-8")   # r4 (Opus): the primary itself, its docs root tracked
-    git("add", ".gitignore", "docs", cwd=e.repo)
-    git("commit", "-qm", "docs tracked", cwd=e.repo)
-    (e.feat / "ledger.md").write_text(e.ledger() + "- a line\n", encoding="utf-8")
-    e.mp.setenv("FAKE_WRITE", str(e.repo / "new.txt"))
-    code, out = run(e, "build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", str(e.repo), "--head", git("rev-parse", "HEAD", cwd=e.repo), "--again")
-    assert code == 0 and "result: ok" in out, out                  # the feature's own ledger and spec are not dirt either
-    assert e.calls()[-1].count("--add-dir") == 1                   # a docs root inside the checkout is not added again
-    code, out = run(e, "build", "archive", "--feature", "09-22-x", "--task", "1")
-    assert code == 0 and ".dead24" in out and not (e.feat / "build" / "task-01-report.md").exists()
-
+    for args, word in ((["task-brief", "--feature", "09-22-x", "--task", "1"], "task-brief"), (["build", "run", "--feature", "09-22-x", "--task", "1", "--checkout", ".", "--head", "HEAD"], "build"),
+                       (["build", "archive", "--feature", "09-22-x", "--task", "1"], "build"), (["doctor", "--lane", "opus", "--kind", "build", "--feature", "09-22-x"], "build")):   # Sol diff r1 F2: no build pre-flight
+        capsys.readouterr(); assert run(e, *args)[0] == 2 and f"invalid choice: '{word}'" in capsys.readouterr().err, args
+    code, out = run(e, "doctor", "--lane", "gemini", "--kind", "design", "--feature", "09-22-x")
+    assert code == 64 and "lane gemini is not a lane or a seat" in out, out
 
 # row 17: fast mode, the tier read back from codex's session record (2026-09-22 fast_mode_probe2.py)
 def test_tier_readback(env):

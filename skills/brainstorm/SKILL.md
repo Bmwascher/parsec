@@ -1,18 +1,18 @@
 ---
 name: brainstorm
-description: Use when Brandon says "brainstorm", "design" or "plan" a feature, or hands over a phase or handoff to build. The conversation and the orchestration from a request to an approved or waived spec, an approved task list, a recorded go and one pre-build debate. Not for a bug fix that needs no design (that is bounded work, see the classification).
+description: Use when Brandon says "brainstorm", "design" or "plan" a feature, or hands over a phase or handoff to build. The conversation and the orchestration from a request to an approved or waived spec, a recorded go and one pre-build debate. Not for a bug fix that needs no design (that is bounded work, see the classification).
 ---
 
 # brainstorm
 
-Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-rules.md`; read it first. The FORMAT of the two files is not here: it is in `templates/spec.md` and `templates/task-list.md`, read by whoever writes.
+Rules that cut across the flow are in `${CLAUDE_PLUGIN_ROOT}/templates/driver-rules.md`; read it first. The spec's FORMAT is not here: it is in `templates/spec.md`, read by whoever writes.
 
 ## Classify the request out loud
 
 Say which it is before anything else. It only ever gets heavier, never lighter.
 
 - **Spike**: exploration with nothing to keep. No feature folder, no spec, no debate. Say what was learned and stop.
-- **Bounded work**: a change small enough to make without a design (a fix, a rename, a guard). No spec, no task list. Brandon's yes is the go (`build`, "Bounded work"). It becomes architectural when it changes how a feature works (a new mechanism or state, a default the user sees, the core of a display), or when two bounded fixes of one symptom have already failed the smoke, counted across feature folders and from the smoke record, not the ledger alone; the next fix goes through one spec. A class a handoff gives is checked out loud, never copied.
+- **Bounded work**: a change small enough to make without a design (a fix, a rename, a guard). No spec. Brandon's yes is the go (`build`, "Bounded work"). It becomes architectural when it changes how a feature works (a new mechanism or state, a default the user sees, the core of a display), or when two bounded fixes of one symptom have already failed the smoke, counted across feature folders and from the smoke record, not the ledger alone; the next fix goes through one spec. A class a handoff gives is checked out loud, never copied.
 - **Architectural**: everything else. The full flow below.
 
 ## What is asked, and what is not
@@ -32,19 +32,19 @@ Made when the request is classified as architectural and named; its name and lay
 
 ## Who writes
 
-Keep `notes.md` as a running record: each question, Brandon's exact answer, the chosen approach and what was rejected, verbatim, never a digest. Then dispatch the `author` (`agents/author.md`) in the background, named `Author: spec`, with the notes (or the handoff and its scoping section), the code paths and the same context paths a reviewer gets (the config's `[[context]]` entries), asking for the spec alone.
+Keep `notes.md` as a running record: each question, Brandon's exact answer, the chosen approach and what was rejected, verbatim, never a digest. Then dispatch the `author` (`agents/author.md`) in the background, named `Author: spec`, with the notes (or the handoff and its scoping section), the code paths and the same context paths a reviewer gets (the config's `[[context]]` entries), asking for the spec.
 
-The session never writes the two files itself: the author's fresh context proves the notes complete and keeps the session small.
+The session never writes the spec itself, apart from the two clerical edits below and a Design-section correction during the build or the gate (`build`); any other edit waits for Brandon. The author's fresh context proves the notes complete and keeps the session small.
 
-Brandon reviews the written spec before the task list, from its decision summary posted in chat, unless his go-ahead words ("go all the way") waive that reading or his own words delegate the approval (driver rule 2); neither waives the design debate or the Fable look (2026-09-28); a pre-approved handoff never waives it: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Approving the spec is not a go. After approval or its waiver, and once each claim to probe has a result or his waiver (driver rule 7), the same `author` agent, resumed, writes the task list (`Author: task list`).
+Brandon reviews the written spec before the go, from its decision summary posted in chat, unless his go-ahead words ("go all the way") waive that reading or his own words delegate the approval (driver rule 2); neither waives the design debate or the Fable look (2026-09-28); a pre-approved handoff never waives it: "It shouldn't be taken as gospel basically and still should be reviewed and go through the gates" (2026-09-23). Approving the spec is not a go. After approval or its waiver, and once each claim to probe has a result or his waiver (driver rule 7), the session restates the decision summary as approved, and by whom, or waived, and sets each claim's status from its `probe` line: the two clerical edits. A claim added after the go is written `open` by the author; the session sets its status from its `probe` line when that comes. A change Brandon asks for at approval goes to the resumed `author`.
 
 ## The go (its one home)
 
-Nothing is built without one. When the task list exists, the driver asks for it, before the first debate round: "Go?" A pre-approved handoff is already a go to build, never approval of the spec; a go given earlier in the conversation is recorded when it is given. The ledger line: `templates/ledger.md`.
+Nothing is built without one. When the spec stands so, the driver asks, before the first debate round: "Go?", unless a go is already on record. A pre-approved handoff is already a go to build, never approval of the spec; a go given earlier in the conversation is recorded when it is given. The ledger line: `templates/ledger.md`.
 
 ## The pre-build debate
 
-One debate over both files, `--kind design`, run by `debate` on the cross-vendor lane, then the Fable design look (`debate`, "The Fable looks"). When both end, the driver posts what they changed and:
+One debate over `spec.md`, `--kind design`, run by `debate` on the cross-vendor lane, then the Fable design look (`debate`, "The Fable looks"). When both end, the driver posts what they changed and:
 
 - continues to `build` if a go is on record and neither changed what the feature does;
 - pauses and asks when no go is on record, or when either changed what the feature does (a new behaviour, a dropped one, a different interface).

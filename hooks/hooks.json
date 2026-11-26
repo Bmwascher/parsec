@@ -1,5 +1,5 @@
 {
-  "description": "parsec: after a compaction, the driver rules and the ledger template again; a parsec agent dispatch that sets model is denied; a turn that ends with a printed block unposted goes back once",
+  "description": "parsec: after a compaction, the driver rules and the ledger template again; a parsec agent dispatch that sets model is denied; a turn that ends with a printed block unposted goes back once, as does one that ends while an Opus or Fable round has its reply.md written and is not collected (2026-11-25 vc-arm0)",
   "hooks": {
     "SessionStart": [
       {

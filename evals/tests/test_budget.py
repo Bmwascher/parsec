@@ -7,9 +7,9 @@ SKILLS = ["brainstorm", "build", "debate", "setup", "panel"]
 # The Muse and Kimi lane notes (models/muse-*.md, models/kimi-*.md, lanes/kimi-reviewer.md) are read only when
 # that lane runs, Muse as the backup and Kimi by name, so they are not counted (Brandon, 2026-10-15).
 PROSE = [f"skills/{s}/SKILL.md" for s in SKILLS] + [
-    "templates/driver-rules.md", "templates/spec.md", "templates/task-list.md", "templates/brief.md",
+    "templates/driver-rules.md", "templates/spec.md", "templates/brief.md",
     "templates/brief-design.md", "templates/brief-diff.md", "templates/brief-lastlook.md", "templates/brief-panel.md", "templates/ledger.md",
-    "templates/implementer-contract.md", "agents/backup-implementer.md", "agents/reviewer-opus.md", "agents/reviewer-fable.md",
+    "agents/reviewer-opus.md", "agents/reviewer-fable.md",
     "agents/author.md", "commands/doctor.md", "models/index.md", "models/codex-cli.md",
     "models/astra.md", "models/fable.md", "models/opus.md", "models/sol.md",
     "models/agy-cli.md", "models/neon.md", "CLAUDE.md"]
@@ -30,8 +30,8 @@ def test_tool_within_1331_lines():
     assert lines(REPO / "tools" / "parsec.py") <= 1331   # Brandon, 2026-11-22: "A Raise to built count (Recommended)", the Trigger regrade (was 1,309)
 
 
-def test_hooks_within_80_lines():
-    assert lines(REPO / "tools" / "hooks.py") <= 80
+def test_hooks_within_116_lines():
+    assert lines(REPO / "tools" / "hooks.py") <= 116   # Brandon, 2026-11-25: "Not too worried about the budgets"; the built count of the late-round check, its round-shape guard and its local-drive check (direct-build B12; was 80)
 
 
 def test_tests_within_1648_lines():
